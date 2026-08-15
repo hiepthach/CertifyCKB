@@ -1,4 +1,8 @@
-# DOB Credential & Badge Protocol — Implementation Architecture
+# CKB Credential Registry — Implementation Architecture
+
+> **Updated Scope**: Course completion certificate registry focusing on course providers, students, and verifiers.
+
+---
 
 ## Table of Contents
 
@@ -18,104 +22,64 @@
 
 ## 1. Overview
 
-This document describes the implementation architecture for the DOB Credential & Badge Protocol, a verifiable credentials system built on CKB using the Spore Protocol.
-
 ### 1.1 Design Principles
 
-- **Self-Sovereign**: Users own their credentials as on-chain assets
+- **Self-Sovereign**: Users own their certificates as on-chain assets
 - **Composable**: Built on existing standards (W3C VC, Spore, CCC SDK)
-- **Minimal Viable**: Start with MVP, extend features iteratively
+- **Course-Centric**: Focused on course completion certificates
 - **CKB-Native**: Leverage CKB's unique advantages (zero fees, on-chain storage)
+
+### 1.2 Core Value Propositions
+
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| **Fully on-chain** | ✅ | Spore DOB DNA (certificate JSON) |
+| **Holder-owned** | ✅ | Spore DOB lock = recipient wallet |
+| **CKB-backed** | ✅ | Spore capacity + melt-to-reclaim |
+| **Zero transfer fees** | ✅ | CKB UTXO model |
+| **Cluster organization** | ✅ | Spore Cluster = Course Provider |
 
 ---
 
 ## 2. Feature Specification
 
-### 2.1 Feature Matrix
+### 2.1 Core Features (MVP)
 
 | Feature | Priority | Description |
 |---------|----------|-------------|
-| **F1: Wallet Connection** | P0 | Connect wallet via JoyID, MetaMask, Neuron, Portal |
-| **F2: Cluster Creation** | P0 | Issuer creates credential Clusters |
-| **F3: Credential Issuance** | P0 | Mint credential DOBs to recipients |
-| **F4: Credential Display** | P0 | View credentials in holder dashboard |
-| **F5: Credential Verification** | P0 | Query and verify credential validity |
-| **F6: Credential Presentation** | P1 | Share credential details/copy ID |
-| **F7: Non-Transferable** | P1 | Soulbound credentials cannot be transferred |
-| **F8: Expiration** | P1 | Time-based credential validity |
-| **F9: Revocation** | P2 | Issuer can mark credentials as revoked |
-| **F10: Credential Types** | P0 | Support multiple credential types (course, event, cert) |
+| **F1: Wallet Connection** | P0 | Connect via JoyID, MetaMask, Neuron, Portal |
+| **F2: Provider Registration** | P0 | Course provider creates Cluster |
+| **F3: Certificate Issuance** | P0 | Issue course completion certificate |
+| **F4: Certificate Display** | P0 | Student views certificates in dashboard |
+| **F5: Certificate Sharing** | P0 | Copy ID, open in Explorer |
+| **F6: Certificate Verification** | P0 | Verify certificate by ID |
 
-### 2.2 Feature Details
+### 2.2 Extended Features
 
-#### F1: Wallet Connection
-- Support multiple wallets: JoyID (WebAuthn), MetaMask (Omnilock), Neuron, Portal Wallet
-- Use `@ckb-ccc/connector-react` for React integration
-- Display connected wallet status and address
-- Handle disconnection and reconnection
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| **F7: Certificate Templates** | P1 | Pre-defined certificate formats |
+| **F8: Batch Issuance** | P1 | Issue multiple certificates at once |
+| **F9: Expiration** | P1 | Time-based certificate validity |
+| **F10: Revocation** | P1 | Mark certificate as revoked |
 
-#### F2: Cluster Creation
-- Issuer creates a Cluster for each credential type/organization
-- Cluster stores: name, description, credential policy
-- Cluster owner controls credential issuance
-- Cluster ID used as issuer identifier in credentials
+### 2.3 Future Features
 
-#### F3: Credential Issuance
-- Issue credentials as Spore DOBs
-- Credential DNA stores W3C VC-compatible JSON
-- Support multiple credential types:
-  - Course Completion
-  - Event Attendance
-  - Professional Certification
-- Associate credentials with issuer's Cluster
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| **F11: Renewal** | P2 | Update expiration date |
+| **F12: Embedding** | P2 | Embed on external platforms |
+| **F13: Trust Layer** | P2 | Verified issuers registry |
+| **F14: Analytics** | P2 | Provider issuance statistics |
+| **F15: Comments** | P3 | Student comments/reviews |
 
-#### F4: Credential Display
-- Holder sees all credentials in their wallet
-- Display credential summary: type, title, issuer, date
-- Show credential status: active, expired, revoked
-- Link to full credential details
-
-#### F5: Credential Verification
-- Input: Credential ID (Spore DOB ID)
-- Output: Verification result with details
-- Verify: issuer, validity, expiration, revocation status
-- Show verification timestamp
-
-#### F6: Credential Presentation
-- Copy credential ID to clipboard
-- Open in CKB Explorer
-- Display full credential JSON
-- Generate shareable verification link (future)
-
-#### F7: Non-Transferable (Soulbound)
-- Credentials locked to recipient wallet
-- Cannot be transferred after issuance
-- Enforced by custom Type Script (future) or policy
-
-#### F8: Expiration
-- Optional expiration date in credential DNA
-- UI shows "Expired" badge for expired credentials
-- Verification returns expired status
-
-#### F9: Revocation
-- Issuer can mark credential as revoked
-- Revocation stored in credential status field
-- Verification returns revoked status
-
-#### F10: Credential Types
-| Type | Fields | Policy |
-|------|--------|--------|
-| **Course Completion** | course name/description, completion date, grade, skills | transferable or not |
-| **Event Attendance** | event name/dates, location, role | non-transferable |
-| **Professional Cert** | certification name, issuing body, validity period | non-transferable |
-
-### 2.3 User Roles
+### 2.4 User Roles
 
 | Role | Capabilities |
 |------|-------------|
-| **Issuer** | Create Clusters, Issue Credentials, Revoke Credentials |
-| **Holder** | View Own Credentials, Present Credentials, Transfer (if allowed) |
-| **Verifier** | Verify Credential Validity, Check Issuer, Check Expiration |
+| **Course Provider** | Register, Issue Certificates, Revoke |
+| **Student** | View Own Certificates, Share, Transfer (if allowed) |
+| **Verifier** | Verify Certificate Validity |
 
 ---
 
@@ -127,7 +91,7 @@ This document describes the implementation architecture for the DOB Credential &
 graph TB
     subgraph Frontend["Frontend Layer (React/Next.js)"]
         UI["UI Components"]
-        PAGES["Pages"]
+        PAGES["Pages<br/>(Provider, Student, Verifier)"]
     end
 
     subgraph SDK["SDK Layer"]
@@ -136,15 +100,15 @@ graph TB
     end
 
     subgraph Blockchain["CKB Blockchain (L1)"]
-        SPORE_CELLS["Spore Cells<br/>Clusters + Credentials"]
-        SCRIPT["Spore Type Scripts"]
+        CLUSTERS["Cluster Cells<br/>(Course Providers)"]
+        CERTS["Certificate DOBs<br/>(Students)"]
     end
 
     UI --> PAGES
     PAGES --> CCC
     CCC --> SPORE
-    SPORE --> SCRIPT
-    SPORE_CELLS --> SCRIPT
+    SPORE --> CLUSTERS
+    SPORE --> CERTS
 ```
 
 ### 3.2 Component Interaction
@@ -152,55 +116,27 @@ graph TB
 ```mermaid
 graph LR
     subgraph Frontend
-        ISSUER_UI["Issuer UI"]
-        HOLDER_UI["Holder UI"]
-        VERIFIER_UI["Verifier UI"]
+        PROVIDER["Provider UI"]
+        STUDENT["Student UI"]
+        VERIFIER["Verifier UI"]
     end
 
     subgraph Services
-        ISSUER_SVC["Issuer Service"]
-        VERIFIER_SVC["Verifier Service"]
+        PROVIDER_SVC["Provider Service"]
+        CERT_SVC["Certificate Service"]
+        VERIFY_SVC["Verify Service"]
     end
 
     subgraph Storage
         CKB["CKB Cells"]
     end
 
-    ISSUER_UI --> ISSUER_SVC
-    ISSUER_SVC --> CKB
-    HOLDER_UI --> VERIFIER_SVC
-    VERIFIER_SVC --> CKB
-    VERIFIER_UI --> VERIFIER_SVC
-```
-
-### 3.3 Data Flow
-
-```mermaid
-flowchart LR
-    subgraph Input
-        CREDENTIAL_DATA["Credential Data"]
-        ISSUER_WALLET["Issuer Wallet"]
-        RECIPIENT_WALLET["Recipient Wallet"]
-    end
-
-    subgraph Process
-        ENCODE["Encode to W3C VC JSON"]
-        CREATE_TX["Create Transaction"]
-        SIGN["Sign Transaction"]
-    end
-
-    subgraph Output
-        SPORE_DOB["Spore DOB Cell"]
-        TX_HASH["Transaction Hash"]
-    end
-
-    CREDENTIAL_DATA --> ENCODE
-    ISSUER_WALLET --> SIGN
-    RECIPIENT_WALLET --> CREATE_TX
-    ENCODE --> CREATE_TX
-    CREATE_TX --> SIGN
-    SIGN --> SPORE_DOB
-    SIGN --> TX_HASH
+    PROVIDER --> PROVIDER_SVC
+    PROVIDER_SVC --> CKB
+    STUDENT --> CERT_SVC
+    CERT_SVC --> CKB
+    VERIFIER --> VERIFY_SVC
+    VERIFY_SVC --> CKB
 ```
 
 ---
@@ -212,49 +148,50 @@ flowchart LR
 ```
 dob-credential-protocol/
 ├── src/
-│   ├── app/                          # Next.js App Router pages
+│   ├── app/
 │   │   ├── layout.tsx               # Root layout with CCC Provider
 │   │   ├── page.tsx                 # Landing page
-│   │   ├── issuer/
-│   │   │   └── page.tsx             # Issuer dashboard
-│   │   ├── holder/
-│   │   │   └── page.tsx             # Holder dashboard
+│   │   ├── provider/
+│   │   │   └── page.tsx             # Provider dashboard
+│   │   ├── student/
+│   │   │   └── page.tsx             # Student dashboard
 │   │   └── verifier/
 │   │       └── page.tsx             # Verification page
 │   │
-│   ├── components/                   # Reusable React components
+│   ├── components/
 │   │   ├── ui/                      # Generic UI components
-│   │   │   ├── Button.tsx
-│   │   │   ├── Card.tsx
-│   │   │   ├── Input.tsx
-│   │   │   └── Modal.tsx
 │   │   ├── wallet/
 │   │   │   └── WalletConnect.tsx
-│   │   ├── credential/
-│   │   │   ├── CredentialCard.tsx
-│   │   │   ├── CredentialDetail.tsx
-│   │   │   └── CredentialForm.tsx
+│   │   ├── certificate/
+│   │   │   ├── CertificateCard.tsx
+│   │   │   ├── CertificateDetail.tsx
+│   │   │   ├── CertificateForm.tsx
+│   │   │   └── BatchIssuance.tsx
 │   │   ├── cluster/
 │   │   │   ├── ClusterCard.tsx
 │   │   │   └── ClusterForm.tsx
+│   │   ├── template/
+│   │   │   ├── TemplateCard.tsx
+│   │   │   └── TemplateForm.tsx
 │   │   └── verification/
 │   │       └── VerifyResult.tsx
 │   │
-│   ├── lib/                         # Business logic
-│   │   ├── ckb/                     # CKB client configuration
+│   ├── lib/
+│   │   ├── ckb/
 │   │   │   ├── config.ts            # Network & script configs
 │   │   │   └── client.ts            # Client setup
-│   │   ├── credentials/              # Credential business logic
+│   │   ├── certificates/
 │   │   │   ├── types.ts             # TypeScript interfaces
-│   │   │   ├── encoder.ts           # W3C VC JSON encoding
-│   │   │   ├── decoder.ts           # W3C VC JSON decoding
-│   │   │   ├── issuer.ts            # Credential issuance logic
-│   │   │   └── verifier.ts          # Credential verification logic
+│   │   │   ├── encoder.ts            # W3C VC JSON encoding
+│   │   │   ├── decoder.ts            # W3C VC JSON decoding
+│   │   │   ├── issuer.ts             # Certificate issuance logic
+│   │   │   ├── verifier.ts           # Certificate verification logic
+│   │   │   └── templates.ts          # Template management
 │   │   └── utils/
-│   │       └── formatters.ts        # Utility functions
+│   │       └── formatters.ts
 │   │
 │   └── styles/
-│       └── globals.css              # Global styles
+│       └── globals.css
 │
 ├── contracts/                        # Rust on-chain scripts (future)
 │   ├── Cargo.toml
@@ -269,83 +206,56 @@ dob-credential-protocol/
 └── README.md
 ```
 
-### 4.2 Module Responsibilities
-
-| Module | Responsibility |
-|--------|----------------|
-| `app/` | Page components and routing |
-| `components/ui/` | Generic UI primitives |
-| `components/wallet/` | Wallet connection UI |
-| `components/credential/` | Credential display and forms |
-| `components/cluster/` | Cluster management UI |
-| `lib/ckb/` | CKB client and configuration |
-| `lib/credentials/` | Credential business logic |
-| `contracts/` | Custom on-chain scripts |
-
 ---
 
 ## 5. Data Structures
 
-### 5.1 Credential DNA (W3C VC Compatible)
+### 5.1 Certificate DNA (W3C VC)
 
 ```mermaid
 classDiagram
     class VerifiableCredential {
-        +string[] @context
-        +string id
-        +string[] type
-        +Issuer issuer
-        +string issuanceDate
-        +string? expirationDate
-        +CredentialSubject credentialSubject
-        +Evidence[]? evidence
-        +CredentialStatus? credentialStatus
-        +Metadata? metadata
+        +@context: string[]
+        +id: string
+        +type: string[]
+        +issuer: Issuer
+        +issuanceDate: string
+        +expirationDate?: string
+        +credentialSubject: CertificateSubject
+        +credentialStatus?: CredentialStatus
     }
 
     class Issuer {
-        +string id
-        +string name
-        +string? description
+        +id: string
+        +name: string
+        +description?: string
     }
 
-    class CredentialSubject {
-        +string id
-        +any ...
+    class CertificateSubject {
+        +id: string
+        +courseName: string
+        +courseProvider: string
+        +completionDate: string
+        +grade?: string
+        +skills?: string[]
     }
 
-    class CourseCredential {
-        +string id
-        +Course course
-        +string completionDate
-        +string? grade
-        +string[] skills
-    }
-
-    class EventCredential {
-        +string id
-        +Event event
-        +string attendanceType
-    }
-
-    class CertificationCredential {
-        +string id
-        +Certification certification
-        +string examDate
-        +string? score
+    class CredentialStatus {
+        +id: string
+        +type: string
+        +revoked: boolean
+        +revocationReason?: string
     }
 
     VerifiableCredential --> Issuer
-    VerifiableCredential --> CredentialSubject
-    CredentialSubject <|-- CourseCredential
-    CredentialSubject <|-- EventCredential
-    CredentialSubject <|-- CertificationCredential
+    VerifiableCredential --> CertificateSubject
+    VerifiableCredential --> CredentialStatus
 ```
 
 ### 5.2 TypeScript Interfaces
 
 ```typescript
-// Credential Types
+// Certificate DNA (W3C VC Compatible)
 interface VerifiableCredential {
   "@context": string[];
   id: string;
@@ -353,10 +263,9 @@ interface VerifiableCredential {
   issuer: Issuer;
   issuanceDate: string;
   expirationDate?: string;
-  credentialSubject: CredentialSubject;
-  evidence?: Evidence[];
+  credentialSubject: CertificateSubject;
   credentialStatus?: CredentialStatus;
-  metadata?: CredentialMetadata;
+  metadata?: CertificateMetadata;
 }
 
 interface Issuer {
@@ -365,70 +274,73 @@ interface Issuer {
   description?: string;
 }
 
-interface CredentialSubject {
+interface CertificateSubject {
   id: string;
-  [key: string]: any;
-}
-
-// Credential-specific subjects
-interface CourseCredential extends CredentialSubject {
-  course: {
-    name: string;
-    description: string;
-    duration: string;
-    institution: string;
-  };
+  courseName: string;
+  courseProvider: string;
   completionDate: string;
   grade?: string;
-  skills: string[];
+  skills?: string[];
 }
 
-interface EventCredential extends CredentialSubject {
-  event: {
-    name: string;
-    description: string;
-    startDate: string;
-    endDate: string;
-    location: string;
-  };
-  attendanceType: 'in-person' | 'virtual' | 'hybrid';
+interface CredentialStatus {
+  id: string;
+  type: string;
+  revoked: boolean;
+  revocationReason?: string;
 }
 
-interface CertificationCredential extends CredentialSubject {
-  certification: {
-    name: string;
-    issuingBody: string;
-    level: string;
-    validityPeriod: string;
-  };
-  examDate: string;
-  score?: number;
+interface CertificateMetadata {
+  clusterId: string;
+  templateId?: string;
+  version: string;
 }
 
 // Cluster Configuration
 interface ClusterConfig {
   name: string;
   description: string;
-  credentialPolicy: CredentialPolicy;
-  metadata?: {
-    issuerUrl?: string;
-    revocationEndpoint?: string;
-  };
+  providerInfo: ProviderInfo;
+  certificatePolicy: CertificatePolicy;
+  metadata?: Record<string, any>;
 }
 
-interface CredentialPolicy {
+interface ProviderInfo {
+  url?: string;
+  logo?: string;
+  contact?: string;
+}
+
+interface CertificatePolicy {
   transferable: boolean;
-  requiresIssuerSignature: boolean;
-  maxIssuancePerRecipient?: number;
+  expirationDefault?: string;
   allowRenewal: boolean;
-  expirationRequired: boolean;
   revocationEnabled: boolean;
+}
+
+// Certificate Template
+interface CertificateTemplate {
+  id: string;
+  name: string;
+  description: string;
+  clusterId: string;
+  fields: TemplateField[];
+  requiredFields: string[];
+  defaultValues?: Record<string, any>;
+}
+
+interface TemplateField {
+  name: string;
+  type: 'text' | 'date' | 'select' | 'number';
+  label: string;
+  required: boolean;
+  options?: string[];
 }
 
 // Verification
 interface VerificationResult {
   valid: boolean;
-  credentialId: string;
+  certificateId: string;
   issuer: {
     id: string;
     name: string;
@@ -438,7 +350,7 @@ interface VerificationResult {
     address: string;
     ownershipVerified: boolean;
   };
-  credential: {
+  certificate: {
     type: string[];
     issuanceDate: string;
     expirationDate?: string;
@@ -457,219 +369,192 @@ interface VerificationResult {
 
 ```mermaid
 graph TB
-    subgraph Presentation["Presentation Layer"]
-        ISSUER_PAGE["Issuer Page"]
-        HOLDER_PAGE["Holder Page"]
-        VERIFIER_PAGE["Verifier Page"]
+    subgraph Pages
+        PROVIDER["Provider Page"]
+        STUDENT["Student Page"]
+        VERIFIER["Verifier Page"]
     end
 
-    subgraph Components["UI Components"]
-        WALLET["WalletConnect"]
-        CRED_CARD["CredentialCard"]
-        CRED_FORM["CredentialForm"]
-        CLUSTER_FORM["ClusterForm"]
-        VERIFY_RESULT["VerifyResult"]
+    subgraph Services
+        CLUSTER_SVC["Cluster Service"]
+        CERT_SVC["Certificate Service"]
+        VERIFY_SVC["Verify Service"]
+        TEMPLATE_SVC["Template Service"]
     end
 
-    subgraph Services["Service Layer"]
-        ISSUER_SVC["Issuer Service"]
-        VERIFIER_SVC["Verifier Service"]
+    subgraph Libraries
+        ENCODER["Encoder"]
+        DECODER["Decoder"]
     end
 
-    subgraph SDK["SDK Layer"]
+    subgraph SDK
         CCC["CCC SDK"]
-        SPORE_SDK["Spore SDK"]
+        SPORE["Spore SDK"]
     end
 
-    subgraph Blockchain["Blockchain"]
-        CKB["CKB Network"]
-    end
+    PROVIDER --> CLUSTER_SVC
+    PROVIDER --> CERT_SVC
+    PROVIDER --> TEMPLATE_SVC
+    STUDENT --> CERT_SVC
+    VERIFIER --> VERIFY_SVC
 
-    ISSUER_PAGE --> ISSUER_SVC
-    HOLDER_PAGE --> VERIFIER_SVC
-    VERIFIER_PAGE --> VERIFIER_SVC
-    ISSUER_PAGE --> WALLET
-    HOLDER_PAGE --> WALLET
+    CLUSTER_SVC --> SPORE
+    CERT_SVC --> ENCODER
+    CERT_SVC --> SPORE
+    VERIFY_SVC --> DECODER
+    VERIFY_SVC --> SPORE
+    TEMPLATE_SVC --> CERT_SVC
 
-    ISSUER_SVC --> CRED_FORM
-    VERIFIER_SVC --> CRED_CARD
-    VERIFIER_SVC --> VERIFY_RESULT
-
-    ISSUER_SVC --> SPORE_SDK
-    VERIFIER_SVC --> SPORE_SDK
-    CRED_CARD --> SPORE_SDK
-
-    SPORE_SDK --> CCC
-    CCC --> CKB
+    SPORE --> CCC
 ```
 
-### 6.2 Service Module Responsibilities
+### 6.2 Service Responsibilities
 
-| Module | Operations | External Dependencies |
-|--------|-----------|----------------------|
-| **Issuer Service** | `createCluster`, `issueCourseCredential`, `issueEventBadge`, `issueCertification` | Spore SDK, CCC |
-| **Verifier Service** | `verifyCredential`, `getHolderCredentials`, `getIssuerCredentials` | CCC, Spore SDK |
-| **Encoder** | `encodeCredentialDNA`, `validateCredentialDNA` | None |
-| **Decoder** | `decodeCredentialDNA`, `isExpired`, `isRevoked`, `formatDisplay` | None |
+| Module | Operations |
+|--------|-----------|
+| **Cluster Service** | `createCluster`, `getClusters` |
+| **Certificate Service** | `issueCertificate`, `getHolderCertificates`, `revokeCertificate` |
+| **Verify Service** | `verifyCertificate`, `isExpired`, `isRevoked` |
+| **Template Service** | `createTemplate`, `getTemplates`, `applyTemplate` |
 
-### 6.3 CCC & Spore SDK Usage
+### 6.3 SDK Usage
 
 ```mermaid
 sequenceDiagram
-    participant UI as UI Component
-    participant SVC as Issuer/Verifier Service
+    participant UI
+    participant SVC
     participant SPORE as Spore SDK
-    participant CCC as CCC SDK
-    participant CKB as CKB Network
+    participant CCC
+    participant CKB
 
-    Note over UI,CKB: Credential Issuance Flow
-    UI->>SVC: Call issueCourseCredential()
-    SVC->>SPORE: createCluster() / createSpore()
-    SPORE->>CCC: Build transaction
-    CCC->>CCC: completeInputsByCapacity()
-    CCC->>CCC: completeFeeBy()
-    SVC->>CKB: signAndSendTransaction()
-    CKB-->>SVC: Return txHash
+    Note over UI,CKB: Certificate Issuance
+    UI->>SVC: issueCertificate()
+    SVC->>SPORE: createSpore()
+    SPORE->>CCC: Build tx
+    CCC->>CKB: signAndSendTransaction()
+    CKB-->>CCC: txHash
+    CCC-->>SVC: txHash
+    SVC-->>UI: certificateId
 
-    Note over UI,CKB: Credential Verification Flow
-    UI->>SVC: Call verifyCredential(id)
+    Note over UI,CKB: Certificate Verification
+    UI->>SVC: verifyCertificate(id)
     SVC->>CCC: findCellsByType()
     CCC->>CKB: Query cell
-    CKB-->>CCC: Return cell data
-    CCC-->>SVC: Return cell
+    CKB-->>CCC: cell data
+    CCC-->>SVC: cell
     SVC->>SVC: Decode DNA
-    SVC-->>UI: Return VerificationResult
+    SVC-->>UI: VerificationResult
 ```
 
 ---
 
 ## 7. User Flows
 
-### 7.1 Credential Issuance Flow
+### 7.1 Provider Registration Flow
 
 ```mermaid
 sequenceDiagram
-    participant Issuer
+    participant Provider
     participant Frontend
-    participant CCC as CCC SDK
-    participant Spore as Spore SDK
-    participant CKB as CKB Network
+    participant SPORE as Spore SDK
+    participant CKB
 
-    Issuer->>Frontend: Connect wallet
-    Frontend->>CCC: Connect wallet (JoyID/MetaMask)
-    CCC-->>Frontend: Connected signer
-
-    Issuer->>Frontend: Create Cluster (name, policy)
-    Frontend->>Spore: createCluster()
-    Spore->>Spore: Build cluster creation tx
-    Spore->>CCC: tx.completeInputsByCapacity()
-    Spore->>CCC: tx.completeFeeBy()
-    Spore->>CKB: signAndSendTransaction()
-    CKB-->>Spore: txHash
-    Spore-->>Frontend: clusterId
-
-    Issuer->>Frontend: Issue Credential (recipient, data)
-    Frontend->>Frontend: Encode credential to W3C VC JSON
-    Frontend->>Spore: createSpore()
-    Spore->>Spore: Build credential DOB tx
-    Spore->>CCC: tx.completeInputsByCapacity()
-    Spore->>CCC: tx.completeFeeBy()
-    Spore->>CKB: signAndSendTransaction()
-    CKB-->>Spore: txHash
-    Spore-->>Frontend: credentialId
-    Frontend-->>Issuer: Success with credentialId
+    Provider->>Frontend: Connect wallet
+    Provider->>Frontend: Fill cluster info
+    Frontend->>SPORE: createCluster()
+    SPORE->>CKB: Transaction
+    CKB-->>SPORE: clusterId
+    SPORE-->>Frontend: clusterId
+    Frontend-->>Provider: Registration complete
 ```
 
-### 7.2 Credential Verification Flow
+### 7.2 Certificate Issuance Flow
+
+```mermaid
+sequenceDiagram
+    participant Provider
+    participant Frontend
+    participant ENCODER
+    participant SPORE as Spore SDK
+    participant CKB
+
+    Provider->>Frontend: Select cluster
+    Provider->>Frontend: Enter student address
+    Provider->>Frontend: Fill certificate data
+    Frontend->>ENCODER: Encode to W3C VC JSON
+    ENCODER-->>Frontend: Certificate DNA
+    Frontend->>SPORE: createSpore()
+    SPORE->>CKB: Transaction
+    CKB-->>SPORE: txHash
+    SPORE-->>Frontend: certificateId
+    Frontend-->>Provider: Certificate issued
+```
+
+### 7.3 Verification Flow
 
 ```mermaid
 sequenceDiagram
     participant Verifier
     participant Frontend
-    participant CCC as CCC SDK
-    participant CKB as CKB Network
+    participant CCC
+    participant DECODER
+    participant CKB
 
-    Verifier->>Frontend: Enter credential ID
-    Frontend->>CCC: findCellsByType(credentialId)
-    CCC->>CKB: Query cell by type script args
-    CKB-->>CCC: Return cell data
-    CCC-->>Frontend: Return cell
-
-    alt Cell found
-        Frontend->>Frontend: Decode credential DNA (JSON)
-        Frontend->>Frontend: Check expiration
-        Frontend->>Frontend: Check revocation status
-        Frontend->>Frontend: Verify issuer
-
-        alt Valid
-            Frontend-->>Verifier: ✅ Valid credential
-        else Expired
-            Frontend-->>Verifier: ⚠️ Expired
-        else Revoked
-            Frontend-->>Verifier: ❌ Revoked
-        end
-    else Cell not found
-        Frontend-->>Verifier: ❌ Credential not found
-    end
+    Verifier->>Frontend: Enter certificate ID
+    Frontend->>CCC: findCellsByType()
+    CCC->>CKB: Query cell
+    CKB-->>CCC: cell
+    CCC-->>Frontend: cell
+    Frontend->>DECODER: Decode DNA
+    DECODER-->>Frontend: Certificate
+    Frontend->>Frontend: Check expiration
+    Frontend->>Frontend: Check revocation
+    Frontend-->>Verifier: Verification result
 ```
 
-### 7.3 Holder Credential Management Flow
+### 7.4 Batch Issuance Flow
 
 ```mermaid
 flowchart TD
-    START["Holder Connects Wallet"] --> QUERY["Query credentials by holder address"]
-    QUERY --> FIND["Find all Spore cells owned by holder"]
-    FIND --> DECODE["Decode each cell's DNA"]
-    DECODE --> FILTER["Filter W3C VC credentials"]
-    FILTER --> DISPLAY["Display credential list"]
-    DISPLAY --> SELECT["Select credential"]
-    SELECT --> ACTION["Choose action"]
-    ACTION --> VIEW["View Details"]
-    ACTION --> COPY["Copy ID"]
-    ACTION --> EXPLORER["Open in Explorer"]
-    ACTION --> TRANSFER{"Transferable?"}
-    TRANSFER -->|Yes| DO_TRANSFER["Transfer to another address"]
-    TRANSFER -->|No| END["End"]
-    DO_TRANSFER --> END
-    VIEW --> END
-    COPY --> END
-    EXPLORER --> END
+    START["Provider uploads CSV/JSON"] --> PARSE["Parse recipient list"]
+    PARSE --> VALIDATE["Validate each entry"]
+    VALIDATE --> ERRORS{"Errors?"}
+    ERRORS -->|Yes| FIX["Fix errors"]
+    FIX --> PARSE
+    ERRORS -->|No| PREVIEW["Preview list"]
+    PREVIEW --> CONFIRM["Confirm batch"]
+    CONFIRM --> ENCODE["Encode all certificates"]
+    ENCODE --> TX["Create batch transaction"]
+    TX --> SEND["Send to CKB"]
+    SEND --> RESULTS["Show results"]
 ```
 
 ---
 
 ## 8. Custom On-Chain Scripts (Future)
 
-### 8.1 Soulbound Credential Script
+### 8.1 Soulbound Certificate Script
 
-For non-transferable credentials, a custom Type Script may be needed.
+For non-transferable certificates, a custom Type Script may be needed.
 
 ```mermaid
 graph LR
     subgraph Transaction
-        INPUT["Input Cell<br/>(Old credential)"]
-        OUTPUT["Output Cell<br/>(New owner)"]
+        INPUT["Input Cell"]
+        OUTPUT["Output Cell"]
     end
 
-    subgraph Script["Soulbound Type Script"]
-        CHECK["Check input == output owner?"]
-        PASS["Pass"]
-        FAIL["Reject"]
+    subgraph Script
+        CHECK["Check owner == input owner?"]
+        PASS["Allow"]
+        REJECT["Reject"]
     end
 
     INPUT --> CHECK
     CHECK -->|Same owner| PASS
-    CHECK -->|Different owner| FAIL
+    CHECK -->|Different owner| REJECT
     PASS --> OUTPUT
 ```
-
-### 8.2 Script Specifications
-
-| Script | Type | Purpose |
-|--------|------|---------|
-| `credential-soulbound` | Type Script | Enforce non-transferability |
-| `credential-revocable` | Type Script | Allow issuer revocation |
-| `credential-expiring` | Type Script | Auto-expire after timestamp |
 
 ---
 
@@ -685,7 +570,7 @@ graph BT
         UNIT["Unit Tests"]
     end
 
-    subgraph Coverage
+    subgraph Targets
         UI["UI Components"]
         SERVICES["Services"]
         CONTRACTS["On-Chain Scripts"]
@@ -693,7 +578,6 @@ graph BT
 
     UNIT --> SERVICES
     INT --> UI
-    E2E --> E2E
     E2E --> CONTRACTS
 ```
 
@@ -701,40 +585,16 @@ graph BT
 
 | Test | Target | Tools |
 |------|--------|-------|
-| Unit Tests | Encoder/Decoder logic | Jest / Vitest |
-| Unit Tests | Service functions | Jest / Vitest |
-| Integration Tests | Transaction building | CCC + Mock |
-| Integration Tests | Type Script logic | ckb-testtool |
-| E2E Tests | Full flows | Playwright |
+| Unit Tests | Encoder/Decoder | Vitest |
+| Unit Tests | Service functions | Vitest |
+| Integration | Transaction building | CCC + Mock |
+| E2E | Full flows | Playwright |
 
 ---
 
 ## 10. Deployment Configuration
 
-### 10.1 Environment Configuration
-
-```mermaid
-graph LR
-    subgraph Environments
-        DEV["Development"]
-        TEST["Testnet"]
-        PROD["Mainnet"]
-    end
-
-    subgraph Config
-        URL["Network URLs"]
-        SCRIPTS["Script Addresses"]
-    end
-
-    DEV --> URL
-    DEV --> SCRIPTS
-    TEST --> URL
-    TEST --> SCRIPTS
-    PROD --> URL
-    PROD --> SCRIPTS
-```
-
-### 10.2 Network Configuration
+### 10.1 Network Configuration
 
 | Environment | Network | CKB Node | Indexer |
 |-------------|---------|----------|---------|
@@ -746,62 +606,68 @@ graph LR
 
 ## 11. Milestones
 
-### 11.1 Timeline Overview
+### 11.1 Timeline
 
 ```mermaid
 gantt
-    title DOB Credential Protocol - Development Timeline
+    title CKB Credential Registry - Timeline
     dateFormat  YYYY-MM-DD
+
     section Week 9
-    Project Setup & Cluster Management    :2024-01-01, 7d
+    Project Setup & Provider Registration    :2024-01-01, 10d
+
     section Week 10
-    Credential Issuance                   :2024-01-08, 7d
+    Certificate Issuance & View               :2024-01-08, 10d
+
     section Week 11
-    Credential Verification               :2024-01-15, 7d
+    Verification & Extended Features          :2024-01-15, 10d
+
     section Week 12
-    Polish & Documentation              :2024-01-22, 7d
+    Polish & Documentation                  :2024-01-22, 10d
 ```
 
-### 11.2 Detailed Milestones
+### 11.2 Week-by-Week Milestones
 
-| Week | Milestone | Deliverables | Success Criteria |
-|------|-----------|--------------|------------------|
-| **Week 9** | Project Setup & Cluster Management | Project scaffold, CCC + Spore integration, Cluster creation UI, Cluster listing | Issuer can create and view Clusters |
-| **Week 10** | Credential Issuance | Credential forms (course, event, cert), W3C VC JSON encoding, Issuance transaction, Credential listing | Issuer can issue credentials, Holder can view them |
-| **Week 11** | Credential Verification | Verification page, Credential detail view, Verification result display | Verifier can verify any credential |
-| **Week 12** | Polish & Documentation | UI/UX improvements, Error handling, Testing, README | All features work, Tests pass |
-
-### 11.3 Feature Release Plan
-
-```mermaid
-graph LR
-    subgraph MVP[Week 9-10: MVP]
-        W9["Week 9:<br/>Setup + Cluster"]
-        W10["Week 10:<br/>Issuance"]
-    end
-
-    subgraph Extended[Week 11-12: Extended]
-        W11["Week 11:<br/>Verification"]
-        W12["Week 12:<br/>Polish"]
-    end
-
-    subgraph Future[Future Releases]
-        SB["Soulbound Script"]
-        REV["Revocation"]
-        EXP["Expiration Script"]
-    end
-
-    W9 --> W10 --> W11 --> W12
-    W12 --> SB
-    W12 --> REV
-    W12 --> EXP
-```
+| Week | Milestone | Deliverables |
+|------|-----------|--------------|
+| **Week 9** | Project Setup & Provider Registration | Scaffold, wallet connection, Cluster creation |
+| **Week 10** | Certificate Issuance & View | Issuance, W3C VC encoding, holder dashboard |
+| **Week 11** | Verification & Extended Features | Verify, templates, batch, revocation |
+| **Week 12** | Polish & Documentation | Error handling, testing, README, demo |
 
 ---
 
-## Appendix A: Key References
+## Appendix: Feature Coverage
 
-| Resource | URL |
+### Original Core Value Propositions
+
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Fully on-chain | ✅ | Spore DOB DNA |
+| Holder-owned | ✅ | Spore lock script |
+| CKB-backed | ✅ | Spore capacity + melt |
+| Zero transfer fees | ✅ | CKB UTXO model |
+| Cluster organization | ✅ | Spore Cluster |
+
+### New Scope Features
+
+| Feature | Status | Week |
+|---------|--------|------|
+| Course Provider Registration | ✅ | Week 9 |
+| Certificate Issuance | ✅ | Week 10 |
+| Student View | ✅ | Week 10 |
+| Student Share | ✅ | Week 10 |
+| Verifier Check | ✅ | Week 11 |
+| Certificate Templates | ✅ | Week 11 |
+| Batch Issuance | ✅ | Week 11 |
+| Expiration | ✅ | Week 11 |
+| Revocation | ✅ | Week 11 |
+
+---
+
+## References
+
+| Resource | Link |
 |----------|-----|
 | W3C VC Data Model | https://www.w3.org/TR/vc-data-model/ |
 | Spore Protocol | https://docs.spore.pro/ |
@@ -809,8 +675,3 @@ graph LR
 | CCC SDK | https://docs.ckbccc.com |
 | Spore SDK | https://github.com/sporeprotocol/spore-sdk |
 
----
-
-*Document Version: 1.0*
-*Last Updated: 2026-08-11*
-*Author: Claude (for CKBuilder Week 8)*

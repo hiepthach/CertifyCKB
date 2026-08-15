@@ -1,26 +1,28 @@
-# DOB Credential & Badge Protocol — 4-Week Project Schedule
+# CKB Credential Registry — 4-Week Project Schedule
+
+> **Project Focus**: Course completion certificate registry for course providers, students, and verifiers.
 
 ## Overview
 
 | Item | Details |
 |------|---------|
 | **Duration** | Week 9 – Week 12 (4 weeks) |
-| **Goal** | Build a working MVP of a verifiable credentials system on CKB |
+| **Goal** | Build a working MVP of course credential registry on CKB |
 
 ---
 
 ## Weekly Summary
 
-| Week | Focus | Deliverables |
-|------|-------|--------------|
-| **Week 9** | Project Setup & Cluster Management | Project scaffold, wallet connection, cluster creation |
-| **Week 10** | Credential Issuance | Credential issuance, W3C VC encoding, holder display |
-| **Week 11** | Credential Verification | Verification, credential detail, verification results |
+| Week | Focus | Core Deliverables |
+|------|-------|-------------------|
+| **Week 9** | Project Setup & Provider Registration | Scaffold, wallet connection, Cluster creation |
+| **Week 10** | Certificate Issuance & View | Single issuance, W3C VC encoding, holder dashboard |
+| **Week 11** | Verification & Extended Features | Verify, templates, batch issuance, revocation |
 | **Week 12** | Polish & Documentation | Error handling, testing, README, demo |
 
 ---
 
-## Week 9: Project Setup & Cluster Management
+## Week 9: Project Setup & Provider Registration
 
 **Estimated Time**: 10 hours
 
@@ -28,7 +30,7 @@
 - Set up Next.js project with TypeScript
 - Configure CCC SDK and Spore SDK for devnet
 - Implement wallet connection
-- Create Cluster management functionality
+- Create Course Provider registration (Cluster creation)
 
 ### Tasks
 
@@ -38,24 +40,25 @@
   ```bash
   npx create-next-app@latest dob-credential-protocol --typescript --tailwind --eslint
   ```
+  - Reference: [Next.js Setup](https://nextjs.org/docs)
+
 - [ ] Install dependencies
   ```bash
-  npm install @ckb-ccc/connector-react @ckb-ccc/core @ckb-ccc/spore
-  npm install @spore-sdk/core
+  npm install @ckb-ccc/connector-react @ckb-ccc/core @ckb-ccc/spore @spore-sdk/core
   ```
+  - Reference: [CCC SDK](https://docs.ckbccc.com), [Spore SDK](https://docs.spore.pro/)
 
-- [ ] Configure Tailwind CSS and global styles
-- [ ] Set up project folder structure
+- [ ] Configure Tailwind CSS and project folder structure
 
 #### 2. CKB Client & SDK Configuration (2h)
 
 - [ ] Configure CKB client for OffCKB devnet
   - Network: `http://localhost:28114`
-  - Reference: [CCC SDK Docs](https://docs.ckbccc.com)
+  - Reference: [CCC Client Setup](https://docs.ckbccc.com)
 
 - [ ] Configure Spore SDK
-  - Use `predefinedSporeConfigs.Devnet` or custom config
-  - Reference: [Spore SDK](https://docs.spore.pro/)
+  - Use `predefinedSporeConfigs.Devnet`
+  - Reference: [Spore SDK Config](https://docs.spore.pro/)
 
 - [ ] Set up environment variables (`.env.local`)
 
@@ -65,6 +68,7 @@
   ```tsx
   import { CccProvider } from "@ckb-ccc/connector-react";
   ```
+  - Reference: [CCC React Connector](https://docs.ckbccc.com)
 
 - [ ] Implement `WalletConnect` component
   - Support: JoyID, MetaMask, Neuron, Portal Wallet
@@ -72,19 +76,23 @@
 
 - [ ] Test wallet connection with multiple wallets
 
-#### 4. Cluster Management (3h)
+#### 4. Provider Registration (Cluster Creation) (3h)
 
 - [ ] Define TypeScript interfaces
   - `ClusterConfig`
   - `CredentialPolicy`
+  - `ProviderInfo`
 
-- [ ] Implement `createCluster` service function
+- [ ] Implement `createCluster` service
   - Use Spore SDK's `createCluster()`
-  - Reference: [Spore Cluster Creation](https://docs.spore.pro/)
+  - Reference: [Spore Cluster](https://docs.spore.pro/)
 
-- [ ] Create `ClusterForm` and `ClusterCard` components
+- [ ] Create `ClusterForm` component
+  - Provider name, description, policy settings
 
-- [ ] Build Issuer dashboard page
+- [ ] Build Provider dashboard page
+  - List created clusters
+  - Create new cluster
 
 ### Tech References
 | Tech | Link | Purpose |
@@ -105,59 +113,64 @@
 
 ---
 
-## Week 10: Credential Issuance
+## Week 10: Certificate Issuance & View
 
 **Estimated Time**: 10 hours
 
 ### Goals
-- Implement W3C VC compliant credential encoding/decoding
-- Build credential issuance for 3 types (course, event, certification)
-- Create holder dashboard to view credentials
+- Implement W3C VC compliant certificate encoding/decoding
+- Build single certificate issuance
+- Create holder dashboard to view certificates
 
 ### Tasks
 
-#### 1. Credential Data Layer (3h)
+#### 1. Certificate Data Layer (3h)
 
 - [ ] Define TypeScript interfaces
   - `VerifiableCredential`
-  - `CredentialSubject`
-  - `CourseCredential`, `EventCredential`, `CertificationCredential`
+  - `CertificateSubject` (course-specific fields)
+  - `CredentialStatus`
+  - Reference: [W3C VC Data Model](https://www.w3.org/TR/vc-data-model/)
 
-- [ ] Implement `encodeCredentialDNA()`
-  - Encode credential data to W3C VC JSON
-  - Add `@context`, `id`, `issuanceDate`
+- [ ] Implement `encodeCertificateDNA()`
+  - Encode to W3C VC JSON
+  - Include `@context`, `id`, `issuanceDate`
+  - Reference: [JSON-LD](https://json-ld.org/)
 
-- [ ] Implement `decodeCredentialDNA()`
+- [ ] Implement `decodeCertificateDNA()`
   - Decode JSON bytes to credential object
   - Add validation
 
-#### 2. Credential Issuance (4h)
+#### 2. Certificate Issuance (4h)
 
-- [ ] Implement `issueCourseCredential()`
-  - Course completion credential
-  - Fields: course name, institution, completion date, grade, skills
+- [ ] Implement `issueCertificate()`
+  - Single certificate issuance
+  - Fields: course name, completion date, grade, skills
+  - Reference: [Spore createSpore](https://docs.spore.pro/)
 
-- [ ] Implement `issueEventBadge()`
-  - Event attendance badge (POAP-style)
-  - Fields: event name, dates, location, attendance type
+- [ ] Create certificate issuance form
+  - Select provider's cluster
+  - Enter recipient wallet address
+  - Fill certificate fields
+  - Add validation
 
-- [ ] Implement `issueCertification()`
-  - Professional certification
-  - Fields: certification name, issuing body, level, validity period
-
-- [ ] Create credential issuance forms with validation
+- [ ] Handle transaction completion
+  - Show transaction hash
+  - Display certificate ID
 
 #### 3. Holder Dashboard (3h)
 
-- [ ] Implement `getHolderCredentials()`
+- [ ] Implement `getHolderCertificates()`
   - Query Spore cells by holder address
   - Filter for W3C VC credentials
+  - Reference: [Cell Query](https://docs.ckbccc.com/api/ccc)
 
-- [ ] Create `CredentialCard` component
-  - Display: type, title, issuer, date, status
+- [ ] Create `CertificateCard` component
+  - Display: course name, provider, date, status
 
 - [ ] Build holder dashboard page
-  - List all credentials in wallet
+  - List all certificates in wallet
+  - Show certificate count
 
 ### Tech References
 | Tech | Link | Purpose |
@@ -168,64 +181,88 @@
 | Cell Query | https://docs.ckbccc.com/api/ccc | Query cells |
 
 ### Definition of Done
-- [ ] Can issue course completion credential
-- [ ] Can issue event attendance badge
-- [ ] Can issue professional certification
-- [ ] Holder can view all credentials in dashboard
+- [ ] Can issue a course completion certificate
+- [ ] Holder can view all certificates in dashboard
 - [ ] Full issuance flow works end-to-end
+- [ ] Certificate shows on holder dashboard
 
 ---
 
-## Week 11: Credential Verification
+## Week 11: Verification & Extended Features
 
 **Estimated Time**: 10 hours
 
 ### Goals
-- Build credential verification functionality
-- Create verification UI and result display
-- Implement credential detail view
+- Build certificate verification functionality
+- Add certificate templates
+- Implement batch issuance
+- Add revocation capability
 
 ### Tasks
 
-#### 1. Verification Logic (3h)
+#### 1. Verification (3h)
 
-- [ ] Implement `verifyCredential()`
-  - Query credential cell by ID
+- [ ] Implement `verifyCertificate()`
+  - Query certificate cell by ID
   - Decode and validate credential DNA
   - Check expiration and revocation status
 
-- [ ] Implement `isExpired()`
-  - Check `expirationDate` field
-
-- [ ] Implement `isRevoked()`
-  - Check `credentialStatus` field
+- [ ] Implement `isExpired()` and `isRevoked()`
 
 - [ ] Define `VerificationResult` type
 
-#### 2. Verification UI (4h)
-
-- [ ] Create `VerifyResult` component
-  - Display: valid/invalid status
-  - Show: issuer, type, dates, status badges
-
 - [ ] Build verifier page
-  - Input: credential ID
-  - Output: verification result
+  - Input: certificate ID
+  - Output: verification result with details
 
-- [ ] Create `CredentialDetail` component
-  - Full credential view
+- [ ] Create `CertificateDetail` component
+  - Full certificate view
   - Show all credential fields
 
-#### 3. Polish & Integration (3h)
+#### 2. Certificate Templates (2h)
 
-- [ ] Add CKB Explorer links
-  - View transaction on explorer
-  - Reference: [CKB Explorer](https://explorer.nervos.org/)
+- [ ] Define `CertificateTemplate` interface
+  - Template name
+  - Field definitions
+  - Required fields
+  - Default values
 
-- [ ] Implement copy credential ID
-  - Clipboard API
+- [ ] Create template management
+  - List templates
+  - Create new template
+  - Edit template
 
-- [ ] End-to-end verification test
+- [ ] Use template in issuance form
+  - Select template
+  - Auto-fill fields
+
+#### 3. Batch Issuance (3h)
+
+- [ ] Design batch issuance input format
+  - CSV upload
+  - JSON list
+
+- [ ] Implement batch issuance service
+  - Parse input
+  - Create multiple Spore DOBs
+  - Send transaction
+
+- [ ] Create batch issuance UI
+  - Upload CSV/JSON
+  - Preview list
+  - Confirm and issue
+
+#### 4. Revocation (2h)
+
+- [ ] Implement `revokeCertificate()`
+  - Mark certificate as revoked
+  - Update credential status
+
+- [ ] Add revocation UI
+  - Provider selects certificate to revoke
+  - Confirm revocation
+
+- [ ] Add "Revoked" badge in holder dashboard
 
 ### Tech References
 | Tech | Link | Purpose |
@@ -235,11 +272,12 @@
 | Clipboard API | https://developer.mozilla.org/en-US/docs/Web/API/Clipboard_API | Copy to clipboard |
 
 ### Definition of Done
-- [ ] Can verify credential by ID
+- [ ] Can verify certificate by ID
 - [ ] Verification shows expiration status
-- [ ] Can view full credential details
-- [ ] Explorer links work
-- [ ] Copy ID feature works
+- [ ] Can view full certificate details
+- [ ] Templates work
+- [ ] Batch issuance works
+- [ ] Revocation works
 
 ---
 
@@ -267,26 +305,30 @@
   - Disabled buttons during loading
 
 - [ ] Add empty states
-  - "No credentials yet" message
+  - "No certificates yet" message
   - "No clusters created" message
+
+- [ ] Add share functionality
+  - Copy certificate ID
+  - Open in CKB Explorer
 
 #### 2. Testing (3h)
 
 - [ ] Write unit tests for `encoder`
   ```typescript
-  // Test encodeCredentialDNA
-  // Test validateCredentialDNA
+  // Test encodeCertificateDNA
+  // Test validateCertificateDNA
   ```
 
 - [ ] Write unit tests for `decoder`
   ```typescript
   // Test isExpired
   // Test isRevoked
-  // Test formatCredentialDisplay
+  // Test formatCertificateDisplay
   ```
 
-- [ ] Integration test: full credential lifecycle
-  - Create cluster → Issue credential → Verify → Display
+- [ ] Integration test: full certificate lifecycle
+  - Create cluster → Issue certificate → Verify → Display
 
 #### 3. Documentation (2h)
 
@@ -325,6 +367,48 @@
 
 ---
 
+## Feature Scope Summary
+
+### MVP (Week 9-10) ✅
+| Feature | Status |
+|---------|--------|
+| Course Provider Registration | Week 9 |
+| Certificate Issuance | Week 10 |
+| Student View Certificates | Week 10 |
+| Student Share (Copy ID) | Week 10 |
+| Verifier Check | Week 11 |
+
+### Extended (Week 11) ✅
+| Feature | Status |
+|---------|--------|
+| Certificate Templates | Week 11 |
+| Batch Issuance | Week 11 |
+| Expiration Check | Week 11 |
+| Revocation | Week 11 |
+
+### Future (Post-Capstone)
+| Feature | Notes |
+|---------|-------|
+| Renewal | Update expiration date |
+| Embedding | Embed on external platforms |
+| Trust Layer | Verified issuers registry |
+| Analytics Dashboard | Provider statistics |
+| Comments/Reviews | Social features |
+
+---
+
+## Core Value Propositions
+
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Fully on-chain | ✅ | Spore DOB DNA |
+| Holder-owned | ✅ | Spore lock script |
+| CKB-backed | ✅ | Spore capacity + melt |
+| Zero transfer fees | ✅ | CKB UTXO model |
+| Cluster organization | ✅ | Spore Cluster |
+
+---
+
 ## Master Task Checklist
 
 ### Week 9
@@ -332,52 +416,41 @@
 - [ ] Install CCC SDK and Spore SDK
 - [ ] Configure devnet connection
 - [ ] Implement wallet connection (JoyID, MetaMask)
-- [ ] Define Cluster interfaces
+- [ ] Define Cluster/Credential interfaces
 - [ ] Implement createCluster service
 - [ ] Build cluster creation UI
-- [ ] Build issuer dashboard
+- [ ] Build provider dashboard
 
 ### Week 10
-- [ ] Define credential interfaces (W3C VC)
-- [ ] Implement encodeCredentialDNA
-- [ ] Implement decodeCredentialDNA
-- [ ] Implement issueCourseCredential
-- [ ] Implement issueEventBadge
-- [ ] Implement issueCertification
-- [ ] Build credential issuance forms
-- [ ] Implement getHolderCredentials
+- [ ] Define certificate interfaces (W3C VC)
+- [ ] Implement encodeCertificateDNA
+- [ ] Implement decodeCertificateDNA
+- [ ] Implement issueCertificate
+- [ ] Build certificate issuance form
+- [ ] Implement getHolderCertificates
 - [ ] Build holder dashboard
 
 ### Week 11
-- [ ] Implement verifyCredential
+- [ ] Implement verifyCertificate
 - [ ] Implement isExpired, isRevoked
-- [ ] Build VerifyResult component
 - [ ] Build verifier page
-- [ ] Build CredentialDetail component
-- [ ] Add explorer links
-- [ ] Add copy ID feature
+- [ ] Build CertificateDetail component
+- [ ] Define CertificateTemplate interface
+- [ ] Implement template management
+- [ ] Implement batch issuance
+- [ ] Implement revocation
 
 ### Week 12
 - [ ] Add error handling
 - [ ] Add loading states
 - [ ] Add empty states
+- [ ] Add share functionality
 - [ ] Write encoder tests
 - [ ] Write decoder tests
 - [ ] Integration test
 - [ ] Write README
 - [ ] Prepare demo
 - [ ] Final polish
-
----
-
-## Risk Mitigation
-
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| Spore SDK compatibility issues | Medium | High | Test early, check SDK docs |
-| Wallet connection problems | Low | Medium | Support multiple wallets |
-| Complex credential forms | Medium | Low | Start simple, add incrementally |
-| Time constraints | Medium | Medium | Prioritize MVP, defer non-essential |
 
 ---
 
@@ -399,8 +472,3 @@
 |----------|------|
 | Project Analysis | `Requirement_analysis/Project_Analysis.md` |
 | Implementation Architecture | `Requirement_analysis/Implementation_Architecture.md` |
-
----
-
-*Document Version: 1.0*
-*Last Updated: 2026-08-11*

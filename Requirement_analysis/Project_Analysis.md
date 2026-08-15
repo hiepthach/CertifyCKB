@@ -1,628 +1,569 @@
-# DOB Credential & Badge Protocol — Requirement Analysis
+# DOB Credential & Badge Protocol — Project Analysis
+
+> **Updated Scope**: CKB Credential Registry — A focused credential system for course providers, students, and verifiers.
+
+---
 
 ## 1. Project Overview
 
 ### 1.1 Project Name
-**DOB Credential & Badge Protocol**
+**CKB Credential Registry** (DOB Credential & Badge Protocol)
 
 ### 1.2 Project Type
 Blockchain-native verifiable credentials system built on CKB using the Spore Protocol.
 
 ### 1.3 Project Summary
 
-A protocol for issuing, managing, and verifying verifiable credentials (course completions, event attendance, skill certifications, employment history) as Spore DOBs organized in Clusters. Credentials are fully on-chain, holder-owned, backed by locked CKB, and transferable with zero fees.
+A registry for issuing, managing, and verifying course completion certificates on CKB. Course providers register and issue certificates as Spore DOBs organized in Clusters. Students view and share their certificates. Verifiers can verify certificate authenticity.
 
-### 1.4 Core Value Propositions
+### 1.4 Core Value Propositions (Original)
 
-| Feature | Description |
-|---------|-------------|
-| **Fully On-Chain** | All credential data stored in Spore cells (DNA = credential metadata) |
-| **Holder-Owned** | Credentials are NFTs owned by the recipient (wallet) |
-| **CKB-Backed** | Issuing requires locking CKB; reclaimable by melting the credential |
-| **Zero Transfer Fees** | CKB's model allows free credential transfers |
-| **Cluster Organization** | Issuers create Clusters; recipients hold DOBs within Clusters |
-| **Non-Transferable Option** | Credentials can be configured as soulbound (non-transferable) for certain use cases |
-
----
-
-## 2. Problem Statement & Market Analysis
-
-### 2.1 The Credential Verification Problem
-
-Traditional credential systems suffer from:
-- **Centralized control**: Institutions own and control records
-- **Verification friction**: Third parties must contact issuers to verify
-- **Data silos**: No interoperability between credential systems
-- **Forgery risk**: Digital certificates can be copied or faked
-- **Privacy issues**: Credentials reveal more information than necessary
-
-### 2.2 CKB Community Relevance
-
-**Why CKB is ideal for this use case:**
-
-1. **UTXO Model Advantage**: Unlike account-based chains, credentials stored as cells don't require gas for transfers. This makes credential sharing truly free.
-
-2. **Spore Protocol**: Native DOB standard with built-in:
-   - Cluster organization (perfect for issuers/organizations)
-   - DNA structure (flexible metadata for credential attributes)
-   - Melt-to-reclaim (credentials have intrinsic value)
-
-3. **CKB-VM Flexibility**: Custom validation scripts can enforce credential rules:
-   - Expiration dates
-   - Revocation mechanisms
-   - Transferability constraints
-   - Multi-sig issuance requirements
-
-4. **Ecosystem Alignment**: The CKB community values:
-   - Self-sovereign identity
-   - Privacy-preserving systems
-   - True on-chain ownership
-
-### 2.3 Target Use Cases
-
-| Use Case | Description | Credential Type |
-|----------|-------------|----------------|
-| **Online Course Certificates** | Completion proofs from educational platforms | Transferable/non-transferable |
-| **Event Attendance Badges** | POAP-style attendance proofs for conferences/hackathons | Non-transferable |
-| **Professional Certifications** | Skill attestations from recognized institutions | Non-transferable |
-| **Employment History** | On-chain work experience verification | Non-transferable |
-| **Achievement Badges** | Gamified skill acknowledgments | Transferable/non-transferable |
-| **Membership Cards** | DAO/organization membership credentials | Semi-transferable |
+| Feature | Description | Implementation |
+|---------|-------------|----------------|
+| **Fully On-Chain** | All credential data stored in Spore cells (DNA = credential metadata) | Spore DOB content field |
+| **Holder-Owned** | Credentials are NFTs owned by the recipient | Spore DOB lock = recipient wallet |
+| **CKB-Backed** | Issuing locks CKB; reclaimable by melting | Spore capacity + melt-to-reclaim |
+| **Zero Transfer Fees** | CKB's model allows free credential transfers | CKB UTXO model |
+| **Cluster Organization** | Issuers create Clusters; recipients hold DOBs | Spore Cluster + DOB |
 
 ---
 
-## 3. Input/Output Analysis
+## 2. Feature Specification
 
-### 3.1 System Inputs
+### 2.1 Core Features
 
-#### 3.1.1 Issuer Inputs
-```
-- Issuer Wallet (Lock Script)
-- Cluster Configuration
-  - Cluster name
-  - Cluster description (JSON with decoder config)
-  - Cluster policy (who can mint credentials)
-- Credential Template
-  - Credential type
-  - Required attributes
-  - Transferability setting
-  - Expiration policy
-- Credential Metadata (per issuance)
-  - Recipient address
-  - Credential name/title
-  - Issue date
-  - Expiration date (optional)
-  - Custom attributes (skills, scores, etc.)
-  - Evidence/proof URLs
-```
+| # | Feature | Description | Priority |
+|---|---------|-------------|----------|
+| **F1** | Course Provider Registration | Providers create Clusters to issue certificates | P0 |
+| **F2** | Certificate Issuance | Mint credential DOBs to students | P0 |
+| **F3** | Student View | Students see all their certificates | P0 |
+| **F4** | Student Share | Share certificate ID or view link | P0 |
+| **F5** | Verifier Check | Verify certificate by ID | P0 |
 
-#### 3.1.2 Holder Inputs
-```
-- Holder Wallet (Lock Script)
-- Credential ID to present
-- Verification request (to third party)
-```
+### 2.2 Additional Features
 
-#### 3.1.3 Verifier Inputs
-```
-- Credential Spore ID
-- Expected issuer/cluster
-- Expected credential type
-- Verification timestamp
-```
+| # | Feature | Description | Priority |
+|---|---------|-------------|----------|
+| **F6** | Certificate Templates | Pre-defined certificate formats | P1 |
+| **F7** | Batch Issuance | Issue multiple certificates at once | P1 |
+| **F8** | Expiration | Time-based certificate validity | P1 |
+| **F9** | Renewal | Renew expired certificates | P2 |
+| **F10** | Revocation | Issuer can revoke certificates | P1 |
+| **F11** | Credential Embedding | Embed certificate on external platforms | P2 |
+| **F12** | Issuer Verification | Trust layer for issuers | P2 |
+| **F13** | Analytics Dashboard | Provider sees issuance stats | P2 |
+| **F14** | Comments/Reviews | Students can comment on certificates | P3 |
 
-### 3.2 System Outputs
+### 2.3 Feature Prioritization (MVP vs Extended)
 
-#### 3.2.1 On-Chain Outputs (Cells)
-```
-1. Cluster Cell (created by issuer)
-   - Type Script: SPORE_CLUSTER
-   - Data: Cluster configuration + metadata
-   
-2. Credential DOB Cell (created by issuer → recipient)
-   - Type Script: SPORE
-   - Data: Credential DNA (JSON metadata)
-   - Lock Script: Recipient's wallet
-   - Capacity: Locked CKB backing value
-```
+```mermaid
+graph LR
+    subgraph MVP["MVP (Week 9-10)"]
+        F1["Provider Registration<br/>(Cluster)"]
+        F2["Certificate Issuance"]
+        F3["Student View"]
+        F4["Student Share"]
+        F5["Verifier Check"]
+    end
 
-#### 3.2.2 Off-Chain Outputs
-```
-1. Transaction Receipt
-   - Transaction hash
-   - Credential Spore ID
-   - Block confirmation
+    subgraph Extended1["Week 11 - Extended"]
+        F6["Templates"]
+        F7["Batch Issuance"]
+        F8["Expiration"]
+        F10["Revocation"]
+    end
 
-2. Verification Response
-   - Credential validity
-   - Issuer verification
-   - Expiration status
-   - Revocation status
+    subgraph Future["Future Releases"]
+        F9["Renewal"]
+        F11["Embedding"]
+        F12["Trust Layer"]
+        F13["Analytics"]
+        F14["Comments"]
+    end
+
+    MVP --> Extended1 --> Future
 ```
 
 ---
 
-## 4. Existing Credential Standards Reference
+## 3. User Roles & Use Cases
 
-### 4.1 W3C Verifiable Credentials (VC) Data Model
+### 3.1 User Roles
 
-The W3C VC standard provides the conceptual foundation:
+| Role | Description | Capabilities |
+|------|-------------|--------------|
+| **Course Provider (Issuer)** | Educational platform, course creator | Register, Issue, Revoke |
+| **Student (Holder)** | Certificate recipient | View, Share, Transfer (if allowed) |
+| **Verifier** | Anyone checking validity | Verify, View Details |
 
-```json
-{
-  "@context": [
-    "https://www.w3.org/2018/credentials/v1",
-    "https://www.w3.org/2018/credentials/examples/v1"
-  ],
-  "id": "urn:uuid:...",
-  "type": ["VerifiableCredential", "CourseCertificate"],
-  "issuer": {
-    "id": "did:example:issuer123"
-  },
-  "issuanceDate": "2024-01-01T00:00:00Z",
-  "credentialSubject": {
-    "id": "did:example:recipient456",
-    "course": "CKB Development",
-    "grade": "A"
-  },
-  "proof": { ... }
+### 3.2 Use Cases
+
+#### UC1: Provider Registration
+```
+Actor: Course Provider
+Goal: Register as credential issuer
+Steps:
+1. Provider connects wallet
+2. Provider creates Cluster (name, description)
+3. System returns Cluster ID
+Result: Provider can issue certificates
+```
+
+#### UC2: Certificate Issuance
+```
+Actor: Course Provider
+Goal: Issue certificate to student
+Precondition: Provider has created Cluster
+Steps:
+1. Provider enters student wallet address
+2. Provider fills certificate data (course name, date, grade)
+3. System encodes to W3C VC JSON
+4. System creates Spore DOB
+5. System sends transaction
+Result: Student receives certificate
+```
+
+#### UC3: Student View Certificates
+```
+Actor: Student
+Goal: View all certificates
+Steps:
+1. Student connects wallet
+2. System queries all Spore DOBs owned by student
+3. System filters for W3C VC credentials
+4. System displays certificate list
+Result: Student sees all certificates
+```
+
+#### UC4: Student Share Certificate
+```
+Actor: Student
+Goal: Share certificate with others
+Steps:
+1. Student selects certificate
+2. Student copies certificate ID
+3. OR Student gets explorer link
+Result: Certificate ID/link available to share
+```
+
+#### UC5: Verifier Check Certificate
+```
+Actor: Verifier
+Goal: Verify certificate authenticity
+Steps:
+1. Verifier enters certificate ID
+2. System queries Spore cell
+3. System decodes credential DNA
+4. System checks expiration, revocation
+5. System returns verification result
+Result: Verifier knows if certificate is valid
+```
+
+#### UC6: Batch Issuance (Extended)
+```
+Actor: Course Provider
+Goal: Issue multiple certificates at once
+Steps:
+1. Provider uploads CSV/list of recipients
+2. Provider confirms batch
+3. System creates multiple Spore DOBs in one transaction
+Result: Multiple students receive certificates
+```
+
+#### UC7: Certificate Revocation (Extended)
+```
+Actor: Course Provider
+Goal: Revoke a certificate
+Steps:
+1. Provider selects certificate to revoke
+2. Provider confirms revocation
+3. System updates credential status
+Result: Certificate marked as revoked
+```
+
+---
+
+## 4. Data Architecture
+
+### 4.1 Credential DNA Structure (W3C VC Compatible)
+
+```mermaid
+classDiagram
+    class VerifiableCredential {
+        +@context: string[]
+        +id: string
+        +type: string[]
+        +issuer: Issuer
+        +issuanceDate: string
+        +expirationDate?: string
+        +credentialSubject: CredentialSubject
+        +credentialStatus?: CredentialStatus
+    }
+
+    class Issuer {
+        +id: string
+        +name: string
+        +description?: string
+    }
+
+    class CredentialSubject {
+        +id: string
+        +courseName: string
+        +courseProvider: string
+        +completionDate: string
+        +grade?: string
+        +skills?: string[]
+    }
+
+    class CredentialStatus {
+        +id: string
+        +type: string
+        +revoked: boolean
+        +revocationReason?: string
+    }
+
+    VerifiableCredential --> Issuer
+    VerifiableCredential --> CredentialSubject
+    VerifiableCredential --> CredentialStatus
+```
+
+### 4.2 Certificate Template Structure
+
+```typescript
+interface CertificateTemplate {
+  id: string;
+  name: string;
+  description: string;
+  issuer: string; // Cluster ID
+  fields: TemplateField[];
+  requiredFields: string[];
+  defaultValues?: Record<string, any>;
+  styling?: {
+    logo?: string;
+    colors?: string[];
+    layout: 'compact' | 'standard' | 'detailed';
+  };
+}
+
+interface TemplateField {
+  name: string;
+  type: 'text' | 'date' | 'select' | 'number';
+  label: string;
+  required: boolean;
+  options?: string[]; // For select type
+  validation?: {
+    min?: number;
+    max?: number;
+    pattern?: string;
+  };
 }
 ```
 
-**W3C VC Concepts to Map:**
-| VC Concept | CKB Implementation |
-|-----------|-------------------|
-| Credential | Spore DOB (DNA = credential data) |
-| Issuer | Cluster owner |
-| Holder | DOB owner (Lock Script) |
-| Credential Type | DOB Cluster membership |
-| Presentation | Read-only credential display |
-| Verification | On-chain query + signature verification |
+### 4.3 Cluster Configuration
 
-### 4.2 Ethereum Ecosystem Standards
-
-#### 4.2.1 ERC-721 (NFT Standard)
-- Basic token standard for unique assets
-- Credentials as NFTs (current approach by some projects)
-- **Limitation**: Gas fees for every transfer
-
-#### 4.2.2 ERC-5192 (Soulbound Tokens)
-Minimal Soulbound Token interface:
-
-```solidity
-interface IERC5192 {
-    /// @notice Emitted when the locking status changes
-    event Locked(address indexed owner);
-    event Unlocked(address indexed owner);
-    
-    /// @notice Returns the locking status
-    function locked(address account) external view returns (bool);
+```typescript
+interface ClusterConfig {
+  name: string;
+  description: string;
+  providerInfo: {
+    url?: string;
+    logo?: string;
+    contact?: string;
+  };
+  certificatePolicy: {
+    transferable: boolean;
+    expirationDefault?: string; // ISO duration e.g., "P1Y" (1 year)
+    allowRenewal: boolean;
+    revocationEnabled: boolean;
+  };
+  metadata?: Record<string, any>;
 }
 ```
-
-**CKB Implementation**:
-- Use a custom Type Script that rejects transfers
-- Lock the DOB to the recipient's address permanently
-- Alternatively: use Spore's Cluster Agent to enforce non-transferability
-
-#### 4.2.3 ENS (Ethereum Name Service)
-- Domain names as NFTs
-- Related for credential namespaces
-- Cluster names could follow similar naming conventions
-
-#### 4.2.4 Gitcoin Passport
-- Identity verification system
-- Stamps as credential attestations
-- Quadratic funding integration
-- **Lesson**: Integrate with existing identity systems
-
-### 4.3 Bitcoin Ecosystem
-
-#### 4.3.1 Ordinals Protocol
-- Inscriptions as on-chain data
-- Similar to Spore's on-chain content storage
-- **Lesson**: Proven on-chain content works for digital artifacts
-
-#### 4.3.2 Nostr
-- Decentralized identity and credentials
-- Relay-based verification
-- **Lesson**: Credential verification doesn't need full blockchain
-
-### 4.4 Other Blockchain Credentials
-
-| Project | Approach | CKB Lesson |
-|---------|---------|-----------|
-| **POAP** | Attendance badges on Ethereum/Polygon | Non-transferable event credentials |
-| **Gitcoin Passport** | Identity stamps with weighted scores | Verification scoring system |
-| **Worldcoin** | Biometric identity | Privacy considerations |
-| **BrightID** | Social graph identity | Sybil resistance |
-
-### 4.5 Key Takeaways for CKB Implementation
-
-1. **W3C VC as the data model**: Use W3C VC JSON structure for credential DNA
-2. **ERC-5192 soulbound pattern**: Custom Type Script for non-transferable DOBs
-3. **Spore Cluster as Issuer**: Cluster = Credential Type/Organization
-4. **Zero fees**: CKB's model enables free credential transfers (unlike Ethereum)
-5. **On-chain verification**: Query Spore cells directly, no off-chain database needed
 
 ---
 
 ## 5. Technical Architecture
 
-### 5.1 Tech Stack
+### 5.1 System Architecture
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **Blockchain** | Nervos CKB | L1 storage and validation |
-| **Asset Protocol** | Spore Protocol | DOB creation and management |
-| **DApp SDK** | CCC SDK (`@ckb-ccc/connector-react`) | Frontend wallet integration |
-| **Backend (optional)** | Node.js + `@ckb-ccc/shell` | Indexer, API server |
-| **On-Chain Scripts** | Rust + `ckb-std` | Custom credential validation |
-| **Testing** | `ckb-testtool` + `ckb-debugger` | Contract testing |
-| **Dev Environment** | OffCKB | Local devnet |
-| **Data Format** | JSON (UTF-8) | Credential DNA content |
+```mermaid
+graph TB
+    subgraph Frontend["Frontend (React)"]
+        PAGES["Pages"]
+        COMPONENTS["Components"]
+    end
 
-### 5.2 System Architecture
+    subgraph SDK["SDK Layer"]
+        CCC["CCC SDK"]
+        SPORE["Spore SDK"]
+    end
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        FRONTEND (React)                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │ Issue Cred   │  │ View Wallet  │  │ Verify Credential    │  │
-│  │ Component    │  │ Credentials  │  │ Component            │  │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                        CCC SDK Layer                            │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │  @ckb-ccc/connector-react  │  @ckb-ccc/shell                │ │
-│  │  - Wallet connection      │  - Transaction building       │ │
-│  │  - Signer management      │  - Cell querying              │ │
-│  └────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      SPORE PROTOCOL LAYER                       │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │  Cluster     │  │  Spore DOB   │  │  Credential Type     │  │
-│  │  Manager     │  │  (Credential) │  │  Script (optional)   │  │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    CKB BLOCKCHAIN (L1)                         │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │  Cluster Cell          │  Credential DOB Cell              │ │
-│  │  - Type: SPORE_CLUSTER │  - Type: SPORE                   │ │
-│  │  - Data: JSON config   │  - Data: Credential DNA (JSON)   │ │
-│  │  - Lock: Issuer        │  - Lock: Holder                  │ │
-│  └────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
+    subgraph Blockchain["CKB Blockchain"]
+        CLUSTERS["Cluster Cells"]
+        CERTS["Certificate DOBs"]
+    end
+
+    subgraph Storage["Off-Chain (Optional)"]
+        TEMPLATES["Templates DB"]
+        ANALYTICS["Analytics"]
+    end
+
+    PAGES --> COMPONENTS
+    COMPONENTS --> SDK
+    SDK --> CCC
+    SDK --> SPORE
+    SPORE --> CLUSTERS
+    SPORE --> CERTS
+    TEMPLATES --> COMPONENTS
+    ANALYTICS --> PAGES
 ```
 
-### 5.3 Credential DNA Structure (W3C VC Mapping)
+### 5.2 Module Design
 
-Following the DOB/0 protocol pattern, credential DNA stores W3C VC-compliant JSON:
+```mermaid
+graph TB
+    subgraph Pages
+        ISSUER["Issuer Page"]
+        HOLDER["Holder Page"]
+        VERIFIER["Verifier Page"]
+    end
 
-```json
-{
+    subgraph Services
+        CLUSTER_SVC["Cluster Service"]
+        CERT_SVC["Certificate Service"]
+        VERIFY_SVC["Verify Service"]
+    end
+
+    subgraph Libraries
+        ENCODER["Encoder"]
+        DECODER["Decoder"]
+        TEMPLATE["Template Manager"]
+    end
+
+    subgraph SDK
+        CCC_SDK["CCC SDK"]
+        SPORE_SDK["Spore SDK"]
+    end
+
+    ISSUER --> CLUSTER_SVC
+    ISSUER --> CERT_SVC
+    HOLDER --> CERT_SVC
+    VERIFIER --> VERIFY_SVC
+
+    CLUSTER_SVC --> SPORE_SDK
+    CERT_SVC --> ENCODER
+    CERT_SVC --> SPORE_SDK
+    VERIFY_SVC --> DECODER
+    VERIFY_SVC --> SPORE_SDK
+
+    ENCODER --> TEMPLATE
+    SPORE_SDK --> CCC_SDK
+```
+
+---
+
+## 6. Implementation Scope
+
+### 6.1 MVP Scope (Week 9-10)
+
+**Features**:
+- [x] F1: Course Provider Registration (Cluster creation)
+- [x] F2: Certificate Issuance (Single)
+- [x] F3: Student View Certificates
+- [x] F4: Student Share (Copy ID, Explorer link)
+- [x] F5: Verifier Check Certificate
+
+**NOT in MVP**:
+- Templates
+- Batch Issuance
+- Renewal
+- Revocation
+- Embedding
+- Trust Layer
+- Analytics
+- Comments
+
+### 6.2 Week 11 - Extended (New Scope)
+
+**Features**:
+- [x] F6: Certificate Templates (basic)
+- [x] F7: Batch Issuance
+- [x] F8: Expiration check (UI)
+- [x] F10: Revocation (mark as revoked)
+
+**NOT in Week 11**:
+- Renewal
+- Embedding
+- Trust Layer
+- Analytics
+- Comments
+
+### 6.3 Week 12 - Polish (Adjusted)
+
+**Features**:
+- [x] Error handling
+- [x] Loading states
+- [x] Empty states
+- [x] Unit tests
+- [x] Integration tests
+- [x] README
+- [x] Demo
+
+**NOT in Week 12**:
+- Analytics Dashboard
+- Comments/Reviews
+
+### 6.4 Future Releases (Post-Capstone)
+
+| Feature | Complexity | Notes |
+|---------|------------|-------|
+| Renewal | Medium | Update expiration date |
+| Embedding | Low | iframe or API embed |
+| Trust Layer | High | Verified issuers registry |
+| Analytics Dashboard | Medium | Provider statistics |
+| Comments/Reviews | Low | Social features |
+
+---
+
+## 7. Comparison with Original Scope
+
+### 7.1 What Changed
+
+| Original Scope | New Scope | Change |
+|---------------|-----------|--------|
+| Multiple credential types (course, event, cert) | Focus on **course certificates** | Simplified |
+| POAP-style event badges | Removed | Focus on credential registry |
+| Professional certifications | Removed | Focus on course completion |
+| General "Credential" abstraction | Course-specific fields | More concrete |
+
+### 7.2 What Remains
+
+| Feature | Status | Rationale |
+|---------|--------|-----------|
+| Fully on-chain | ✅ | Spore DOB |
+| Holder-owned | ✅ | Spore lock script |
+| CKB-backed | ✅ | Spore capacity |
+| Zero transfer fees | ✅ | CKB native |
+| Cluster organization | ✅ | Spore Cluster |
+
+---
+
+## 8. Technical Decisions
+
+### 8.1 Spore DOB Usage
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Content Type | `application/json` | W3C VC JSON format |
+| Cluster Usage | One Cluster per Course Provider | Organization boundary |
+| Transferability | Configurable per Cluster | Some certs transferable, some not |
+| Melt-to-reclaim | Enabled | User can burn to reclaim CKB |
+
+### 8.2 Credential DNA Encoding
+
+```typescript
+// Certificate as W3C VC JSON
+interface CertificateDNA {
   "@context": [
     "https://www.w3.org/2018/credentials/v1",
-    "https://credentials.example/v1"
+    "https://credentials.ckb.dob/v1"
   ],
   "id": "did:ckb:credential:0x...",
-  "type": [
-    "VerifiableCredential",
-    "CourseCompletion"
-  ],
+  "type": ["VerifiableCredential", "CourseCertificate"],
   "issuer": {
-    "id": "did:ckb:issuer:cluster:0x...",
+    "id": "did:ckb:issuer:cluster:0x...", // Cluster ID
     "name": "CKB Academy",
-    "description": "Official CKB developer certification body"
+    "description": "Official CKB developer training"
   },
   "issuanceDate": "2024-01-15T00:00:00Z",
   "expirationDate": "2027-01-15T00:00:00Z",
   "credentialSubject": {
-    "id": "did:ckb:recipient:0x...",
-    "recipientName": "John Doe",
-    "course": {
-      "name": "CKB Developer Fundamentals",
-      "description": "Introduction to CKB development",
-      "duration": "12 weeks"
-    },
+    "id": "did:ckb:recipient:0x...", // Student wallet
+    "courseName": "CKB Development Fundamentals",
+    "courseProvider": "CKB Academy",
     "completionDate": "2024-01-10",
     "grade": "A",
     "skills": ["Rust", "CKB-VM", "Cell Model"]
   },
-  "evidence": [
-    {
-      "id": "https://credentials.example/evidence/1",
-      "type": "DocumentVerification",
-      "verifier": "did:ckb:verifier:0x..."
-    }
-  ],
   "credentialStatus": {
-    "id": "https://credentials.example/status/1",
-    "type": "CredentialStatusList2023"
-  }
-}
-```
-
-### 5.4 Cluster Configuration
-
-Cluster `description` field contains JSON configuration:
-
-```json
-{
-  "name": "CKB Academy Credentials",
-  "description": "Official credential issuance for CKB Academy courses",
-  "credentialPolicy": {
-    "transferable": false,
-    "requiresIssuerSignature": true,
-    "maxIssuancePerRecipient": 1,
-    "allowRenewal": false
-  },
-  "decoder": {
-    "type": "code_hash",
-    "hash": "0x13cac78ad8482202f18f9df4ea707611c35f994375fa03ae79121312dda9925c"
+    "id": "https://credentials.ckb.dob/status/0x...",
+    "type": "RevocationList2023",
+    "revoked": false,
+    "revocationReason": null
   },
   "metadata": {
-    "issuerUrl": "https://ckb.academy",
-    "revocationEndpoint": "https://api.ckb.academy/revoke"
+    "clusterId": "0x...",
+    "templateId": "0x...",
+    "version": "1.0"
   }
 }
 ```
 
 ---
 
-## 6. Use Cases Deep Dive
+## 9. CKB-Specific Advantages
 
-### 6.1 Use Case 1: Online Course Certificate
+### 9.1 Why CKB for Credential Registry
 
-**Scenario**: A user completes a CKB development course and receives a certificate.
+| Advantage | Description | Impact |
+|-----------|-------------|--------|
+| **Zero Transfer Fees** | Share certificates without gas | UX improvement |
+| **On-Chain Content** | Full certificate in Spore DOB | No IPFS/centralized storage needed |
+| **Melt-to-Reclaim** | User can burn certificate | User has control |
+| **Cluster Organization** | Natural issuer boundary | Easy to find issuer's certs |
+| **UTXO Model** | Each certificate is a cell | Independent, composable |
 
-**Flow**:
-1. Issuer (Academy) creates a Cluster for their credentials
-2. Upon course completion, Academy issues a DOB credential to the recipient
-3. Credential DNA contains course details, completion date, grade
-4. Recipient can present the credential to employers
-5. Verifier queries the CKB chain to confirm validity
+### 9.2 Comparison with Other Platforms
 
-**Technical Details**:
-- Credential Type: Non-transferable (soulbound)
-- Expiration: Optional (e.g., 3 years)
-- Cluster Policy: Only Academy can issue
-
-### 6.2 Use Case 2: Event Attendance Badge (POAP-style)
-
-**Scenario**: A user attends a CKB hackathon and receives a participation badge.
-
-**Flow**:
-1. Event organizer creates a Cluster for the event
-2. After attendance verification, organizer mints DOBs to attendees
-3. Badges are non-transferable (soulbound)
-4. Attendees can showcase badges on profiles/social media
-
-**Technical Details**:
-- Credential Type: Non-transferable
-- No expiration (permanent memento)
-- Cluster Policy: Organizer controls issuance
-
-### 6.3 Use Case 3: Professional Skill Certification
-
-**Scenario**: A developer earns a "CKB Smart Contract Developer" certification.
-
-**Flow**:
-1. Certifying body creates a Cluster with strict policies
-2. User passes an exam or meets criteria
-3. Certifying body issues a credential DOB
-4. Credential includes skills, certification level, validity period
-5. Employers can verify instantly via CKB explorer or API
-
-**Technical Details**:
-- Credential Type: Non-transferable
-- Expiration: Required (e.g., 2 years, renewable)
-- Multi-sig: Requires multiple issuer signatures
-
-### 6.4 Use Case 4: Employment History Verification
-
-**Scenario**: A user wants to prove employment history on-chain.
-
-**Flow**:
-1. Employer creates/uses a Cluster
-2. Upon employee onboarding, employer issues a DOB
-3. DOB DNA contains: role, department, start date, status
-4. Upon departure, credential can be "revoked" or marked inactive
-5. User retains the DOB but it's marked as "former employee"
-
-**Technical Details**:
-- Credential Type: Semi-transferable (can be held after leaving)
-- Revocation mechanism via status field
-- Cluster Policy: HR department controls
+| Platform | Storage | Transfer Fees | Content |
+|----------|---------|---------------|---------|
+| **CKB + Spore** | On-chain | Zero | Full certificate |
+| Ethereum NFT | Usually IPFS | Gas required | URI reference |
+| POAP | IPFS + Polygon | Gas required | Partial on-chain |
+| Traditional | Centralized DB | N/A | Full |
 
 ---
 
-## 7. Feasibility Analysis
+## 10. Conclusion
 
-### 7.1 Technical Feasibility: HIGH
+### 10.1 Scope Summary
 
-**Strengths**:
-- Spore SDK already provides Cluster and DOB creation
-- CCC SDK handles wallet integration and transaction building
-- DOB/0 protocol supports JSON content in DNA
-- W3C VC JSON structure fits naturally in DOB data
-- Zero-fee transfers align perfectly with credential sharing
+**MVP (Week 9-10)**:
+- Provider registration via Clusters
+- Single certificate issuance
+- Student view and share
+- Verifier check
 
-**Challenges**:
-- Non-transferable credentials require custom Type Script
-- Revocation mechanism needs on-chain logic
-- Credential verification requires indexer or full node access
+**Extended (Week 11)**:
+- Certificate templates
+- Batch issuance
+- Expiration display
+- Revocation
 
-### 7.2 Community Relevance: HIGH
+**Future**:
+- Renewal
+- Embedding
+- Trust layer
+- Analytics
 
-**CKB Community Benefits**:
-- Self-sovereign identity aligns with CKB philosophy
-- Addresses real need (credential verification is pain point)
-- Leverages existing Spore ecosystem
-- Showcases CKB's unique advantages (zero fees, on-chain content)
+### 10.2 Core Value Propositions Status
 
-**Adoption Potential**:
-- Can integrate with existing CKB educational programs
-- Hackathon organizers can issue badges
-- Developer communities can use for skill verification
-- Potential integration with RGB++ for Bitcoin-native credentials
-
-### 7.3 Development Effort: MEDIUM
-
-| Component | Effort | Notes |
-|-----------|--------|-------|
-| Cluster Management UI | Low | Standard Spore SDK usage |
-| Credential Issuance Flow | Low | Based on existing Spore patterns |
-| Non-Transferable Script | Medium | Custom Type Script in Rust |
-| Credential Verification | Low | On-chain cell query |
-| Revocation System | Medium | Requires state management |
-| Frontend Wallet Integration | Low | CCC connector-react |
-| Testing | Medium | ckb-testtool for Type Script |
-
-### 7.4 Scalability Considerations
-
-- **Cell Model**: Each credential is one cell. 1 million credentials = 1 million cells
-- **Query Performance**: Need ckb-indexer for efficient credential lookup
-- **Capacity Costs**: ~100-200 CKBytes per credential DOB
-
----
-
-## 8. Differentiation from Existing Solutions
-
-### 8.1 vs. Traditional Credential Systems
-
-| Aspect | Traditional | CKB DOB Credentials |
-|--------|-------------|---------------------|
-| Issuer Control | Full control | Can revoke but cannot seize |
-| Transferability | N/A | Optional |
-| Verification | Centralized database | On-chain, trustless |
-| Fees | Platform fees | Near-zero |
-| Data Storage | Off-chain, siloed | On-chain, verifiable |
-| Interoperability | Low | High (CKB standard) |
-
-### 8.2 vs. Ethereum NFT Credentials
-
-| Aspect | ERC-721 NFTs | CKB DOB Credentials |
-|--------|--------------|---------------------|
-| Transfer Fees | Gas required | Zero fees |
-| Content Storage | Usually IPFS/centralized | Fully on-chain |
-| Credential Semantics | Generic NFT | Semantic clustering |
-| Verification | External indexer | Native cell query |
-| Soulbound | ERC-5192 complex | Simple Type Script |
-
-### 8.3 vs. POAP
-
-| Aspect | POAP | CKB DOB Credentials |
-|--------|------|---------------------|
-| Chain | Ethereum/Polygon | CKB |
-| Transfer | Non-transferable | Configurable |
-| Data Model | Custom JSON | W3C VC compatible |
-| Fees | Gas fees | Zero fees |
-| Verification | Centralized API | Trustless on-chain |
-
----
-
-## 9. Security Considerations
-
-### 9.1 On-Chain Security
-
-- **Credential Ownership**: Locked by holder's wallet (secp256k1/Omnilock)
-- **Issuer Authentication**: Cluster type script verifies issuer signature
-- **Data Integrity**: DNA is immutable after issuance
-
-### 9.2 Potential Risks
-
-| Risk | Mitigation |
-|------|------------|
-| Fake Issuers | Credential verification includes issuer Cluster check |
-| Credential Replay | Include timestamp/nonce in credential ID |
-| Data Privacy | Use zero-knowledge proofs for selective disclosure |
-| Sybil Attacks | Integrate with JoyID or other identity systems |
-
-### 9.3 Privacy Considerations
-
-- Credentials reveal holder address
-- Consider: Zero-knowledge proof integration for selective disclosure
-- Alternative: Use stealth addresses for credential collection
-
----
-
-## 10. Implementation Recommendations
-
-### 10.1 MVP Scope (Weeks 9-10)
-
-1. **Cluster Creation**: Issuer creates a credential Cluster
-2. **Credential Issuance**: Mint DOB credentials to recipients
-3. **Credential Display**: View credentials in wallet/profile
-4. **Basic Verification**: Query chain to verify credential exists
-
-### 10.2 Extended Features (Weeks 11-12)
-
-1. **Non-Transferable Script**: Custom Type Script preventing transfers
-2. **Expiration Mechanism**: Time-based credential validity
-3. **Revocation System**: Issuer can mark credentials as revoked
-4. **Credential Verification API**: Backend service for verification
-
-### 10.3 Future Enhancements
-
-- Zero-knowledge proofs for selective disclosure
-- Integration with RGB++ for Bitcoin-native credentials
-- Credential bundles (multiple credentials in one presentation)
-- Verification scoring (similar to Gitcoin Passport)
-
----
-
-## 11. Conclusion
-
-The DOB Credential & Badge Protocol is a technically feasible and community-relevant project that leverages CKB's unique advantages (zero fees, on-chain storage, Spore Protocol) to create a self-sovereign credential system. The project:
-
-✅ Builds on existing, tested infrastructure (Spore, CCC SDK)
-✅ Addresses real pain points in credential verification
-✅ Showcases CKB's unique advantages
-✅ Is achievable within the 4-week capstone timeline
-✅ Has clear differentiation from existing solutions
-
-### 11.1 Recommendation
-
-**Proceed with implementation**, starting with the MVP scope:
-1. Cluster-based credential issuance
-2. W3C VC-compatible credential DNA
-3. Basic verification functionality
-4. Frontend wallet integration
-
-The non-transferable and revocation features can be added as the project progresses.
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Fully on-chain | ✅ | Spore DOB DNA |
+| Holder-owned | ✅ | Spore lock script |
+| CKB-backed | ✅ | Spore capacity + melt |
+| Zero transfer fees | ✅ | CKB UTXO model |
+| Cluster organization | ✅ | Spore Cluster |
 
 ---
 
 ## References
 
-### CKB Documentation
-- [CKB Cell Model](https://docs.nervos.org/docs/ckb-fundamentals/cell-model)
-- [Spore Protocol](https://docs.spore.pro/)
-- [DOB/0 Protocol](https://docs.spore.pro/dob/dob0-protocol)
-- [CCC SDK](https://docs.ckbccc.com)
-- [Spore SDK](https://github.com/sporeprotocol/spore-sdk)
-
-### Credential Standards
-- [W3C Verifiable Credentials Data Model](https://www.w3.org/TR/vc-data-model/)
-- [ERC-5192 Soulbound Tokens](https://eips.ethereum.org/EIPS/eip-5192)
-- [Gitcoin Passport](https://passport.gitcoin.co/)
-
-### Related Projects
-- [POAP (Proof of Attendance Protocol)](https://poap.xyz/)
-- [ENS (Ethereum Name Service)](https://ens.domains/)
-- [BrightID](https://www.brightid.org/)
-
----
-
-*Document Version: 1.0*
-*Last Updated: 2026-08-11*
+| Resource | Link |
+|----------|------|
+| W3C VC Data Model | https://www.w3.org/TR/vc-data-model/ |
+| Spore Protocol | https://docs.spore.pro/ |
+| DOB/0 Protocol | https://docs.spore.pro/dob/dob0-protocol |
+| CCC SDK | https://docs.ckbccc.com |
+| Spore SDK | https://github.com/sporeprotocol/spore-sdk |
