@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
 import '@testing-library/jest-dom';
+import userEvent from '@testing-library/user-event';
 
 // Mock crypto.getRandomValues for tests
 if (typeof globalThis.crypto === 'undefined') {

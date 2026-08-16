@@ -17,26 +17,50 @@ tests/
     ├── ckb/
     │   └── config.test.ts  # Network config tests (13 tests)
     └── credentials/
-        ├── encoder.test.ts  # W3C VC encoding tests (9 tests)
+        ├── encoder.test.ts   # W3C VC encoding tests (9 tests)
         ├── decoder.test.ts  # W3C VC decoding tests (22 tests)
-        ├── batch.test.ts   # Batch issuance tests (14 tests)
+        ├── batch.test.ts    # Batch issuance tests (14 tests)
         ├── cluster.test.ts  # Cluster validation tests (9 tests)
-        └── verifier.test.ts # Verification logic tests (11 tests)
+        ├── verifier.test.ts # Verification logic tests (11 tests)
+    └── ui/
+        ├── Button.test.tsx  # Button component tests (17 tests)
+        ├── Badge.test.tsx   # Badge component tests (11 tests)
+        ├── Card.test.tsx   # Card component tests (14 tests)
+        └── Input.test.tsx   # Input component tests (18 tests)
 ```
 
 ## Summary
 
 | Metric | Value |
 |--------|-------|
-| Total Test Files | 6 |
-| Total Tests | 78 |
-| Passed | 78 |
+| Total Test Files | 10 |
+| Total Tests | 138 |
+| Passed | 138 |
 | Failed | 0 |
+
+## Test Categories
+
+| Category | Tests |
+|----------|-------|
+| UI Components | 60 |
+| Credentials | 65 |
+| CKB Config | 13 |
+| **Total** | **138** |
 
 ## Run Tests
 
 ```bash
+# Run all tests
 npm test
+
+# Run tests once
+npm run test:run
+
+# Run with UI
+npm run test:ui
+
+# Run with coverage
+npm run test:coverage
 ```
 
 ## Status

@@ -3,7 +3,7 @@
 **Project:** CKB Credential Registry
 **Test Date:** 2026-08-16
 **Test Framework:** Vitest 2.0.5
-**Total Tests:** 78
+**Total Tests:** 138
 **Status:** ✅ ALL PASSING
 
 ---
@@ -12,11 +12,11 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Test Files | 6 |
-| Total Tests | 78 |
-| Passed | 78 |
+| Total Test Files | 10 |
+| Total Tests | 138 |
+| Passed | 138 |
 | Failed | 0 |
-| Test Duration | ~1.5s |
+| Test Duration | ~2.6s |
 
 ---
 
@@ -30,6 +30,10 @@
 | `tests/unit/credentials/batch.test.ts` | 14 | ✅ Pass |
 | `tests/unit/credentials/cluster.test.ts` | 9 | ✅ Pass |
 | `tests/unit/credentials/verifier.test.ts` | 11 | ✅ Pass |
+| `tests/unit/ui/Button.test.tsx` | 17 | ✅ Pass |
+| `tests/unit/ui/Badge.test.tsx` | 11 | ✅ Pass |
+| `tests/unit/ui/Card.test.tsx` | 14 | ✅ Pass |
+| `tests/unit/ui/Input.test.tsx` | 18 | ✅ Pass |
 
 ---
 
@@ -232,6 +236,102 @@
 
 ---
 
+### 7. Button Component Tests (`tests/unit/ui/Button.test.tsx`)
+
+**Coverage:** Button variants, sizes, loading state, accessibility
+
+| # | Test Case | Status |
+|---|-----------|--------|
+| 1 | should render button with default props | ✅ Pass |
+| 2 | should render primary variant | ✅ Pass |
+| 3 | should render secondary variant | ✅ Pass |
+| 4 | should render danger variant | ✅ Pass |
+| 5 | should render ghost variant | ✅ Pass |
+| 6 | should render small size | ✅ Pass |
+| 7 | should render medium size | ✅ Pass |
+| 8 | should render large size | ✅ Pass |
+| 9 | should show loading spinner when loading | ✅ Pass |
+| 10 | should be disabled when loading | ✅ Pass |
+| 11 | should be disabled when disabled prop is true | ✅ Pass |
+| 12 | should have full width when fullWidth is true | ✅ Pass |
+| 13 | should handle click events | ✅ Pass |
+| 14 | should not call onClick when disabled | ✅ Pass |
+| 15 | should apply custom className | ✅ Pass |
+| 16 | should render with children | ✅ Pass |
+| 17 | should have focus styles | ✅ Pass |
+
+---
+
+### 8. Badge Component Tests (`tests/unit/ui/Badge.test.tsx`)
+
+**Coverage:** Badge variants, styling, display behavior
+
+| # | Test Case | Status |
+|---|-----------|--------|
+| 1 | should render badge with default props | ✅ Pass |
+| 2 | should render success variant | ✅ Pass |
+| 3 | should render warning variant | ✅ Pass |
+| 4 | should render danger variant | ✅ Pass |
+| 5 | should render info variant | ✅ Pass |
+| 6 | should render neutral variant | ✅ Pass |
+| 7 | should apply custom className | ✅ Pass |
+| 8 | should render with complex content | ✅ Pass |
+| 9 | should have border styling | ✅ Pass |
+| 10 | should have pill shape | ✅ Pass |
+| 11 | should have small text size | ✅ Pass |
+
+---
+
+### 9. Card Component Tests (`tests/unit/ui/Card.test.tsx`)
+
+**Coverage:** Card variants, padding options, content rendering
+
+| # | Test Case | Status |
+|---|-----------|--------|
+| 1 | should render card with default props | ✅ Pass |
+| 2 | should render default variant | ✅ Pass |
+| 3 | should render highlighted variant | ✅ Pass |
+| 4 | should render interactive variant | ✅ Pass |
+| 5 | should render with no padding | ✅ Pass |
+| 6 | should render with small padding | ✅ Pass |
+| 7 | should render with medium padding | ✅ Pass |
+| 8 | should render with large padding | ✅ Pass |
+| 9 | should have border styling | ✅ Pass |
+| 10 | should have rounded corners | ✅ Pass |
+| 11 | should render with complex content | ✅ Pass |
+| 12 | should apply custom className | ✅ Pass |
+| 13 | should apply id attribute | ✅ Pass |
+| 14 | should handle click events | ✅ Pass |
+
+---
+
+### 10. Input Component Tests (`tests/unit/ui/Input.test.tsx`)
+
+**Coverage:** Input label, error states, helper text, accessibility
+
+| # | Test Case | Status |
+|---|-----------|--------|
+| 1 | should render input without label | ✅ Pass |
+| 2 | should render input with label | ✅ Pass |
+| 3 | should associate label with input | ✅ Pass |
+| 4 | should show required asterisk | ✅ Pass |
+| 5 | should show error message | ✅ Pass |
+| 6 | should have error styling when error is present | ✅ Pass |
+| 7 | should show helper text when no error | ✅ Pass |
+| 8 | should hide helper text when error is present | ✅ Pass |
+| 9 | should handle text input | ✅ Pass |
+| 10 | should be disabled when disabled prop is true | ✅ Pass |
+| 11 | should show placeholder text | ✅ Pass |
+| 12 | should apply custom className | ✅ Pass |
+| 13 | should have full width | ✅ Pass |
+| 14 | should have focus ring styling | ✅ Pass |
+| 15 | should generate id from label | ✅ Pass |
+| 16 | should use provided id | ✅ Pass |
+| 17 | should support different input types | ✅ Pass |
+| 18 | should have dark theme styling | ✅ Pass |
+
+---
+
 ## Test Commands
 
 ```bash
@@ -250,6 +350,29 @@ npm run test:coverage
 
 ---
 
+## Test Structure
+
+```
+tests/
+├── setup.ts                    # Global test setup & mocks
+└── unit/
+    ├── ckb/
+    │   └── config.test.ts    # Network config tests (13 tests)
+    └── credentials/
+        ├── encoder.test.ts    # W3C VC encoding tests (9 tests)
+        ├── decoder.test.ts   # W3C VC decoding tests (22 tests)
+        ├── batch.test.ts     # Batch issuance tests (14 tests)
+        ├── cluster.test.ts   # Cluster validation tests (9 tests)
+        ├── verifier.test.ts # Verification logic tests (11 tests)
+    └── ui/
+        ├── Button.test.tsx   # Button component tests (17 tests)
+        ├── Badge.test.tsx    # Badge component tests (11 tests)
+        ├── Card.test.tsx     # Card component tests (14 tests)
+        └── Input.test.tsx    # Input component tests (18 tests)
+```
+
+---
+
 ## Design Spec Reference
 
 Tests implemented according to `doc/Design_spec/`:
@@ -263,6 +386,7 @@ Tests implemented according to `doc/Design_spec/`:
 | 05_Template_Service.md | ⏳ Week 3 |
 | 06_Batch_Issuance.md | ✅ Unit Tests - Batch |
 | 07_CKB_Client.md | ✅ Unit Tests - Config |
+| 08_UI_Components.md | ✅ Unit Tests - UI Components |
 
 ---
 
@@ -272,6 +396,7 @@ Tests implemented according to `doc/Design_spec/`:
 - Tests are isolated and do not depend on external services
 - Mock data is used for CKB SDK dependencies
 - Tests follow the arrange-act-assert pattern with descriptive comments
+- UI components tested with @testing-library/react
 
 ---
 
