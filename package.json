@@ -9,13 +9,18 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "offckb:start": "offckb node",
     "offckb:stop": "pkill -f offckb || true"
   },
   "dependencies": {
-    "@ckb-ccc/core": "^0.41.0",
-    "@ckb-ccc/connector-react": "^0.41.0",
-    "@spore-sdk/core": "^0.2.0",
+    "@ckb-ccc/connector-react": "^1.1.8",
+    "@ckb-ccc/core": "^1.1.8",
+    "@exact-realty/multipart-parser": "^1.0.14",
+    "@spore-sdk/core": "^0.2.2-alpha.2",
     "@tanstack/react-query": "^5.51.23",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
@@ -27,16 +32,22 @@
     "tailwind-merge": "^2.5.2"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.8",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/node": "^22.5.4",
     "@types/papaparse": "^5.3.14",
     "@types/react": "^18.3.8",
     "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "@vitest/coverage-v8": "^2.0.5",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.10",
-    "offckb": "^0.5.0",
+    "jsdom": "^24.1.1",
     "postcss": "^8.4.45",
     "tailwindcss": "^3.4.11",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "vitest": "^2.0.5"
   }
 }
