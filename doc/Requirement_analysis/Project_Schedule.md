@@ -458,7 +458,7 @@
 
 | Week | Planned | Actual | Notes |
 |------|---------|--------|-------|
-| Week 9 | 10h | ___ | |
+| Week 9 | 10h | 10h | ✅ Scaffold, wallet, cluster management |
 | Week 10 | 10h | ___ | |
 | Week 11 | 10h | ___ | |
 | Week 12 | 10h | ___ | |
