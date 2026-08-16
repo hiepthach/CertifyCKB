@@ -1,229 +1,166 @@
+/**
+ * Batch Issuance - CSV/JSON Parsing and Validation
+ *
+ * Handles batch certificate issuance including file parsing,
+ * entry validation, and fee estimation.
+ */
+
 import Papa from 'papaparse';
-import type {
-  BatchEntry,
-  ParseBatchResult,
-  BatchIssueParams,
-  BatchIssueResult,
-  BatchCertificateResult,
-  BatchError,
-  BatchPreview,
-  ValidationResult,
-} from '@/types';
-import { issueCertificate } from './issuer';
-import { ccc } from '@ckb-ccc/core';
+import type { BatchEntry, BatchValidationResult, BatchPreview } from '@/types';
+
+const CKB_PER_CERTIFICATE = 151;
+const LARGE_BATCH_THRESHOLD = 100;
 
 /**
- * Parse a batch file (CSV or JSON)
+ * Parse batch file (CSV or JSON)
  */
-export async function parseBatchFile(file: File): Promise<ParseBatchResult> {
+export async function parseBatchFile(file: File): Promise<{
+  totalRows: number;
+  entries: BatchEntry[];
+}> {
   const content = await file.text();
-  const extension = file.name.split('.').pop()?.toLowerCase();
+  const filename = file.name.toLowerCase();
 
-  let entries: Partial<BatchEntry>[] = [];
-
-  if (extension === 'csv') {
-    const result = Papa.parse(content, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (header) => header.trim().toLowerCase(),
-    });
-
-    if (result.errors.length > 0) {
-      throw new Error(`CSV parsing error: ${result.errors[0].message}`);
-    }
-
-    entries = result.data as Partial<BatchEntry>[];
-  } else if (extension === 'json') {
-    try {
-      const data = JSON.parse(content);
-      entries = Array.isArray(data) ? data : [data];
-    } catch {
-      throw new Error('Invalid JSON format');
-    }
+  if (filename.endsWith('.csv')) {
+    return parseCSV(content);
+  } else if (filename.endsWith('.json')) {
+    return parseJSON(content);
   } else {
-    throw new Error('Unsupported file format. Use CSV or JSON.');
+    throw new Error('Unsupported file format');
   }
+}
 
-  // Process entries
-  const processedEntries: BatchEntry[] = entries.map((entry, index) => ({
+/**
+ * Parse CSV content (exported for testing)
+ */
+export function parseCSV(content: string): {
+  totalRows: number;
+  entries: BatchEntry[];
+} {
+  const result = Papa.parse(content, {
+    header: true,
+    skipEmptyLines: true,
+  });
+
+  const entries: BatchEntry[] = result.data.map((row: Record<string, string>, index: number) => ({
     row: index + 1,
-    recipientAddress: entry.recipientAddress || '',
-    recipientName: entry.recipientName,
-    courseName: entry.courseName || '',
-    completionDate: entry.completionDate || '',
-    grade: entry.grade,
-    score: entry.score,
-    skills: entry.skills,
-    metadata: entry.metadata,
+    recipientAddress: row.recipientAddress || '',
+    recipientName: row.recipientName || '',
+    courseName: row.courseName || '',
+    completionDate: row.completionDate || '',
+    grade: row.grade || undefined,
+    score: row.score ? parseInt(row.score, 10) : undefined,
     errors: [],
     valid: false,
   }));
 
-  // Validate entries
-  const validation = validateBatchEntries(processedEntries);
+  return {
+    totalRows: entries.length,
+    entries,
+  };
+}
+
+/**
+ * Parse JSON content (exported for testing)
+ */
+export function parseJSON(content: string): {
+  totalRows: number;
+  entries: BatchEntry[];
+} {
+  const data = JSON.parse(content);
+
+  if (!Array.isArray(data)) {
+    throw new Error('JSON must be an array of entries');
+  }
+
+  const entries: BatchEntry[] = data.map((item: Record<string, unknown>, index: number) => ({
+    row: index + 1,
+    recipientAddress: (item.recipientAddress as string) || '',
+    recipientName: (item.recipientName as string) || '',
+    courseName: (item.courseName as string) || '',
+    completionDate: (item.completionDate as string) || '',
+    grade: item.grade as string | undefined,
+    score: item.score as number | undefined,
+    errors: [],
+    valid: false,
+  }));
 
   return {
-    entries: validation.entries,
-    totalRows: processedEntries.length,
-    validCount: validation.entries.filter((e) => e.valid).length,
-    invalidCount: validation.entries.filter((e) => !e.valid).length,
+    totalRows: entries.length,
+    entries,
   };
 }
 
 /**
  * Validate batch entries
  */
-export function validateBatchEntries(
-  entries: BatchEntry[]
-): ValidationResult {
-  const errors: BatchError[] = [];
+export function validateBatchEntries(entries: BatchEntry[]): BatchValidationResult {
+  const validated = entries.map((entry) => validateEntry(entry));
+  const allValid = validated.every((e) => e.valid);
 
-  for (const entry of entries) {
-    const entryErrors: string[] = [];
+  return {
+    valid: allValid,
+    entries: validated,
+  };
+}
 
-    // Validate address format (basic CKB address check)
-    if (!entry.recipientAddress || !entry.recipientAddress.startsWith('ckt')) {
-      entryErrors.push('Invalid CKB address format');
+/**
+ * Validate single entry (exported for testing)
+ */
+export function validateEntry(entry: BatchEntry): BatchEntry {
+  const errors: string[] = [];
+
+  // Validate address
+  if (!entry.recipientAddress || !entry.recipientAddress.startsWith('ckt')) {
+    errors.push('Invalid CKB address format');
+  }
+
+  // Validate course name
+  if (!entry.courseName || entry.courseName.trim() === '') {
+    errors.push('Course name is required');
+  }
+
+  // Validate date
+  if (entry.completionDate) {
+    const date = new Date(entry.completionDate);
+    if (isNaN(date.getTime())) {
+      errors.push('Invalid date format');
     }
-
-    // Validate course name
-    if (!entry.courseName || entry.courseName.trim().length === 0) {
-      entryErrors.push('Course name is required');
-    }
-
-    // Validate completion date
-    if (entry.completionDate) {
-      const date = new Date(entry.completionDate);
-      if (isNaN(date.getTime())) {
-        entryErrors.push('Invalid date format');
-      }
-    }
-
-    entry.errors = entryErrors;
-    entry.valid = entryErrors.length === 0;
   }
 
   return {
-    valid: entries.every((e) => e.valid),
-    entries,
+    ...entry,
+    valid: errors.length === 0,
     errors,
   };
 }
 
 /**
- * Preview batch before issuing
+ * Preview batch issuance
  */
-export function previewBatch(entries: BatchEntry[], clusterId: string): BatchPreview {
+export function previewBatch(
+  entries: BatchEntry[],
+  clusterId: string
+): BatchPreview {
   const validEntries = entries.filter((e) => e.valid);
   const invalidEntries = entries.filter((e) => !e.valid);
-
-  // Estimate fee: ~151 CKB per certificate (150 capacity + 1 fee buffer)
-  const estimatedCKB = validEntries.length * 151;
-  const estimatedFee = `${estimatedCKB.toLocaleString()} CKB`;
-
   const warnings: string[] = [];
 
+  // Add warnings
   if (invalidEntries.length > 0) {
     warnings.push(`${invalidEntries.length} entries have validation errors and will be skipped`);
   }
 
-  if (validEntries.length > 100) {
+  if (entries.length > LARGE_BATCH_THRESHOLD) {
     warnings.push('Large batch may take several minutes to process');
   }
 
   return {
+    clusterId,
     totalEntries: entries.length,
     validEntries,
     invalidEntries,
-    estimatedFee,
+    estimatedFee: `${validEntries.length * CKB_PER_CERTIFICATE} CKB`,
     warnings,
-  };
-}
-
-/**
- * Issue certificates in batch
- */
-export async function issueBatchCertificates(
-  signer: ccc.Signer,
-  params: BatchIssueParams,
-  onProgress?: (progress: {
-    current: number;
-    total: number;
-    currentAddress: string;
-    status: 'encoding' | 'building' | 'signing' | 'sending';
-  }) => void
-): Promise<BatchIssueResult> {
-  const { clusterId, issuerName, issuerDescription, entries, expirationDate } = params;
-
-  const validEntries = entries.filter((e) => e.valid);
-  const results: BatchCertificateResult[] = [];
-  const errors: BatchError[] = [];
-
-  for (let i = 0; i < validEntries.length; i++) {
-    const entry = validEntries[i];
-
-    onProgress?.({
-      current: i + 1,
-      total: validEntries.length,
-      currentAddress: entry.recipientAddress,
-      status: 'encoding',
-    });
-
-    try {
-      const result = await issueCertificate({
-        signer,
-        clusterId,
-        issuerName,
-        issuerDescription,
-        subject: {
-          id: entry.recipientAddress,
-          type: 'CourseCertificate',
-          name: entry.recipientName,
-          courseName: entry.courseName,
-          completionDate: entry.completionDate,
-          grade: entry.grade,
-          score: entry.score,
-          skills: entry.skills,
-          metadata: entry.metadata,
-        },
-        expirationDate,
-      });
-
-      results.push({
-        row: entry.row,
-        recipientAddress: entry.recipientAddress,
-        certificateId: result.certificateId,
-        transactionHash: result.transactionHash,
-        success: true,
-      });
-    } catch (error) {
-      results.push({
-        row: entry.row,
-        recipientAddress: entry.recipientAddress,
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-
-      errors.push({
-        code: 'ISSUANCE_FAILED',
-        message: `Row ${entry.row}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        row: entry.row,
-      });
-    }
-
-    onProgress?.({
-      current: i + 1,
-      total: validEntries.length,
-      currentAddress: entry.recipientAddress,
-      status: 'sending',
-    });
-  }
-
-  return {
-    total: validEntries.length,
-    successful: results.filter((r) => r.success).length,
-    failed: results.filter((r) => !r.success).length,
-    certificates: results,
-    errors,
   };
 }

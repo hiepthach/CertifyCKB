@@ -55,3 +55,12 @@ export interface VerificationHistory {
   verifiedAt: string;
   result: VerificationResult;
 }
+
+export interface CertificateDisplay {
+  title: string;
+  recipient: string;
+  course: string;
+  issuer: string;
+  date?: string;
+  status: 'active' | 'expired' | 'revoked';
+}

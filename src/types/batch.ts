@@ -59,9 +59,15 @@ export interface BatchError {
 }
 
 export interface BatchPreview {
+  clusterId: string;
   totalEntries: number;
   validEntries: BatchEntry[];
   invalidEntries: BatchEntry[];
   estimatedFee: string;
   warnings: string[];
+}
+
+export interface BatchValidationResult {
+  valid: boolean;
+  entries: BatchEntry[];
 }

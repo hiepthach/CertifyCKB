@@ -1,69 +1,68 @@
-import type { CertificateDNA } from '@/types';
+/**
+ * Decoder - W3C VC Certificate DNA Decoding
+ *
+ * Decodes W3C Verifiable Credential JSON into CertificateDNA objects.
+ * Includes validation, expiration checking, and format verification.
+ */
+
+import type { CertificateDNA, CertificateDisplay } from '@/types';
 
 /**
- * Parse JSON string to CertificateDNA
+ * Decode JSON string to CertificateDNA
  */
-export function decodeCertificateDNA(jsonString: string): CertificateDNA {
-  const parsed = JSON.parse(jsonString);
+export function decodeCertificateDNA(json: string): CertificateDNA {
+  let data: unknown;
 
-  // Validate required fields
-  if (!parsed['@context'] || !parsed.id || !parsed.type || !parsed.issuer || !parsed.credentialSubject) {
+  try {
+    data = JSON.parse(json);
+  } catch {
+    throw new Error('Invalid certificate DNA: invalid JSON');
+  }
+
+  if (!isValidDNAFormat(data)) {
     throw new Error('Invalid certificate DNA: missing required fields');
   }
 
-  // Validate @context
-  if (!Array.isArray(parsed['@context'])) {
-    throw new Error('Invalid certificate DNA: @context must be an array');
-  }
-
-  // Validate type
-  if (!Array.isArray(parsed.type) || !parsed.type.includes('VerifiableCredential')) {
-    throw new Error('Invalid certificate DNA: must be a VerifiableCredential');
-  }
-
-  return parsed as CertificateDNA;
+  return data;
 }
 
 /**
- * Check if certificate has expired
+ * Check if certificate is expired
  */
-export function isExpired(certificate: CertificateDNA): boolean {
-  if (!certificate.expirationDate) {
+export function isExpired(dna: CertificateDNA): boolean {
+  if (!dna.expirationDate) {
     return false;
   }
-
-  const expirationDate = new Date(certificate.expirationDate);
-  const now = new Date();
-  return now > expirationDate;
+  return new Date(dna.expirationDate) < new Date();
 }
 
 /**
  * Check if certificate is revoked
  */
-export function isRevoked(certificate: CertificateDNA): boolean {
-  return !!certificate.credentialStatus;
+export function isRevoked(dna: CertificateDNA): boolean {
+  return !!dna.credentialStatus;
 }
 
 /**
- * Get certificate expiration status
+ * Get expiration status with days remaining
  */
-export function getExpirationStatus(certificate: CertificateDNA): {
+export function getExpirationStatus(dna: CertificateDNA): {
   isExpired: boolean;
   expirationDate?: string;
   daysUntilExpiration?: number;
 } {
-  if (!certificate.expirationDate) {
+  if (!dna.expirationDate) {
     return { isExpired: false };
   }
 
-  const expirationDate = new Date(certificate.expirationDate);
+  const expDate = new Date(dna.expirationDate);
   const now = new Date();
-  const diffTime = expirationDate.getTime() - now.getTime();
+  const diffTime = expDate.getTime() - now.getTime();
   const daysUntilExpiration = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   return {
-    isExpired: diffTime < 0,
-    expirationDate: certificate.expirationDate,
+    isExpired: daysUntilExpiration < 0,
+    expirationDate: dna.expirationDate,
     daysUntilExpiration,
   };
 }
@@ -71,36 +70,29 @@ export function getExpirationStatus(certificate: CertificateDNA): {
 /**
  * Format certificate for display
  */
-export function formatCertificateDisplay(certificate: CertificateDNA): {
-  title: string;
-  recipient: string;
-  course: string;
-  issuer: string;
-  date: string;
-  status: 'active' | 'expired' | 'revoked';
-} {
-  const subject = certificate.credentialSubject;
-  const expirationStatus = getExpirationStatus(certificate);
+export function formatCertificateDisplay(dna: CertificateDNA): CertificateDisplay {
+  const subject = dna.credentialSubject as Record<string, unknown>;
 
   let status: 'active' | 'expired' | 'revoked' = 'active';
-  if (isRevoked(certificate)) {
+
+  if (isRevoked(dna)) {
     status = 'revoked';
-  } else if (expirationStatus.isExpired) {
+  } else if (isExpired(dna)) {
     status = 'expired';
   }
 
   return {
-    title: subject.courseName || 'Course Certificate',
-    recipient: subject.name || 'Unknown Recipient',
-    course: subject.courseName || 'Unknown Course',
-    issuer: certificate.issuer.name || certificate.issuer.id,
-    date: new Date(certificate.issuanceDate).toLocaleDateString(),
+    title: (subject.courseName as string) || 'Unknown Course',
+    recipient: (subject.name as string) || 'Unknown Recipient',
+    course: (subject.courseName as string) || 'Unknown Course',
+    issuer: dna.issuer.name || 'Unknown Issuer',
+    date: dna.issuanceDate,
     status,
   };
 }
 
 /**
- * Validate DNA format without full parsing
+ * Validate DNA format
  */
 export function isValidDNAFormat(data: unknown): data is CertificateDNA {
   if (!data || typeof data !== 'object') {
@@ -109,15 +101,31 @@ export function isValidDNAFormat(data: unknown): data is CertificateDNA {
 
   const dna = data as Record<string, unknown>;
 
-  return (
-    Array.isArray(dna['@context']) &&
-    typeof dna.id === 'string' &&
-    Array.isArray(dna.type) &&
-    dna.type.includes('VerifiableCredential') &&
-    typeof dna.issuer === 'object' &&
-    dna.issuer !== null &&
-    typeof (dna.issuer as Record<string, unknown>).id === 'string' &&
-    typeof dna.credentialSubject === 'object' &&
-    dna.credentialSubject !== null
-  );
+  // Check required fields
+  if (!Array.isArray(dna['@context']) || dna['@context'].length === 0) {
+    return false;
+  }
+
+  if (!dna['id'] || typeof dna['id'] !== 'string') {
+    return false;
+  }
+
+  if (!Array.isArray(dna['type']) || !dna['type'].includes('VerifiableCredential')) {
+    return false;
+  }
+
+  if (!dna['issuer'] || typeof dna['issuer'] !== 'object') {
+    return false;
+  }
+
+  const issuer = dna['issuer'] as Record<string, unknown>;
+  if (!issuer['id'] || typeof issuer['id'] !== 'string') {
+    return false;
+  }
+
+  if (!dna['credentialSubject'] || typeof dna['credentialSubject'] !== 'object') {
+    return false;
+  }
+
+  return true;
 }
