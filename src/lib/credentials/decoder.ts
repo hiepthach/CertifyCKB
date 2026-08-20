@@ -38,9 +38,10 @@ export function isExpired(dna: CertificateDNA): boolean {
 
 /**
  * Check if certificate is revoked
+ * Soft revocation: checks the revoked flag in credentialStatus
  */
 export function isRevoked(dna: CertificateDNA): boolean {
-  return !!dna.credentialStatus;
+  return dna.credentialStatus?.revoked === true;
 }
 
 /**

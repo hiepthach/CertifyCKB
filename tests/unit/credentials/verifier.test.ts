@@ -63,19 +63,39 @@ describe('Verification Service', () => {
     });
 
     // Test: Revoked certificate detection
-    // Input: Certificate with credentialStatus set
+    // Input: Certificate with credentialStatus.revoked = true
     // Expected: isRevoked=true
-    it('should detect revoked certificate', () => {
+    it('should detect revoked certificate with revoked flag', () => {
       const dna = createMockDNA({
         credentialStatus: {
           id: 'https://example.com/revocations/1',
           type: 'RevocationList2023Status',
+          revoked: true,
+          revocationReason: 'Certificate was issued in error',
         },
       });
 
-      const isRevoked = !!dna.credentialStatus;
+      const isRevoked = dna.credentialStatus?.revoked === true;
 
       expect(isRevoked).toBe(true);
+      expect(dna.credentialStatus?.revocationReason).toBe('Certificate was issued in error');
+    });
+
+    // Test: Non-revoked certificate with credentialStatus present
+    // Input: Certificate with credentialStatus but revoked=false
+    // Expected: isRevoked=false
+    it('should not consider certificate revoked if revoked flag is false', () => {
+      const dna = createMockDNA({
+        credentialStatus: {
+          id: 'https://example.com/status/1',
+          type: 'RevocationList2023Status',
+          revoked: false,
+        },
+      });
+
+      const isRevoked = dna.credentialStatus?.revoked === true;
+
+      expect(isRevoked).toBe(false);
     });
 
     // Test: W3C VC structure validation

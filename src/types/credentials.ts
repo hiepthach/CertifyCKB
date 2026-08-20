@@ -21,7 +21,10 @@ export interface CredentialSubject {
 
 export interface CredentialStatus {
   id: string;
-  type: 'RevocationList2023Status' | string;
+  type: string;
+  revoked: boolean;
+  revocationReason?: string;
+  revokedAt?: string;
   revocationListIndex?: string;
   revocationListCredential?: string;
 }
