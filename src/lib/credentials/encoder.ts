@@ -14,6 +14,7 @@ export function encodeCertificateDNA(params: {
   id: string;
   issuer: { id: string; name?: string; description?: string };
   subject: {
+    id?: string;
     type: string;
     name?: string;
     courseName?: string;
@@ -45,23 +46,28 @@ export function encodeCertificateDNA(params: {
   };
 
   // Add optional subject fields
+  const subjectRecord = dna.credentialSubject as Record<string, unknown>;
+
+  if (subject.id) {
+    subjectRecord.id = subject.id;
+  }
   if (subject.name) {
-    (dna.credentialSubject as Record<string, unknown>).name = subject.name;
+    subjectRecord.name = subject.name;
   }
   if (subject.courseName) {
-    (dna.credentialSubject as Record<string, unknown>).courseName = subject.courseName;
+    subjectRecord.courseName = subject.courseName;
   }
   if (subject.completionDate) {
-    (dna.credentialSubject as Record<string, unknown>).completionDate = subject.completionDate;
+    subjectRecord.completionDate = subject.completionDate;
   }
   if (subject.grade) {
-    (dna.credentialSubject as Record<string, unknown>).grade = subject.grade;
+    subjectRecord.grade = subject.grade;
   }
   if (subject.score !== undefined) {
-    (dna.credentialSubject as Record<string, unknown>).score = subject.score;
+    subjectRecord.score = subject.score;
   }
   if (subject.skills) {
-    (dna.credentialSubject as Record<string, unknown>).skills = subject.skills;
+    subjectRecord.skills = subject.skills;
   }
 
   // Add expiration date if provided

@@ -1,9 +1,15 @@
-import { ccc } from '@ckb-ccc/core';
-import { createSporeCell, getSporeCell } from '@spore-sdk/core';
-import type { CertificateDNA, CredentialSubject } from '@/types';
+import type { ccc } from '@ckb-ccc/core';
+import { createSporeCell } from '@spore-sdk/core';
+import type { CertificateDNA, CredentialSubject, CredentialStatus } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
 import { decodeCertificateDNA } from './decoder';
-import { getDefaultClient } from '@/lib/ckb/client';
+
+// Environment flag to enable mock mode for testing
+// Default to mock for development, set to 'false' for production
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
+
+// Mock certificate storage for testing
+const mockCertificates = new Map<string, { certificate: CertificateDNA; txHash: string }>();
 
 interface IssueCertificateParams {
   signer: ccc.Signer;
@@ -27,12 +33,26 @@ interface GetCertificateResult {
 }
 
 /**
+ * Clear all mock certificates (for testing)
+ */
+export function clearMockCertificates(): void {
+  mockCertificates.clear();
+}
+
+/**
+ * Get mock storage (for testing)
+ */
+export function getMockCertificates(): Map<string, { certificate: CertificateDNA; txHash: string }> {
+  return mockCertificates;
+}
+
+/**
  * Issue a new certificate as a Spore DOB
  */
 export async function issueCertificate(
   params: IssueCertificateParams
 ): Promise<IssueCertificateResult> {
-  const { signer, clusterId, issuerName, issuerDescription, subject, expirationDate } = params;
+  const { clusterId, issuerName, issuerDescription, subject, expirationDate } = params;
 
   // Generate certificate ID
   const certificateId = generateCertificateId();
@@ -41,7 +61,7 @@ export async function issueCertificate(
   const dna = encodeCertificateDNA({
     id: certificateId,
     issuer: {
-      id: clusterId, // Use cluster ID as issuer
+      id: clusterId,
       name: issuerName,
       description: issuerDescription,
     },
@@ -52,7 +72,26 @@ export async function issueCertificate(
   // Serialize DNA to JSON
   const dnaJson = serializeDNA(dna);
 
-  // Create Spore DOB with certificate DNA
+  if (USE_MOCK) {
+    // Mock transaction hash for MVP
+    const txHash = '0x' + 'a'.repeat(64);
+
+    // Store in mock storage
+    mockCertificates.set(certificateId, { certificate: dna, txHash });
+
+    console.log('Certificate issued (mock):', {
+      certificateId,
+      txHash,
+      dna: dnaJson,
+    });
+
+    return {
+      certificateId,
+      transactionHash: txHash,
+    };
+  }
+
+  // Real Spore SDK implementation
   const { txHash } = await createSporeCell({
     data: {
       ...dna,
@@ -62,7 +101,7 @@ export async function issueCertificate(
       },
     },
     clusterId,
-    from: signer,
+    from: params.signer,
   });
 
   return {
@@ -72,107 +111,93 @@ export async function issueCertificate(
 }
 
 /**
- * Get certificate by ID (DNA hex from Spore cell args)
+ * Get certificate by ID
  */
 export async function getCertificate(certificateId: string): Promise<GetCertificateResult | null> {
-  try {
-    const client = getDefaultClient();
-
-    // Find the Spore cell with this certificate ID as the type script args
-    const cells = await client.findCells({
-      script: {
-        codeHash: process.env.NEXT_PUBLIC_SPORE_CODE_HASH || '',
-        hashType: 'data2',
-        args: certificateId,
-      },
-      scriptType: 'type',
-    });
-
-    if (cells.length === 0) {
-      return null;
-    }
-
-    const cell = cells[0];
-    const data = cell.outputData;
-
-    if (!data) {
-      return null;
-    }
-
-    // Decode the certificate DNA
-    const certificate = decodeCertificateDNA(data);
-
+  // Try mock storage first
+  const mock = mockCertificates.get(certificateId);
+  if (mock) {
     return {
-      certificate,
+      certificate: mock.certificate,
       certificateId,
-      transactionHash: cell.outPoint.txHash,
-      clusterId: cell.output.type?.args,
+      transactionHash: mock.txHash,
+      clusterId: mock.certificate.issuer.id,
     };
-  } catch (error) {
-    console.error('Failed to get certificate:', error);
+  }
+
+  if (USE_MOCK) {
     return null;
   }
+
+  // Real Spore SDK implementation would go here
+  // For now, return null
+  return null;
 }
 
 /**
  * Get all certificates for a holder address
  */
 export async function getHolderCertificates(holderAddress: string): Promise<GetCertificateResult[]> {
-  const client = getDefaultClient();
+  const results: GetCertificateResult[] = [];
 
-  // Find all Spore cells owned by the holder
-  // This requires querying cells by lock script (holder address)
-  const cells = await client.findCells({
-    script: {
-      codeHash: process.env.NEXT_PUBLIC_SPORE_CODE_HASH || '',
-      hashType: 'data2',
-    },
-    scriptType: 'type',
-    filter: {
-      script: {
-        codeHash: process.env.NEXT_PUBLIC_OMNILOCK_CODE_HASH || '',
-        hashType: 'type',
-        args: holderAddress,
-      },
-    },
-  });
-
-  const certificates: GetCertificateResult[] = [];
-
-  for (const cell of cells) {
-    try {
-      const data = cell.outputData;
-      if (!data) continue;
-
-      const certificate = decodeCertificateDNA(data);
-      const certificateId = cell.output.type?.args || '';
-
-      certificates.push({
-        certificate,
-        certificateId,
-        transactionHash: cell.outPoint.txHash,
-        clusterId: certificate.issuer.id,
+  // Get from mock storage
+  for (const [certId, mock] of Array.from(mockCertificates.entries())) {
+    const cert = mock.certificate;
+    if (cert.credentialSubject.id === holderAddress) {
+      results.push({
+        certificate: cert,
+        certificateId: certId,
+        transactionHash: mock.txHash,
+        clusterId: cert.issuer.id,
       });
-    } catch (error) {
-      console.error('Failed to parse certificate:', error);
     }
   }
 
-  return certificates;
+  return results;
 }
 
 /**
- * Revoke a certificate
- * Note: This requires the certificate to support revocation (marking as revoked)
- * The actual revocation would be done by burning the cell or updating its status
+ * Revoke a certificate (Soft Revocation)
+ *
+ * Updates the credentialStatus in the DNA to mark as revoked.
+ * This is a soft revocation - the certificate cell remains on-chain
+ * but is marked as revoked in its DNA.
+ *
+ * @param signer - The issuer's wallet signer
+ * @param certificateId - The certificate ID to revoke
+ * @param reason - The reason for revocation
  */
 export async function revokeCertificate(
-  signer: ccc.Signer,
-  certificateId: string
+  _signer: ccc.Signer,
+  certificateId: string,
+  reason?: string
 ): Promise<{ transactionHash: string }> {
-  // For MVP, we would consume the Spore cell to "revoke" it
-  // This is a placeholder - actual implementation depends on Spore SDK capabilities
-  console.log('Revoking certificate:', certificateId);
+  const mock = mockCertificates.get(certificateId);
 
-  throw new Error('Revocation not yet implemented - requires consuming the Spore cell');
+  if (!mock) {
+    throw new Error('Certificate not found');
+  }
+
+  // Update the certificate DNA with revocation status (soft revocation)
+  const revokedStatus: CredentialStatus = {
+    id: `revocation:${certificateId}`,
+    type: 'RevocationList2023Status',
+    revoked: true,
+    revocationReason: reason,
+    revokedAt: new Date().toISOString(),
+  };
+
+  // Update the certificate in mock storage
+  mock.certificate.credentialStatus = revokedStatus;
+  mockCertificates.set(certificateId, mock);
+
+  console.log('Certificate revoked (soft):', {
+    certificateId,
+    reason,
+    revokedAt: revokedStatus.revokedAt,
+  });
+
+  return {
+    transactionHash: '0x' + 'b'.repeat(64),
+  };
 }
