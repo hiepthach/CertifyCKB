@@ -125,6 +125,7 @@ describe('Decoder', () => {
         credentialStatus: {
           id: 'https://example.com/revocations/1',
           type: 'RevocationList2023Status',
+          revoked: true,
         },
       };
       expect(isRevoked(revokedDNA)).toBe(true);
@@ -211,7 +212,7 @@ describe('Decoder', () => {
     });
 
     // Test: Revoked certificate status
-    // Input: CertificateDNA with credentialStatus set
+    // Input: CertificateDNA with credentialStatus.revoked = true
     // Expected: Returns status='revoked'
     it('should return revoked status for revoked certificate', () => {
       const revokedDNA: CertificateDNA = {
@@ -219,6 +220,8 @@ describe('Decoder', () => {
         credentialStatus: {
           id: 'https://example.com/revocation/1',
           type: 'RevocationList2023Status',
+          revoked: true,
+          revocationReason: 'Issued in error',
         },
       };
       const display = formatCertificateDisplay(revokedDNA);

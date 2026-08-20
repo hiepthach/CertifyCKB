@@ -1,7 +1,14 @@
-import type { Template, TemplateField, VisualConfig, BrandingConfig, TypographyConfig, ColorConfig } from '@/types';
+import type { Template, TemplateField, VisualConfig } from '@/types';
 
 // In-memory storage for MVP (would be stored on-chain or in a database)
 const templates: Map<string, Template> = new Map();
+
+/**
+ * Clear all mock templates (for testing)
+ */
+export function clearMockTemplates(): void {
+  templates.clear();
+}
 
 /**
  * Create a new template
