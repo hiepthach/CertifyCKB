@@ -1,5 +1,3 @@
-import type { SporeClusterDataProps } from '@spore-sdk/core';
-
 export interface ClusterConfig {
   name: string;
   description: string;
@@ -20,5 +18,3 @@ export interface Cluster extends ClusterConfig {
 export interface ClusterWithCount extends Cluster {
   certificateCount?: number;
 }
-
-export type { SporeClusterDataProps as ClusterData };

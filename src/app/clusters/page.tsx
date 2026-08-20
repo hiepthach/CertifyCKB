@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useCKBConnector } from '@ckb-ccc/connector-react';
+import { useCcc } from '@ckb-ccc/connector-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button, Modal, Card, Spinner } from '@/components/ui';
+import { Button, Modal, Card } from '@/components/ui';
 import { ClusterList, ClusterForm } from '@/components/cluster';
 import { Plus, RefreshCw } from 'lucide-react';
 import type { Cluster, ClusterConfig } from '@/types';
@@ -15,22 +15,22 @@ import {
 } from '@/lib/credentials';
 
 export default function ClustersPage() {
-  const { address, signer } = useCKBConnector();
+  const { signerInfo } = useCcc();
   const queryClient = useQueryClient();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCluster, setSelectedCluster] = useState<Cluster | null>(null);
 
-  // Fetch clusters from on-chain + mock storage
+  const address = signerInfo?.address?.addressStr;
+  const signer = signerInfo?.signer;
+
   const { data: clusters = [], isLoading, refetch, error } = useQuery({
     queryKey: ['clusters', address],
     queryFn: async () => {
       const onChainClusters = address ? await getProviderClusters(address) : [];
 
-      // Merge with mock storage clusters for MVP
       const { getClustersFromMockStorage } = await import('@/lib/credentials');
       const mockClusters = getClustersFromMockStorage();
 
-      // Combine and dedupe by clusterId
       const allClusters = [...onChainClusters];
       for (const mock of mockClusters) {
         if (!allClusters.find((c) => c.clusterId === mock.clusterId)) {
@@ -43,14 +43,12 @@ export default function ClustersPage() {
     enabled: true,
   });
 
-  // Create cluster mutation
   const createMutation = useMutation({
     mutationFn: async (config: ClusterConfig) => {
       if (!signer) throw new Error('Wallet not connected');
 
       const result = await createCluster({ signer, config });
 
-      // Save to mock storage for MVP
       const cluster: Cluster = {
         id: result.clusterId,
         clusterId: result.clusterId,
@@ -58,7 +56,7 @@ export default function ClustersPage() {
         description: config.description,
         websiteUrl: config.websiteUrl,
         contactEmail: config.contactEmail,
-        creatorAddress: await signer.getAddress().then(a => a.script.args),
+        creatorAddress: signerInfo?.address?.addressStr || '',
         createdAt: new Date().toISOString(),
       };
 
@@ -97,7 +95,6 @@ export default function ClustersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Clusters</h1>
@@ -117,7 +114,6 @@ export default function ClustersPage() {
         </div>
       </div>
 
-      {/* Cluster List */}
       <ClusterList
         clusters={clusters}
         loading={isLoading}
@@ -128,7 +124,6 @@ export default function ClustersPage() {
         onCreateNew={() => setShowCreateModal(true)}
       />
 
-      {/* Create Modal */}
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
@@ -142,7 +137,6 @@ export default function ClustersPage() {
         />
       </Modal>
 
-      {/* Cluster Detail Modal */}
       {selectedCluster && (
         <Modal
           isOpen={!!selectedCluster}
@@ -203,7 +197,6 @@ export default function ClustersPage() {
         </Modal>
       )}
 
-      {/* Error Display */}
       {error && (
         <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
           <p className="text-red-400">Failed to load clusters: {String(error)}</p>

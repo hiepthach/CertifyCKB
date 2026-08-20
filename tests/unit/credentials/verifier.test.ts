@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { CertificateDNA } from '../../../src/types';
+import type { CertificateDNA, CredentialSubject } from '../../../src/types';
 
 describe('Verification Service', () => {
   // Mock DNA factory for creating test certificates
@@ -265,11 +265,11 @@ describe('Verification Service', () => {
     // Input: Minimal subject (type only) vs full subject (all fields)
     // Expected: Minimal has undefined optional fields, full has all populated
     it('should handle optional fields correctly', () => {
-      const minimalSubject = {
+      const minimalSubject: CredentialSubject = {
         type: 'CourseCertificate',
       };
 
-      const fullSubject = {
+      const fullSubject: CredentialSubject = {
         type: 'CourseCertificate',
         name: 'John Doe',
         courseName: 'CKB Basics',

@@ -1,18 +1,23 @@
 'use client';
 
-import { InputHTMLAttributes, forwardRef } from 'react';
+import { InputHTMLAttributes, forwardRef, ChangeEvent } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   label?: string;
   error?: string;
   helperText?: string;
+  onChange?: (value: string) => void;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, helperText, className, id, ...props }, ref) => {
+  ({ label, error, helperText, className, id, onChange, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+      onChange?.(e.target.value);
+    };
 
     return (
       <div className="space-y-1.5">
@@ -39,6 +44,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               className
             )
           )}
+          onChange={handleChange}
           {...props}
         />
         {error && <p className="text-sm text-red-500">{error}</p>}

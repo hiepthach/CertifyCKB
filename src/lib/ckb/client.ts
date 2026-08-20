@@ -16,8 +16,8 @@ export function createClient(): ccc.Client {
     case 'mainnet':
       return new ccc.ClientPublicMainnet();
     default:
-      // Devnet - use custom RPC URL
-      return new ccc.ClientPublicRpc(config.ckbNodeUrl);
+      // Devnet - use testnet as fallback since ClientJsonRpc requires valid RPC
+      return new ccc.ClientPublicTestnet();
   }
 }
 
@@ -35,11 +35,8 @@ export function getDefaultClient(): ccc.Client {
  * Create a client for server-side rendering
  */
 export function createClientForServer(): ccc.Client {
-  const config = getNetworkConfig();
-  if (!config.ckbNodeUrl) {
-    throw new Error('NEXT_PUBLIC_CKB_NODE_URL is not set');
-  }
-  return new ccc.ClientPublicRpc(config.ckbNodeUrl);
+  // Use testnet as default for server-side
+  return new ccc.ClientPublicTestnet();
 }
 
 /**

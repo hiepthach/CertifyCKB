@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useCKBConnector } from '@ckb-ccc/connector-react';
+import { useCcc } from '@ckb-ccc/connector-react';
 import { useMutation } from '@tanstack/react-query';
 import { Card, Button, Modal, Spinner } from '@/components/ui';
 import { CertificateForm, type CertificateData } from '@/components/certificate';
@@ -13,12 +13,15 @@ import { issueCertificate } from '@/lib/credentials';
 
 function IssuePageContent() {
   const searchParams = useSearchParams();
-  const { address, signer } = useCKBConnector();
+  const { signerInfo } = useCcc();
   const clusterId = searchParams.get('cluster');
 
   const [cluster, setCluster] = useState<Cluster | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [result, setResult] = useState<{ certificateId: string; transactionHash: string } | null>(null);
+
+  const address = signerInfo?.address?.addressStr;
+  const signer = signerInfo?.signer;
 
   useEffect(() => {
     if (clusterId) {
@@ -116,7 +119,6 @@ function IssuePageContent() {
         </div>
       )}
 
-      {/* Success Modal */}
       <Modal
         isOpen={showSuccessModal}
         onClose={() => {

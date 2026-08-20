@@ -136,7 +136,7 @@ describe('Batch Issuance', () => {
       expect(result.entries[0].valid).toBe(true);
       // Second entry has multiple errors
       expect(result.entries[1].valid).toBe(false);
-      expect(result.entries[1].errors.length).toBeGreaterThan(1);
+      expect(result.entries[1].errors?.length ?? 0).toBeGreaterThan(1);
     });
   });
 

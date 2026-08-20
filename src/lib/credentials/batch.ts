@@ -6,7 +6,8 @@
  */
 
 import Papa from 'papaparse';
-import type { BatchEntry, BatchValidationResult, BatchPreview } from '@/types';
+import type { BatchEntry, BatchValidationResult, BatchPreview, BatchIssueParams, BatchIssueResult, BatchCertificateResult, BatchError } from '@/types';
+import { issueCertificate } from './issuer';
 
 const CKB_PER_CERTIFICATE = 151;
 const LARGE_BATCH_THRESHOLD = 100;
@@ -37,12 +38,12 @@ export function parseCSV(content: string): {
   totalRows: number;
   entries: BatchEntry[];
 } {
-  const result = Papa.parse(content, {
+  const result = Papa.parse<Record<string, string>>(content, {
     header: true,
     skipEmptyLines: true,
   });
 
-  const entries: BatchEntry[] = result.data.map((row: Record<string, string>, index: number) => ({
+  const entries: BatchEntry[] = result.data.map((row, index) => ({
     row: index + 1,
     recipientAddress: row.recipientAddress || '',
     recipientName: row.recipientName || '',
@@ -162,5 +163,92 @@ export function previewBatch(
     invalidEntries,
     estimatedFee: `${validEntries.length * CKB_PER_CERTIFICATE} CKB`,
     warnings,
+  };
+}
+
+/**
+ * Issue certificates in batch
+ */
+export async function issueBatchCertificates(
+  signer: unknown,
+  params: BatchIssueParams,
+  onProgress?: (progress: {
+    current: number;
+    total: number;
+    currentAddress: string;
+    status: 'encoding' | 'building' | 'signing' | 'sending';
+  }) => void
+): Promise<BatchIssueResult> {
+  const { clusterId, issuerName, issuerDescription, entries, expirationDate } = params;
+
+  const validEntries = entries.filter((e) => e.valid);
+  const results: BatchCertificateResult[] = [];
+  const errors: BatchError[] = [];
+
+  for (let i = 0; i < validEntries.length; i++) {
+    const entry = validEntries[i];
+
+    onProgress?.({
+      current: i + 1,
+      total: validEntries.length,
+      currentAddress: entry.recipientAddress,
+      status: 'encoding',
+    });
+
+    try {
+      const result = await issueCertificate({
+        signer,
+        clusterId,
+        issuerName,
+        issuerDescription,
+        subject: {
+          id: entry.recipientAddress,
+          type: 'CourseCertificate',
+          name: entry.recipientName,
+          courseName: entry.courseName,
+          completionDate: entry.completionDate,
+          grade: entry.grade,
+          score: entry.score,
+          skills: entry.skills,
+        },
+        expirationDate,
+      });
+
+      results.push({
+        row: entry.row,
+        recipientAddress: entry.recipientAddress,
+        certificateId: result.certificateId,
+        transactionHash: result.transactionHash,
+        success: true,
+      });
+    } catch (error) {
+      results.push({
+        row: entry.row,
+        recipientAddress: entry.recipientAddress,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      errors.push({
+        code: 'ISSUANCE_FAILED',
+        message: `Row ${entry.row}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        row: entry.row,
+      });
+    }
+
+    onProgress?.({
+      current: i + 1,
+      total: validEntries.length,
+      currentAddress: entry.recipientAddress,
+      status: 'sending',
+    });
+  }
+
+  return {
+    total: validEntries.length,
+    successful: results.filter((r) => r.success).length,
+    failed: results.filter((r) => !r.success).length,
+    certificates: results,
+    errors,
   };
 }

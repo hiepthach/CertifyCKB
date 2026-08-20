@@ -3,8 +3,21 @@ export * from './encoder';
 export * from './decoder';
 
 // Services
-export { createCluster, getCluster, getProviderClusters } from './cluster';
-export { issueCertificate, getCertificate, getHolderCertificates, revokeCertificate } from './issuer';
+export {
+  createCluster,
+  getCluster,
+  getProviderClusters,
+  saveClusterToMockStorage,
+  getClustersFromMockStorage,
+  clearMockClusters,
+} from './cluster';
+export {
+  issueCertificate,
+  getCertificate,
+  getHolderCertificates,
+  revokeCertificate,
+  clearMockCertificates,
+} from './issuer';
 export { verifyCertificate, getVerificationHistory } from './verifier';
 export { parseBatchFile, validateBatchEntries, previewBatch, issueBatchCertificates } from './batch';
 export {
@@ -16,4 +29,5 @@ export {
   applyTemplate,
   createDefaultVisualConfig,
   getDefaultCertificateFields,
-} from './template';
+  clearMockTemplates,
+} from './services';

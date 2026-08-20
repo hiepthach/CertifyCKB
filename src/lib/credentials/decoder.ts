@@ -72,7 +72,7 @@ export function getExpirationStatus(dna: CertificateDNA): {
  * Format certificate for display
  */
 export function formatCertificateDisplay(dna: CertificateDNA): CertificateDisplay {
-  const subject = dna.credentialSubject as Record<string, unknown>;
+  const subject = dna.credentialSubject as unknown as Record<string, unknown>;
 
   let status: 'active' | 'expired' | 'revoked' = 'active';
 

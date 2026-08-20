@@ -2,5 +2,11 @@
 export * from './config';
 export * from './client';
 
-// Spore SDK integration
-export { createCluster, getCluster, getClusterData, getSporeConfig } from '@spore-sdk/core';
+// Spore SDK integration - use getClusterByType, getClusterById, etc.
+export {
+  createCluster,
+  getClusterByType,
+  getClusterById,
+  getClusterProxyByType,
+  getSporeConfig,
+} from '@spore-sdk/core';

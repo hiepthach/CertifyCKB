@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useCKBConnector } from '@ckb-ccc/connector-react';
+import { useCcc } from '@ckb-ccc/connector-react';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui';
 import { CertificateList, CertificateDetail } from '@/components/certificate';
@@ -15,8 +15,10 @@ interface CertificateWithMeta {
 }
 
 export default function CertificatesPage() {
-  const { address } = useCKBConnector();
+  const { signerInfo } = useCcc();
   const [selectedCert, setSelectedCert] = useState<CertificateWithMeta | null>(null);
+
+  const address = signerInfo?.address?.addressStr;
 
   const { data: certificates = [], isLoading, error } = useQuery({
     queryKey: ['certificates', address],

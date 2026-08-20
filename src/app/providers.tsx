@@ -1,11 +1,10 @@
 'use client';
 
-import { ReactNode } from 'react';
-import { CKBConnectorProvider, useCKBConnector } from '@ckb-ccc/connector-react';
-import { SporeProvider } from '@spore-sdk/core';
+import { ReactNode, useMemo } from 'react';
+import { Provider } from '@ckb-ccc/connector-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { setSporeConfig } from '@spore-sdk/core';
-import { getSporeConfig } from '@/lib/ckb/config';
+import { ccc } from '@ckb-ccc/core';
+import { getNetwork, getNetworkConfig } from '@/lib/ckb/config';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,24 +15,52 @@ const queryClient = new QueryClient({
   },
 });
 
-// Initialize Spore config
-setSporeConfig(getSporeConfig());
-
 interface ProvidersProps {
   children: ReactNode;
 }
 
 export function Providers({ children }: ProvidersProps) {
+  // Create client options based on network
+  const clientOptions = useMemo(() => {
+    const config = getNetworkConfig();
+    const network = getNetwork();
+
+    const options: { name: string; icon: string; client: ccc.Client }[] = [];
+
+    // Devnet client
+    if (network === 'devnet' || config.ckbNodeUrl.includes('localhost')) {
+      options.push({
+        name: 'Devnet (Local)',
+        icon: '🔧',
+        client: new ccc.ClientPublicTestnet(), // Use testnet as fallback
+      });
+    }
+
+    // Testnet client
+    options.push({
+      name: 'Testnet (Aggron)',
+      icon: '🧪',
+      client: new ccc.ClientPublicTestnet(),
+    });
+
+    // Mainnet client
+    options.push({
+      name: 'Mainnet',
+      icon: '⚡',
+      client: new ccc.ClientPublicMainnet(),
+    });
+
+    return options;
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
-      <SporeProvider>
-        <CKBConnectorProvider
-          supportedWallets={['joyid', 'metamask', 'walletconnect']}
-          appName="CKB Credential Registry"
-        >
-          {children}
-        </CKBConnectorProvider>
-      </SporeProvider>
+      <Provider
+        clientOptions={clientOptions}
+        preferredNetworks={['CKB'] as unknown as ccc.NetworkPreference[]}
+      >
+        {children}
+      </Provider>
     </QueryClientProvider>
   );
 }

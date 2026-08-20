@@ -1,6 +1,5 @@
 import { vi } from 'vitest';
 import '@testing-library/jest-dom';
-import userEvent from '@testing-library/user-event';
 
 // Mock crypto.getRandomValues for tests
 if (typeof globalThis.crypto === 'undefined') {
@@ -14,34 +13,21 @@ if (typeof globalThis.crypto === 'undefined') {
   } as Crypto;
 }
 
-// Mock File class for jsdom (adds text() method)
-class MockFile {
-  private content: string;
+// Mock File class for jsdom
+class MockFile extends Blob {
   name: string;
-  type: string;
+  lastModified: number;
 
   constructor(parts: (string | Blob)[], fileName: string, options?: { type?: string }) {
-    this.content = parts.map(p => typeof p === 'string' ? p : '').join('');
+    const content = parts.map(p => typeof p === 'string' ? p : '').join('');
+    super([content], { type: options?.type || '' });
     this.name = fileName;
-    this.type = options?.type || '';
+    this.lastModified = Date.now();
   }
-
-  text(): Promise<string> {
-    return Promise.resolve(this.content);
-  }
-
-  slice(): Blob {
-    return this;
-  }
-
-  size: number = this.content.length;
-  lastModified: number = Date.now();
 }
 
 // Make MockFile available globally
-if (typeof globalThis.File === 'undefined') {
-  (globalThis as unknown as { File: typeof MockFile }).File = MockFile as unknown as typeof File;
-}
+(globalThis as unknown as { File: typeof MockFile }).File = MockFile;
 
 // Mock crypto.randomUUID
 if (!('randomUUID' in globalThis.crypto)) {
@@ -72,7 +58,6 @@ vi.mock('@spore-sdk/core', () => ({
     txHash: '0x' + '0'.repeat(64),
   }),
   getSporeCell: vi.fn(),
-  SporeProvider: ({ children }: { children: React.ReactNode }) => children,
   setSporeConfig: vi.fn(),
 }));
 
