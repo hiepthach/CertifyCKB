@@ -207,6 +207,13 @@ export function saveClusterToMockStorage(cluster: Cluster): void {
   mockClusters.set(cluster.clusterId, cluster);
 }
 
+/**
+ * Clear all mock clusters (for testing)
+ */
+export function clearMockClusters(): void {
+  mockClusters.clear();
+}
+
 function getClusterFromMockStorage(clusterId: string): Cluster | null {
   return mockClusters.get(clusterId) || null;
 }
