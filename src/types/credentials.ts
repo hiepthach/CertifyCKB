@@ -40,6 +40,14 @@ export interface CertificateDNA {
   credentialStatus?: CredentialStatus;
 }
 
+export interface VerificationChecks {
+  cellExists: boolean;
+  dnaValid: boolean;
+  issuerVerified: boolean;
+  expirationVerified: boolean;
+  revocationVerified: boolean;
+}
+
 export interface VerificationResult {
   valid: boolean;
   certificateId: string;
@@ -50,7 +58,10 @@ export interface VerificationResult {
     issuanceDate: string;
     expirationDate?: string;
   };
+  checks: VerificationChecks;
   errors?: string[];
+  timestamp?: string;
+  transactionHash?: string;
 }
 
 export interface VerificationHistory {

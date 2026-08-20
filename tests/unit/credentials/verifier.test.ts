@@ -162,11 +162,22 @@ describe('Verification Service', () => {
           issuanceDate: dna.issuanceDate,
           expirationDate: dna.expirationDate,
         },
+        checks: {
+          cellExists: true,
+          dnaValid: true,
+          issuerVerified: true,
+          expirationVerified: true,
+          revocationVerified: true,
+        },
+        timestamp: new Date().toISOString(),
       };
 
       expect(result.valid).toBe(true);
       expect(result.certificateId).toBe(certificateId);
       expect(result.issuer.name).toBe('CKB Academy');
+      expect(result.checks.cellExists).toBe(true);
+      expect(result.checks.dnaValid).toBe(true);
+      expect(result.checks.issuerVerified).toBe(true);
     });
 
     // Test: Build invalid result with errors
@@ -185,10 +196,18 @@ describe('Verification Service', () => {
           issuanceDate: '',
         },
         errors,
+        checks: {
+          cellExists: false,
+          dnaValid: false,
+          issuerVerified: false,
+          expirationVerified: false,
+          revocationVerified: false,
+        },
       };
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Certificate not found on chain');
+      expect(result.checks.cellExists).toBe(false);
     });
 
     // Test: Include expiration status in result
@@ -210,10 +229,18 @@ describe('Verification Service', () => {
           expirationDate: expiredDNA.expirationDate,
         },
         errors: ['Certificate has expired'],
+        checks: {
+          cellExists: true,
+          dnaValid: true,
+          issuerVerified: true,
+          expirationVerified: false,
+          revocationVerified: true,
+        },
       };
 
       expect(result.certificate.isExpired).toBe(true);
       expect(result.valid).toBe(false);
+      expect(result.checks.expirationVerified).toBe(false);
     });
   });
 
