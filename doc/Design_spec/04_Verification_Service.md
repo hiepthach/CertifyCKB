@@ -302,14 +302,261 @@ graph TD
 | Verify not found | Non-existent ID | valid: false, cellExists: false |
 | Verify with expected issuer | Wrong issuer ID | valid: false, issuerVerified: false |
 | Verify with correct issuer | Correct issuer ID | valid: true |
+| Verify with checkExpiration=false | Expired cert | valid: true (expiration not checked) |
 
-### 8.2 Integration Tests
+### 8.2 Integration Tests with Mock CCC SDK
 
-| Test Case | Expected Result |
-|-----------|-----------------|
-| Issue → Verify | Verification succeeds |
-| Issue → Expire (mock time) → Verify | Shows expired |
-| Issue → Revoke → Verify | Shows revoked |
+```typescript
+describe('Verification Service - Mock CCC SDK', () => {
+  const mockClient = {
+    findCellsByType: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('Happy Path', () => {
+    it('should verify a valid certificate', async () => {
+      const mockCell = createMockSporeCell({
+        contentType: 'application/json',
+        content: createValidCertificateDNA(),
+      });
+      mockClient.findCellsByType.mockResolvedValue([mockCell]);
+
+      const result = await verifyCertificate(mockClient, 'cert_123');
+
+      expect(result.valid).toBe(true);
+      expect(result.checks.cellExists).toBe(true);
+      expect(result.checks.dnaValid).toBe(true);
+      expect(result.certificate.isExpired).toBe(false);
+      expect(result.certificate.isRevoked).toBe(false);
+    });
+
+    it('should verify expired certificate', async () => {
+      const mockCell = createMockSporeCell({
+        contentType: 'application/json',
+        content: createExpiredCertificateDNA(),
+      });
+      mockClient.findCellsByType.mockResolvedValue([mockCell]);
+
+      const result = await verifyCertificate(mockClient, 'expired_cert');
+
+      expect(result.valid).toBe(false);
+      expect(result.certificate.isExpired).toBe(true);
+      expect(result.checks.expirationVerified).toBe(false);
+    });
+
+    it('should verify revoked certificate', async () => {
+      const mockCell = createMockSporeCell({
+        contentType: 'application/json',
+        content: createRevokedCertificateDNA(),
+      });
+      mockClient.findCellsByType.mockResolvedValue([mockCell]);
+
+      const result = await verifyCertificate(mockClient, 'revoked_cert');
+
+      expect(result.valid).toBe(false);
+      expect(result.certificate.isRevoked).toBe(true);
+      expect(result.checks.revocationVerified).toBe(false);
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should return invalid for non-existent certificate', async () => {
+      mockClient.findCellsByType.mockResolvedValue([]);
+
+      const result = await verifyCertificate(mockClient, 'not_found');
+
+      expect(result.valid).toBe(false);
+      expect(result.checks.cellExists).toBe(false);
+    });
+
+    it('should return invalid for malformed DNA', async () => {
+      const mockCell = createMockSporeCell({
+        contentType: 'application/json',
+        content: 'not valid json',
+      });
+      mockClient.findCellsByType.mockResolvedValue([mockCell]);
+
+      const result = await verifyCertificate(mockClient, 'malformed_cert');
+
+      expect(result.valid).toBe(false);
+      expect(result.checks.dnaValid).toBe(false);
+    });
+
+    it('should verify issuer when expectedIssuerId provided', async () => {
+      const mockCell = createMockSporeCell({
+        contentType: 'application/json',
+        content: createCertificateDNA({ issuerId: 'issuer_abc' }),
+      });
+      mockClient.findCellsByType.mockResolvedValue([mockCell]);
+
+      const result = await verifyCertificate(mockClient, 'cert_123', {
+        expectedIssuerId: 'issuer_abc',
+      });
+
+      expect(result.checks.issuerVerified).toBe(true);
+    });
+
+    it('should fail issuer verification when ID mismatch', async () => {
+      const mockCell = createMockSporeCell({
+        contentType: 'application/json',
+        content: createCertificateDNA({ issuerId: 'issuer_abc' }),
+      });
+      mockClient.findCellsByType.mockResolvedValue([mockCell]);
+
+      const result = await verifyCertificate(mockClient, 'cert_123', {
+        expectedIssuerId: 'issuer_xyz',
+      });
+
+      expect(result.checks.issuerVerified).toBe(false);
+      expect(result.valid).toBe(false);
+    });
+  });
+});
+```
+
+### 8.3 Integration Tests with OffCKB Devnet
+
+> **Prerequisites**: OffCKB running on localhost:28114, test wallet funded
+
+```typescript
+describe('Verification Service - OffCKB Devnet', () => {
+  let devnetClient: ccc.Client;
+  let testSigner: ccc.Signer;
+  let testCluster: Cluster;
+
+  beforeAll(async () => {
+    devnetClient = new ccc.ClientPublicRpc('http://localhost:28114');
+    testSigner = await setupTestWallet(devnetClient);
+
+    // Create test cluster
+    testCluster = await createCluster(testSigner, {
+      name: 'Verification Test Provider',
+      description: 'For testing verification service',
+    });
+  });
+
+  describe('Happy Path', () => {
+    it('should issue and then verify certificate', async () => {
+      // Issue a certificate
+      const issueResult = await issueCertificate(testSigner, {
+        clusterId: testCluster.clusterId,
+        recipientAddress: await testSigner.getAddress(),
+        issuerName: testCluster.name,
+        course: {
+          name: 'Verification Test Course',
+          completionDate: '2026-08-20',
+        },
+      });
+
+      // Verify the certificate
+      const verifyResult = await verifyCertificate(
+        devnetClient,
+        issueResult.certificateId
+      );
+
+      expect(verifyResult.valid).toBe(true);
+      expect(verifyResult.certificateId).toBe(issueResult.certificateId);
+      expect(verifyResult.checks.cellExists).toBe(true);
+    });
+
+    it('should return invalid for certificate from unknown cluster', async () => {
+      const verifyResult = await verifyCertificate(
+        devnetClient,
+        '0x0000000000000000000000000000000000000000000000000000000000000000'
+      );
+
+      expect(verifyResult.valid).toBe(false);
+      expect(verifyResult.checks.cellExists).toBe(false);
+    });
+  });
+
+  describe('Expiration Scenarios', () => {
+    it('should detect expired certificate', async () => {
+      // Issue certificate with past expiration date
+      const issueResult = await issueCertificate(testSigner, {
+        clusterId: testCluster.clusterId,
+        recipientAddress: await testSigner.getAddress(),
+        issuerName: testCluster.name,
+        course: { name: 'Expired Course', completionDate: '2024-01-01' },
+        expirationDate: '2024-01-15T00:00:00Z', // Already expired
+      });
+
+      const verifyResult = await verifyCertificate(
+        devnetClient,
+        issueResult.certificateId
+      );
+
+      expect(verifyResult.valid).toBe(false);
+      expect(verifyResult.certificate.isExpired).toBe(true);
+    });
+
+    it('should verify certificate without expiration date', async () => {
+      // Issue certificate without expiration
+      const issueResult = await issueCertificate(testSigner, {
+        clusterId: testCluster.clusterId,
+        recipientAddress: await testSigner.getAddress(),
+        issuerName: testCluster.name,
+        course: { name: 'No Expiry Course', completionDate: '2026-08-20' },
+        // No expirationDate
+      });
+
+      const verifyResult = await verifyCertificate(
+        devnetClient,
+        issueResult.certificateId
+      );
+
+      expect(verifyResult.valid).toBe(true);
+      expect(verifyResult.certificate.expirationDate).toBeUndefined();
+    });
+  });
+
+  describe('Revocation Scenarios', () => {
+    it('should detect revoked certificate', async () => {
+      // Issue certificate
+      const issueResult = await issueCertificate(testSigner, {
+        clusterId: testCluster.clusterId,
+        recipientAddress: await testSigner.getAddress(),
+        issuerName: testCluster.name,
+        course: { name: 'Revoked Course', completionDate: '2026-08-20' },
+      });
+
+      // Revoke it
+      await revokeCertificate(testSigner, issueResult.certificateId, 'Test revocation');
+
+      // Verify - should be invalid due to revocation
+      const verifyResult = await verifyCertificate(
+        devnetClient,
+        issueResult.certificateId
+      );
+
+      expect(verifyResult.valid).toBe(false);
+      expect(verifyResult.certificate.isRevoked).toBe(true);
+    });
+  });
+});
+```
+
+### 8.4 Verification Checks Matrix
+
+| Check | Test Case | Expected Result |
+|-------|-----------|----------------|
+| cellExists | Valid certificate ID | true |
+| cellExists | Invalid/non-existent ID | false |
+| dnaValid | Valid W3C VC JSON | true |
+| dnaValid | Malformed JSON | false |
+| dnaValid | Missing required fields | false |
+| issuerVerified | Expected issuer matches | true |
+| issuerVerified | Expected issuer differs | false |
+| issuerVerified | No expected issuer provided | true (skipped) |
+| expirationVerified | No expiration date | true (N/A) |
+| expirationVerified | Future expiration date | true |
+| expirationVerified | Past expiration date | false |
+| revocationVerified | credentialStatus.revoked = false | true |
+| revocationVerified | credentialStatus.revoked = true | false |
+| revocationVerified | No credentialStatus | true (N/A) |
 
 ---
 

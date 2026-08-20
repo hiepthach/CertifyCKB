@@ -192,7 +192,12 @@ Fee:    ~0.001 CKB
 
 ### 4.4 revokeCertificate
 
-**Purpose**: Mark a certificate as revoked.
+**Purpose**: Mark a certificate as revoked (soft revocation).
+
+> ⚠️ **Important**: This is **SOFT REVOCATION**, not hard revocation.
+>
+> - **Soft Revocation**: Updates the `credentialStatus.revoked` flag in the certificate DNA to `true`. The certificate cell remains on-chain but is marked as revoked.
+> - **Hard Revocation**: Would permanently destroy the certificate cell (burn). This requires a custom on-chain script (Phase 2+).
 
 **Parameters**:
 | Param | Type | Required | Description |
@@ -202,15 +207,22 @@ Fee:    ~0.001 CKB
 | `reason` | `string` | Yes | Revocation reason |
 
 **Process**:
-1. Find certificate cell
+1. Find certificate cell by ID
 2. Verify signer is issuer (matches Cluster owner)
-3. Update credentialStatus in DNA
-4. Create new cell with updated DNA
-5. Burn old cell
-
-**Note**: Current implementation updates off-chain status. Full on-chain revocation requires custom script (Future).
+3. Decode current DNA
+4. Update `credentialStatus` with:
+   - `revoked: true`
+   - `revocationReason: reason`
+   - `revokedAt: current timestamp`
+5. Create new cell with updated DNA (same lock/type)
+6. Burn old cell (consume input)
 
 **Returns**: `RevokeCertificateResult`
+
+**Phase 2 Improvement**:
+- Support hard revocation (burn cell)
+- Add revocation registry for efficient revocation list queries
+- Consider Merkle tree-based revocation status for scalability
 
 ### 4.5 getCertificate
 
@@ -316,6 +328,13 @@ const cells = await client.findCellsByType({
 | `INSUFFICIENT_BALANCE` | Not enough CKB | "Insufficient CKB balance" |
 | `NOT_ISSUER` | Signer not Cluster owner | "You are not the issuer" |
 | `ALREADY_REVOKED` | Certificate already revoked | "Certificate is already revoked" |
+
+### 7.1 Soft Revocation Limitations
+
+> ⚠️ **Note**: Soft revocation relies on honest verifiers checking `credentialStatus.revoked`.
+> - The revoked certificate cell still exists on-chain
+> - A malicious verifier could ignore the revocation flag
+> - Phase 2 will address this with hard revocation or on-chain revocation registry
 
 ---
 

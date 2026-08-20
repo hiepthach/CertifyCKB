@@ -300,11 +300,26 @@ interface CertificateDisplay {
 
 ### 5.7 generateCertificateId
 
-**Purpose**: Generate unique certificate ID.
+**Purpose**: Generate unique certificate ID for W3C VC `id` field.
+
+> ⚠️ **Important**: This function generates the W3C VC `id` field only.
+>
+> **Two different IDs in the system:**
+> | ID | Source | Purpose |
+> |----|--------|---------|
+> | **VC `id`** | `generateCertificateId()` | W3C VC identifier (DID format) |
+> | **DOB ID** | Spore SDK (transaction output) | Spore cell type script args |
 
 **Returns**: `string`
 
-**Format**: `did:ckb:credential:{timestamp}{random}`
+**Format**: `did:ckb:credential:{timestamp}{randomHex}`
+
+**Example**:
+```
+did:ckb:credential:1724140800000_a1b2c3d4e5f6
+```
+
+**Note**: The actual Spore DOB ID (used for cell lookup) is assigned by the Spore SDK during transaction creation. It is derived from the transaction output and typically follows the pattern `0x{args}` where args come from the Spore protocol.
 
 ---
 

@@ -97,6 +97,47 @@ const DEVNET_SCRIPTS = {
 
 ## 5. Spore Configuration
 
+### 5.0 Dynamic Script Loading
+
+> ⚠️ **Important**: Devnet scripts should be loaded dynamically from OffCKB configuration rather than hardcoded.
+
+**Problem with hardcoded scripts**: If OffCKB updates script versions, hardcoded addresses become invalid.
+
+**Solution**: Load scripts from OffCKB's known scripts configuration.
+
+```typescript
+// Load devnet scripts dynamically
+async function loadDevnetScripts(): Promise<DevnetScripts> {
+  // Option 1: Fetch from OffCKB known scripts
+  const response = await fetch(
+    'https://raw.githubusercontent.com/nervosnetwork/godwoken/develop/crates/types/schemas/known_scripts.json'
+  );
+  const knownScripts = await response.json();
+
+  return {
+    SECP256K1_BLAKE160: knownScripts.secp256k1_blake160,
+    SPORE: knownScripts.spore,
+    SPORE_CLUSTER: knownScripts.spore_cluster,
+  };
+}
+
+// Option 2: Use @offckb/contracts package
+import { getSporeScripts, getClusterScripts } from '@offckb/contracts';
+
+const sporeScripts = await getSporeScripts('devnet');
+```
+
+**Fallback**: If dynamic loading fails, use bundled known-good values with version checking.
+
+```typescript
+const FALLBACK_DEVNET_SCRIPTS = {
+  SPORE: {
+    CODE_HASH: '0x7e8bf78a62232caa2f5d47e691e8db1a90d05e93dc6828ad3cb935c01ec6d208',
+    HASH_TYPE: 'data2' as const,
+  },
+};
+```
+
 ### 5.1 Spore Config Structure
 
 ```typescript
@@ -154,6 +195,46 @@ export const devnetSporeConfig: SporeConfig = {
     },
   },
 };
+```
+
+### 5.1.1 Dynamic Config Creation
+
+```typescript
+import { getSporeScripts } from '@offckb/contracts';
+
+async function createDynamicSporeConfig(network: Network): Promise<SporeConfig> {
+  if (network === 'devnet') {
+    // Load scripts dynamically
+    const scripts = await getSporeScripts('devnet');
+
+    return {
+      lumos: predefinedSporeConfigs.Devnet.lumos,
+      ckbNodeUrl: 'http://localhost:28114',
+      ckbIndexerUrl: 'http://localhost:28114',
+      defaultTags: ['latest'],
+      scripts: {
+        Spore: {
+          versions: [
+            {
+              tags: ['latest'],
+              script: {
+                codeHash: scripts.SPORE.codeHash,
+                hashType: 'data2',
+              },
+              cellDep: {
+                outPoint: scripts.SPORE.cellDep,
+                depType: 'code',
+              },
+            },
+          ],
+        },
+      },
+    };
+  }
+
+  // For testnet/mainnet, use predefined configs
+  return predefinedSporeConfigs[network];
+}
 ```
 
 ### 5.2 Config Selection
@@ -367,6 +448,8 @@ export const NETWORK_DISPLAY_NAMES: Record<Network, string> = {
 | getNetwork returns correct network | Matches env variable |
 | getSporeConfig returns correct config | Matches network |
 | createClient creates correct client type | Correct class for network |
+| loadDevnetScripts fetches scripts | Scripts loaded from remote |
+| Dynamic config with valid scripts | Config created successfully |
 
 ### 10.2 Connection Tests
 
@@ -374,7 +457,63 @@ export const NETWORK_DISPLAY_NAMES: Record<Network, string> = {
 |-----------|-----------------|
 | Devnet connection | Connects to localhost:28114 |
 | Testnet connection | Connects to testnet.ckb.dev |
+| Mainnet connection | Connects to mainnet.ckb.com |
 | Client query works | Returns cells |
+| Script compatibility check | Scripts match OffCKB version |
+
+### 10.3 Dynamic Loading Tests
+
+```typescript
+describe('Dynamic Script Loading', () => {
+  it('should load devnet scripts from @offckb/contracts', async () => {
+    const scripts = await getSporeScripts('devnet');
+
+    expect(scripts).toHaveProperty('codeHash');
+    expect(scripts).toHaveProperty('hashType');
+    expect(scripts.codeHash).toMatch(/^0x[a-f0-9]{64}$/);
+  });
+
+  it('should fallback to bundled scripts on network error', async () => {
+    // Simulate fetch failure
+    global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+
+    const config = await createSporeConfig('devnet');
+
+    // Should use fallback
+    expect(config.scripts.Spore.versions[0].script.codeHash)
+      .toBe(FALLBACK_DEVNET_SCRIPTS.SPORE.CODE_HASH);
+  });
+
+  it('should validate script version compatibility', async () => {
+    const config = await createDynamicSporeConfig('devnet');
+
+    // Check that all required scripts are present
+    expect(config.scripts.Spore).toBeDefined();
+    expect(config.scripts.Cluster).toBeDefined();
+  });
+});
+```
+
+### 10.4 Network Compatibility Tests
+
+```typescript
+describe('Network Compatibility', () => {
+  it('should use correct scripts for each network', async () => {
+    const devnetConfig = await createDynamicSporeConfig('devnet');
+    const testnetConfig = await createSporeConfig('testnet');
+
+    // Devnet and testnet should have different script hashes
+    expect(devnetConfig.scripts.Spore.versions[0].script.codeHash)
+      .not.toBe(testnetConfig.scripts.Spore.versions[0].script.codeHash);
+  });
+
+  it('should detect network from URL in development', () => {
+    // Mock window.location for localhost
+    const network = detectNetwork();
+    expect(network).toBe('devnet');
+  });
+});
+```
 
 ---
 

@@ -174,6 +174,13 @@ ckt1q...456,Jane Smith,CKB Basics,2024-01-16,B+,CKB-VM
 
 **Purpose**: Issue certificates for all valid entries.
 
+> **Transaction Strategy**:
+>
+> | Phase | Approach | Description |
+> |-------|----------|-------------|
+> | **MVP** | N individual transactions | One transaction per certificate. Simple but higher total fees. |
+> | **Phase 2** | 1 transaction with N outputs | Efficient batching. Lower fees but more complex. |
+
 **Parameters**:
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -182,7 +189,80 @@ ckt1q...456,Jane Smith,CKB Basics,2024-01-16,B+,CKB-VM
 
 **Returns**: `Promise<BatchIssueResult>`
 
-**Note**: MVP uses individual transactions per certificate.
+**MVP Implementation**:
+```typescript
+async function issueBatchCertificates(
+  signer: ccc.Signer,
+  params: BatchIssueParams
+): Promise<BatchIssueResult> {
+  const results: BatchCertificateResult[] = [];
+  const errors: BatchError[] = [];
+
+  for (let i = 0; i < params.entries.length; i++) {
+    const entry = params.entries[i];
+    if (!entry.valid) continue;
+
+    // Report progress
+    params.onProgress?.({
+      current: i + 1,
+      total: params.entries.length,
+      currentAddress: entry.recipientAddress,
+      status: 'encoding',
+    });
+
+    try {
+      // Issue one certificate at a time
+      const result = await issueCertificate(signer, {
+        clusterId: params.clusterId,
+        recipientAddress: entry.recipientAddress,
+        issuerName: params.issuerName,
+        // ... other params
+      });
+
+      results.push({
+        row: entry.row,
+        recipientAddress: entry.recipientAddress,
+        certificateId: result.certificateId,
+        transactionHash: result.transactionHash,
+        success: true,
+      });
+    } catch (error) {
+      results.push({
+        row: entry.row,
+        recipientAddress: entry.recipientAddress,
+        success: false,
+        error: error.message,
+      });
+      errors.push({
+        row: entry.row,
+        error: error.message,
+      });
+    }
+  }
+
+  return {
+    total: params.entries.length,
+    successful: results.filter(r => r.success).length,
+    failed: results.filter(r => !r.success).length,
+    certificates: results,
+    errors,
+  };
+}
+```
+
+**Phase 2: Batch Transaction**:
+```typescript
+// Future: One transaction with N outputs
+async function issueBatchCertificatesV2(
+  signer: ccc.Signer,
+  params: BatchIssueParams
+): Promise<BatchIssueResult> {
+  // 1. Build N cell outputs (one per certificate)
+  // 2. Create single transaction with all outputs
+  // 3. Sign and send once
+  // 4. Lower total fees due to shared witness data
+}
+```
 
 ---
 
@@ -304,21 +384,183 @@ For 100 certificates:
 
 ### 9.1 Unit Tests
 
-| Test Case | Expected Result |
-|-----------|-----------------|
-| Parse valid CSV | 10 entries |
-| Parse valid JSON | 10 entries |
-| Parse invalid file | Throws error |
-| Parse empty file | Throws EMPTY_FILE |
-| Validate valid entries | All valid |
-| Validate invalid addresses | Marked invalid |
+| Test Case | Input | Expected Result |
+|-----------|-------|-----------------|
+| Parse valid CSV | 10 entries | 10 BatchEntry objects |
+| Parse valid JSON | 10 entries | 10 BatchEntry objects |
+| Parse CSV with headers | CSV with header row | Skip header, parse data |
+| Parse CSV with empty rows | CSV with blank lines | Skip empty rows |
+| Parse invalid file type | .txt file | Throws INVALID_FILE_TYPE |
+| Parse empty file | 0 bytes | Throws EMPTY_FILE |
+| Parse malformed CSV | Missing columns | Throws PARSING_ERROR |
+| Parse malformed JSON | Invalid JSON | Throws PARSING_ERROR |
+| Validate valid entries | All valid addresses | `{ valid: true }` |
+| Validate invalid addresses | ckt1q...xyz | Marked invalid |
+| Validate missing required fields | No courseName | Marked invalid |
+| Validate invalid date format | "not-a-date" | Marked invalid |
+| Preview batch - all valid | 10 valid entries | Show 10 entries |
+| Preview batch - mixed | 8 valid, 2 invalid | Show 8 valid, 2 errors |
 
-### 9.2 Integration Tests
+### 9.2 Integration Tests with Mock Spore SDK
 
-| Test Case | Expected Result |
-|-----------|-----------------|
-| Issue 5 certificates | 5 successful |
-| Issue with 1 invalid | 4 successful, 1 failed |
+```typescript
+describe('Batch Issuance - Mock Spore SDK', () => {
+  const mockSporeSdk = {
+    createSpore: jest.fn().mockResolvedValue({
+      txSkeleton: mockTxSkeleton,
+      outputIndex: 0,
+      clusterId: 'mock-cluster-id',
+    }),
+  };
+
+  it('should issue 5 certificates successfully', async () => {
+    const entries = generateEntries(5);
+    const result = await issueBatchCertificates(signer, {
+      clusterId: 'cluster_abc',
+      issuerName: 'Test Issuer',
+      entries,
+    });
+
+    expect(result.successful).toBe(5);
+    expect(result.failed).toBe(0);
+    expect(mockSporeSdk.createSpore).toHaveBeenCalledTimes(5);
+  });
+
+  it('should continue issuing when one fails', async () => {
+    mockSporeSdk.createSpore
+      .mockResolvedValueOnce({ /* success */ })
+      .mockRejectedValueOnce(new Error('Network error'))
+      .mockResolvedValueOnce({ /* success */ });
+
+    const entries = generateEntries(3);
+    const result = await issueBatchCertificates(signer, { entries });
+
+    expect(result.successful).toBe(2);
+    expect(result.failed).toBe(1);
+  });
+});
+```
+
+### 9.3 Integration Tests with Local Devnet (OffCKB)
+
+> **Prerequisites**: OffCKB running on localhost:28114
+
+```typescript
+describe('Batch Issuance - OffCKB Devnet', () => {
+  let devnetSigner: ccc.Signer;
+  let devnetClient: ccc.Client;
+
+  beforeAll(async () => {
+    // Setup OffCKB connection
+    devnetClient = new ccc.ClientPublicRpc('http://localhost:28114');
+    devnetSigner = await setupTestWallet(devnetClient);
+  });
+
+  describe('Happy Path', () => {
+    it('should issue 10 certificates in batch', async () => {
+      // Create test cluster
+      const cluster = await createCluster(devnetSigner, {
+        name: 'Test Batch Cluster',
+        description: 'Batch test provider',
+      });
+
+      // Generate 10 test entries
+      const entries = Array.from({ length: 10 }, (_, i) => ({
+        row: i + 1,
+        recipientAddress: generateTestAddress(i),
+        recipientName: `Student ${i + 1}`,
+        courseName: 'Test Course',
+        completionDate: '2026-08-20',
+        grade: 'A',
+        valid: true,
+      }));
+
+      const result = await issueBatchCertificates(devnetSigner, {
+        clusterId: cluster.clusterId,
+        issuerName: 'Test Issuer',
+        entries,
+      });
+
+      expect(result.successful).toBe(10);
+      expect(result.failed).toBe(0);
+
+      // Verify all certificates on chain
+      for (const cert of result.certificates) {
+        const onChain = await getCertificate(devnetClient, cert.certificateId!);
+        expect(onChain).not.toBeNull();
+      }
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle insufficient balance', async () => {
+      const poorSigner = await createPoorTestWallet(devnetClient);
+
+      const entries = generateEntries(1);
+      const result = await issueBatchCertificates(poorSigner, { entries });
+
+      expect(result.successful).toBe(0);
+      expect(result.failed).toBe(1);
+      expect(result.errors[0].error).toContain('INSUFFICIENT_BALANCE');
+    });
+
+    it('should handle network timeout gracefully', async () => {
+      // Mock network failure
+      const flakyClient = createFlakyClient(devnetClient);
+
+      const entries = generateEntries(3);
+      const result = await issueBatchCertificates(flakySigner, { entries });
+
+      // Should report failures without crashing
+      expect(result.failed).toBeGreaterThan(0);
+    });
+
+    it('should handle invalid recipient address', async () => {
+      const entries = [
+        {
+          row: 1,
+          recipientAddress: 'invalid_address',
+          courseName: 'Test',
+          completionDate: '2026-08-20',
+          valid: false,
+          errors: ['Invalid address format'],
+        },
+      ];
+
+      const result = await issueBatchCertificates(devnetSigner, { entries });
+
+      expect(result.successful).toBe(0);
+      expect(result.certificates[0].success).toBe(false);
+    });
+  });
+});
+```
+
+### 9.4 Performance Tests
+
+```typescript
+describe('Batch Issuance - Performance', () => {
+  it('should handle 50 certificates within 5 minutes', async () => {
+    const entries = generateEntries(50);
+
+    const start = Date.now();
+    const result = await issueBatchCertificates(devnetSigner, { entries });
+    const duration = Date.now() - start;
+
+    expect(result.successful).toBe(50);
+    expect(duration).toBeLessThan(5 * 60 * 1000); // 5 minutes
+  });
+
+  it('should estimate fees correctly', async () => {
+    const preview = previewBatch(generateEntries(100), 'cluster_abc');
+
+    // 100 certs * ~151 CKB = ~15100 CKB
+    const estimated = parseFloat(preview.estimatedFee);
+    expect(estimated).toBeGreaterThan(15000);
+    expect(estimated).toBeLessThan(20000);
+  });
+});
+```
 
 ---
 
