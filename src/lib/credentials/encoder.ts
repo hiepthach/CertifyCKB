@@ -46,7 +46,7 @@ export function encodeCertificateDNA(params: {
   };
 
   // Add optional subject fields
-  const subjectRecord = dna.credentialSubject as Record<string, unknown>;
+  const subjectRecord = dna.credentialSubject as unknown as Record<string, unknown>;
 
   if (subject.id) {
     subjectRecord.id = subject.id;

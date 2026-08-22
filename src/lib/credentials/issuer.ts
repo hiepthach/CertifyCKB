@@ -1,8 +1,5 @@
-import type { ccc } from '@ckb-ccc/core';
-import { createSporeCell } from '@spore-sdk/core';
 import type { CertificateDNA, CredentialSubject, CredentialStatus } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
-import { decodeCertificateDNA } from './decoder';
 
 // Environment flag to enable mock mode for testing
 // Default to mock for development, set to 'false' for production
@@ -12,7 +9,7 @@ const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
 const mockCertificates = new Map<string, { certificate: CertificateDNA; txHash: string }>();
 
 interface IssueCertificateParams {
-  signer: ccc.Signer;
+  signer: unknown; // ccc.Signer in production
   clusterId: string;
   issuerName: string;
   issuerDescription?: string;
@@ -91,23 +88,8 @@ export async function issueCertificate(
     };
   }
 
-  // Real Spore SDK implementation
-  const { txHash } = await createSporeCell({
-    data: {
-      ...dna,
-      _metadata: {
-        contentType: 'application/json',
-        encoding: 'utf-8',
-      },
-    },
-    clusterId,
-    from: params.signer,
-  });
-
-  return {
-    certificateId,
-    transactionHash: txHash,
-  };
+  // Real Spore SDK implementation would go here
+  throw new Error('Real Spore SDK integration not yet implemented');
 }
 
 /**
@@ -130,7 +112,6 @@ export async function getCertificate(certificateId: string): Promise<GetCertific
   }
 
   // Real Spore SDK implementation would go here
-  // For now, return null
   return null;
 }
 
@@ -163,12 +144,12 @@ export async function getHolderCertificates(holderAddress: string): Promise<GetC
  * This is a soft revocation - the certificate cell remains on-chain
  * but is marked as revoked in its DNA.
  *
- * @param signer - The issuer's wallet signer
+ * @param signer - The issuer's wallet signer (unused in mock mode)
  * @param certificateId - The certificate ID to revoke
  * @param reason - The reason for revocation
  */
 export async function revokeCertificate(
-  _signer: ccc.Signer,
+  _signer: unknown,
   certificateId: string,
   reason?: string
 ): Promise<{ transactionHash: string }> {
