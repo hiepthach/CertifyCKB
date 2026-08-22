@@ -177,6 +177,47 @@ export async function getHolderCertificates(holderAddress?: string): Promise<Get
 }
 
 /**
+ * Get all certificates issued under a specific cluster ID
+ */
+export async function getClusterCertificates(clusterId: string): Promise<GetCertificateResult[]> {
+  syncCertificatesFromLocalStorage();
+  const results: GetCertificateResult[] = [];
+
+  for (const [certId, mock] of Array.from(mockCertificates.entries())) {
+    const cert = mock.certificate;
+    if (cert.issuer.id === clusterId) {
+      results.push({
+        certificate: cert,
+        certificateId: certId,
+        transactionHash: mock.txHash,
+        clusterId: cert.issuer.id,
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Get all certificates in system
+ */
+export async function getAllCertificates(): Promise<GetCertificateResult[]> {
+  syncCertificatesFromLocalStorage();
+  const results: GetCertificateResult[] = [];
+
+  for (const [certId, mock] of Array.from(mockCertificates.entries())) {
+    results.push({
+      certificate: mock.certificate,
+      certificateId: certId,
+      transactionHash: mock.txHash,
+      clusterId: mock.certificate.issuer.id,
+    });
+  }
+
+  return results;
+}
+
+/**
  * Revoke a certificate (Soft Revocation)
  *
  * Updates the credentialStatus in the DNA to mark as revoked.

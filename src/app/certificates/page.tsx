@@ -4,30 +4,57 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { useQuery } from '@tanstack/react-query';
-import { Card, Button, Spinner } from '@/components/ui';
+import { Card, Button, Spinner, Badge } from '@/components/ui';
 import { CertificateList, CertificateDetail } from '@/components/certificate';
 import type { CertificateDNA } from '@/types';
-import { getHolderCertificates } from '@/lib/credentials';
-import { ArrowLeft, Wallet } from 'lucide-react';
+import {
+  getHolderCertificates,
+  getAllCertificates,
+  getProviderClusters,
+} from '@/lib/credentials';
+import { ArrowLeft, Wallet, RefreshCw, Sparkles, Filter } from 'lucide-react';
 
 interface CertificateWithMeta {
   certificate: CertificateDNA;
   certificateId: string;
   transactionHash?: string;
+  clusterId?: string;
 }
 
 export default function CertificatesPage() {
   const router = useRouter();
   const { address, isConnected, isLoadingAddress, open } = useWallet();
   const [selectedCert, setSelectedCert] = useState<CertificateWithMeta | null>(null);
+  const [filterMode, setFilterMode] = useState<'all' | 'received' | 'issued'>('all');
 
-  const { data: certificates = [], isLoading, error } = useQuery({
+  const { data: rawCertificates = [], isLoading, refetch, error } = useQuery({
     queryKey: ['certificates', address],
     queryFn: async () => {
-      if (!address) return [];
-      return getHolderCertificates(address);
+      const allCerts = await getAllCertificates();
+      return allCerts;
     },
-    enabled: !!address,
+    enabled: true,
+  });
+
+  const { data: userClusters = [] } = useQuery({
+    queryKey: ['clusters', address],
+    queryFn: async () => {
+      return getProviderClusters(address || undefined);
+    },
+    enabled: true,
+  });
+
+  const userClusterIds = new Set(userClusters.map((c) => c.clusterId));
+
+  // Compute filtered list
+  const certificates = rawCertificates.filter((c) => {
+    if (!address) return true;
+    const isRecipient = c.certificate.credentialSubject.id === address;
+    const isIssuer = userClusterIds.has(c.clusterId || c.certificate.issuer.id);
+
+    if (filterMode === 'received') return isRecipient;
+    if (filterMode === 'issued') return isIssuer;
+    return true; // 'all' shows all available DOBs in session/wallet
   });
 
   if (isLoadingAddress) {
@@ -93,12 +120,58 @@ export default function CertificatesPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-lavender-spark text-sm font-bold">✱</span>
-            <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">Recipient Vault</span>
+            <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">Credential Vault</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">My Certificates</h1>
           <p className="text-sm text-ash-veil mt-1">
-            View and manage your on-chain Spore DOB credentials
+            View, verify, and export your sovereign on-chain Spore DOB credentials
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Filter Pills */}
+          <div className="flex bg-midnight-plum p-1 rounded-xl border border-fog-line/10 text-xs">
+            <button
+              onClick={() => setFilterMode('all')}
+              className={`px-3 py-1 rounded-lg transition-colors ${
+                filterMode === 'all'
+                  ? 'bg-shadow-plum text-bone-white font-medium border border-fog-line/20'
+                  : 'text-mid-ash hover:text-bone-white'
+              }`}
+            >
+              All ({rawCertificates.length})
+            </button>
+            <button
+              onClick={() => setFilterMode('received')}
+              className={`px-3 py-1 rounded-lg transition-colors ${
+                filterMode === 'received'
+                  ? 'bg-shadow-plum text-bone-white font-medium border border-fog-line/20'
+                  : 'text-mid-ash hover:text-bone-white'
+              }`}
+            >
+              Received
+            </button>
+            <button
+              onClick={() => setFilterMode('issued')}
+              className={`px-3 py-1 rounded-lg transition-colors ${
+                filterMode === 'issued'
+                  ? 'bg-shadow-plum text-bone-white font-medium border border-fog-line/20'
+                  : 'text-mid-ash hover:text-bone-white'
+              }`}
+            >
+              Issued by You
+            </button>
+          </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => refetch()}
+            className="gap-1.5 text-xs"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh
+          </Button>
         </div>
       </div>
 
@@ -107,7 +180,7 @@ export default function CertificatesPage() {
         loading={isLoading}
         onSelect={setSelectedCert}
         emptyTitle="No certificates found"
-        emptyDescription="Certificates issued to your address will appear here. Connect with an accredited course provider or cluster to receive your first credential."
+        emptyDescription="Certificates issued to your address or minted by your clusters will appear here."
         emptyAction={() => router.push('/clusters')}
       />
 
@@ -119,4 +192,5 @@ export default function CertificatesPage() {
     </div>
   );
 }
+
 

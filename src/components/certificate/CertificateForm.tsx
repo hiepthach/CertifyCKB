@@ -8,6 +8,7 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 interface CertificateFormProps {
   clusterId: string;
   clusterName: string;
+  defaultRecipientAddress?: string;
   onSubmit: (data: CertificateData) => void;
   onCancel?: () => void;
   loading?: boolean;
@@ -28,12 +29,13 @@ const GRADE_OPTIONS = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D', '
 export function CertificateForm({
   clusterId,
   clusterName,
+  defaultRecipientAddress,
   onSubmit,
   onCancel,
   loading = false,
 }: CertificateFormProps) {
   const [formData, setFormData] = useState<CertificateData>({
-    recipientAddress: '',
+    recipientAddress: defaultRecipientAddress || '',
     recipientName: '',
     courseName: '',
     completionDate: new Date().toISOString().split('T')[0],
@@ -49,8 +51,8 @@ export function CertificateForm({
 
     if (!formData.recipientAddress.trim()) {
       newErrors.recipientAddress = 'Recipient address is required';
-    } else if (!formData.recipientAddress.startsWith('ckt')) {
-      newErrors.recipientAddress = 'Invalid CKB address format (must start with ckt)';
+    } else if (!formData.recipientAddress.startsWith('ckt') && !formData.recipientAddress.startsWith('ckb')) {
+      newErrors.recipientAddress = 'Invalid CKB address format (must start with ckt or ckb)';
     }
 
     if (!formData.recipientName.trim()) {
@@ -108,14 +110,29 @@ export function CertificateForm({
         </span>
       </div>
 
-      <Input
-        label="Recipient CKB Address"
-        placeholder="ckt1qzda0cr08m85hc8j..."
-        value={formData.recipientAddress}
-        onChange={(v) => updateField('recipientAddress', v)}
-        error={errors.recipientAddress}
-        required
-      />
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-xs font-medium text-ash-veil">
+            Recipient CKB Address <span className="text-lavender-spark">*</span>
+          </label>
+          {defaultRecipientAddress && formData.recipientAddress !== defaultRecipientAddress && (
+            <button
+              type="button"
+              onClick={() => updateField('recipientAddress', defaultRecipientAddress)}
+              className="text-[11px] text-lavender-spark hover:underline"
+            >
+              Use my connected address
+            </button>
+          )}
+        </div>
+        <Input
+          placeholder="ckt1qzda0cr08m85hc8j..."
+          value={formData.recipientAddress}
+          onChange={(v) => updateField('recipientAddress', v)}
+          error={errors.recipientAddress}
+          required
+        />
+      </div>
 
       <Input
         label="Recipient Full Name"

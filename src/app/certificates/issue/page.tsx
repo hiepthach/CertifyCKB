@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, Button, Modal, Spinner } from '@/components/ui';
 import { CertificateForm, type CertificateData } from '@/components/certificate';
 import { CheckCircle2, ArrowRight } from 'lucide-react';
@@ -13,6 +13,7 @@ import { issueCertificate } from '@/lib/credentials';
 
 function IssuePageContent() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const { signer, address, isLoadingAddress, open } = useWallet();
   const clusterId = searchParams.get('cluster');
@@ -49,7 +50,9 @@ function IssuePageContent() {
         },
       });
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ['certificates'] });
+      await queryClient.invalidateQueries({ queryKey: ['clusters'] });
       setResult(data);
       setShowSuccessModal(true);
     },
@@ -115,6 +118,7 @@ function IssuePageContent() {
         <CertificateForm
           clusterId={clusterId}
           clusterName={cluster.name}
+          defaultRecipientAddress={address || ''}
           onSubmit={(data) => issueMutation.mutate(data)}
           onCancel={() => router.back()}
           loading={issueMutation.isPending}

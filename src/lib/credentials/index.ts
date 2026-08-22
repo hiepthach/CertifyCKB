@@ -15,6 +15,8 @@ export {
   issueCertificate,
   getCertificate,
   getHolderCertificates,
+  getClusterCertificates,
+  getAllCertificates,
   revokeCertificate,
   clearMockCertificates,
 } from './issuer';

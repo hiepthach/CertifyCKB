@@ -7,6 +7,7 @@ import type { Cluster } from '@/types';
 
 interface ClusterListProps {
   clusters: Cluster[];
+  certificateCounts?: Record<string, number>;
   loading?: boolean;
   onManage?: (cluster: Cluster) => void;
   onIssue?: (cluster: Cluster) => void;
@@ -15,6 +16,7 @@ interface ClusterListProps {
 
 export function ClusterList({
   clusters,
+  certificateCounts = {},
   loading = false,
   onManage,
   onIssue,
@@ -48,7 +50,7 @@ export function ClusterList({
         <ClusterCard
           key={cluster.clusterId}
           cluster={cluster}
-          certificateCount={0}
+          certificateCount={certificateCounts[cluster.clusterId] || 0}
           onManage={() => onManage?.(cluster)}
           onIssue={() => onIssue?.(cluster)}
         />
