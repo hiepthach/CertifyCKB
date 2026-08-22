@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCcc } from '@ckb-ccc/connector-react';
+import { useWallet } from '@/hooks/useWallet';
 import { Button } from '@/components/ui';
 import { Wallet, LogOut, Menu, X, ExternalLink, Copy, Check, Sparkles } from 'lucide-react';
 import { useState } from 'react';
@@ -15,12 +15,9 @@ function truncateAddress(address: string): string {
 
 export function Header() {
   const pathname = usePathname();
-  const { open, disconnect, signerInfo } = useCcc();
+  const { open, disconnect, address, isConnected } = useWallet();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  const address = signerInfo?.address?.addressStr;
-  const isConnected = !!address;
 
   const navItems = [
     { href: '/', label: 'Home' },
@@ -103,7 +100,7 @@ export function Header() {
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-signal-green" />
                     <span className="text-xs font-mono text-bone-white">
-                      {truncateAddress(address)}
+                      {truncateAddress(address || '')}
                     </span>
                     {copied ? (
                       <Check className="w-3.5 h-3.5 text-signal-green animate-fade-in" />

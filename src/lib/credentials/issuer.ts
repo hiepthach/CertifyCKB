@@ -5,8 +5,37 @@ import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './enc
 // Default to mock for development, set to 'false' for production
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
 
+const CERT_STORAGE_KEY = 'ckb_credential_certificates';
+
 // Mock certificate storage for testing
 const mockCertificates = new Map<string, { certificate: CertificateDNA; txHash: string }>();
+
+function syncCertificatesFromLocalStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(CERT_STORAGE_KEY);
+    if (raw) {
+      const parsed: [string, { certificate: CertificateDNA; txHash: string }][] = JSON.parse(raw);
+      for (const [key, value] of parsed) {
+        if (key && value) {
+          mockCertificates.set(key, value);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load certificates from localStorage:', e);
+  }
+}
+
+function syncCertificatesToLocalStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const arr = Array.from(mockCertificates.entries());
+    localStorage.setItem(CERT_STORAGE_KEY, JSON.stringify(arr));
+  } catch (e) {
+    console.error('Failed to save certificates to localStorage:', e);
+  }
+}
 
 interface IssueCertificateParams {
   signer: unknown; // ccc.Signer in production
@@ -34,12 +63,18 @@ interface GetCertificateResult {
  */
 export function clearMockCertificates(): void {
   mockCertificates.clear();
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(CERT_STORAGE_KEY);
+    } catch {}
+  }
 }
 
 /**
  * Get mock storage (for testing)
  */
 export function getMockCertificates(): Map<string, { certificate: CertificateDNA; txHash: string }> {
+  syncCertificatesFromLocalStorage();
   return mockCertificates;
 }
 
@@ -74,7 +109,9 @@ export async function issueCertificate(
     const txHash = '0x' + 'a'.repeat(64);
 
     // Store in mock storage
+    syncCertificatesFromLocalStorage();
     mockCertificates.set(certificateId, { certificate: dna, txHash });
+    syncCertificatesToLocalStorage();
 
     console.log('Certificate issued (mock):', {
       certificateId,
@@ -96,6 +133,7 @@ export async function issueCertificate(
  * Get certificate by ID
  */
 export async function getCertificate(certificateId: string): Promise<GetCertificateResult | null> {
+  syncCertificatesFromLocalStorage();
   // Try mock storage first
   const mock = mockCertificates.get(certificateId);
   if (mock) {
@@ -118,13 +156,14 @@ export async function getCertificate(certificateId: string): Promise<GetCertific
 /**
  * Get all certificates for a holder address
  */
-export async function getHolderCertificates(holderAddress: string): Promise<GetCertificateResult[]> {
+export async function getHolderCertificates(holderAddress?: string): Promise<GetCertificateResult[]> {
+  syncCertificatesFromLocalStorage();
   const results: GetCertificateResult[] = [];
 
   // Get from mock storage
   for (const [certId, mock] of Array.from(mockCertificates.entries())) {
     const cert = mock.certificate;
-    if (cert.credentialSubject.id === holderAddress) {
+    if (!holderAddress || cert.credentialSubject.id === holderAddress || !cert.credentialSubject.id) {
       results.push({
         certificate: cert,
         certificateId: certId,
@@ -153,6 +192,7 @@ export async function revokeCertificate(
   certificateId: string,
   reason?: string
 ): Promise<{ transactionHash: string }> {
+  syncCertificatesFromLocalStorage();
   const mock = mockCertificates.get(certificateId);
 
   if (!mock) {
@@ -171,6 +211,7 @@ export async function revokeCertificate(
   // Update the certificate in mock storage
   mock.certificate.credentialStatus = revokedStatus;
   mockCertificates.set(certificateId, mock);
+  syncCertificatesToLocalStorage();
 
   console.log('Certificate revoked (soft):', {
     certificateId,

@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useCcc } from '@ckb-ccc/connector-react';
+import { useRouter } from 'next/navigation';
+import { useWallet } from '@/hooks/useWallet';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button, Modal, Card, Badge } from '@/components/ui';
+import { Button, Modal, Card, Badge, Spinner } from '@/components/ui';
 import { ClusterList, ClusterForm } from '@/components/cluster';
-import { Plus, RefreshCw, Globe, Mail, Copy, Check, ArrowRight, ExternalLink } from 'lucide-react';
+import { Plus, RefreshCw, Globe, Mail, Copy, Check, ArrowRight, ExternalLink, Wallet } from 'lucide-react';
 import type { Cluster, ClusterConfig } from '@/types';
 import {
   createCluster,
@@ -15,19 +16,17 @@ import {
 } from '@/lib/credentials';
 
 export default function ClustersPage() {
-  const { signerInfo } = useCcc();
+  const router = useRouter();
+  const { signer, address, isLoadingAddress, open } = useWallet();
   const queryClient = useQueryClient();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCluster, setSelectedCluster] = useState<Cluster | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const address = signerInfo?.address?.addressStr;
-  const signer = signerInfo?.signer;
-
   const { data: clusters = [], isLoading, refetch, error } = useQuery({
     queryKey: ['clusters', address],
     queryFn: async () => {
-      const onChainClusters = address ? await getProviderClusters(address) : [];
+      const onChainClusters = await getProviderClusters(address || undefined);
 
       const { getClustersFromMockStorage } = await import('@/lib/credentials');
       const mockClusters = getClustersFromMockStorage();
@@ -48,7 +47,11 @@ export default function ClustersPage() {
     mutationFn: async (config: ClusterConfig) => {
       if (!signer) throw new Error('Wallet not connected');
 
-      const result = await createCluster({ signer, config });
+      const result = await createCluster({
+        signer,
+        config,
+        creatorAddress: address || '',
+      });
 
       const cluster: Cluster = {
         id: result.clusterId,
@@ -57,7 +60,7 @@ export default function ClustersPage() {
         description: config.description,
         websiteUrl: config.websiteUrl,
         contactEmail: config.contactEmail,
-        creatorAddress: signerInfo?.address?.addressStr || '',
+        creatorAddress: address || '',
         createdAt: new Date().toISOString(),
       };
 
@@ -65,8 +68,9 @@ export default function ClustersPage() {
 
       return result;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clusters'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['clusters'] });
+      await refetch();
       setShowCreateModal(false);
     },
   });
@@ -81,6 +85,14 @@ export default function ClustersPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  if (isLoadingAddress) {
+    return (
+      <div className="flex justify-center py-24">
+        <Spinner label="Resolving wallet address..." />
+      </div>
+    );
+  }
+
   if (!address) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
@@ -92,6 +104,12 @@ export default function ClustersPage() {
           <p className="text-sm text-ash-veil leading-relaxed">
             Connect your wallet to create and manage sovereign credential provider clusters on CKB.
           </p>
+          <div className="pt-2">
+            <Button onClick={() => open()} className="gap-2 shadow-glow-green/30">
+              <Wallet className="w-4 h-4" />
+              <span>Connect Wallet</span>
+            </Button>
+          </div>
           <p className="text-xs text-mid-ash pt-2 border-t border-fog-line/10">
             Supported wallets: JoyID Passkeys, MetaMask, WalletConnect
           </p>
@@ -131,7 +149,7 @@ export default function ClustersPage() {
         loading={isLoading}
         onManage={(cluster) => setSelectedCluster(cluster)}
         onIssue={(cluster) => {
-          window.location.href = `/certificates/issue?cluster=${cluster.clusterId}`;
+          router.push(`/certificates/issue?cluster=${cluster.clusterId}`);
         }}
         onCreateNew={() => setShowCreateModal(true)}
       />
@@ -210,7 +228,7 @@ export default function ClustersPage() {
             <div className="pt-4 border-t border-fog-line/10 flex gap-3">
               <Button
                 onClick={() => {
-                  window.location.href = `/certificates/issue?cluster=${selectedCluster.clusterId}`;
+                  router.push(`/certificates/issue?cluster=${selectedCluster.clusterId}`);
                 }}
                 className="flex-1 text-xs gap-1.5 shadow-glow-green/30"
               >

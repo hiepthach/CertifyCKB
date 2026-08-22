@@ -1,34 +1,11 @@
 'use client';
 
-import { useCcc } from '@ckb-ccc/connector-react';
-import type { ccc } from '@ckb-ccc/core';
+import { useWallet } from '@/hooks/useWallet';
 import { Button } from '@/components/ui';
 import { Wallet, LogOut } from 'lucide-react';
-import { useState, useEffect } from 'react';
 
 export function WalletConnect() {
-  const { disconnect, client, signerInfo, open } = useCcc();
-  const [balance, setBalance] = useState<bigint | null>(null);
-
-  const address = signerInfo?.address?.addressStr ?? null;
-
-  useEffect(() => {
-    if (!address || !client) {
-      setBalance(null);
-      return;
-    }
-
-    const fetchBalance = async () => {
-      try {
-        const balanceResult = await client.getBalance(address as unknown as Parameters<typeof client.getBalance>[0]);
-        setBalance(balanceResult);
-      } catch (error) {
-        console.error('Failed to fetch balance:', error);
-      }
-    };
-
-    fetchBalance();
-  }, [address, client]);
+  const { disconnect, address, balance, open } = useWallet();
 
   const truncateAddress = (addr: string): string => {
     if (addr.length <= 10) return addr;

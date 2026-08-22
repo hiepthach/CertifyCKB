@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useCcc } from '@ckb-ccc/connector-react';
+import { useRouter } from 'next/navigation';
+import { useWallet } from '@/hooks/useWallet';
 import { useQuery } from '@tanstack/react-query';
-import { Card, Button } from '@/components/ui';
+import { Card, Button, Spinner } from '@/components/ui';
 import { CertificateList, CertificateDetail } from '@/components/certificate';
 import type { CertificateDNA } from '@/types';
 import { getHolderCertificates } from '@/lib/credentials';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Wallet } from 'lucide-react';
 
 interface CertificateWithMeta {
   certificate: CertificateDNA;
@@ -16,10 +17,9 @@ interface CertificateWithMeta {
 }
 
 export default function CertificatesPage() {
-  const { signerInfo } = useCcc();
+  const router = useRouter();
+  const { address, isConnected, isLoadingAddress, open } = useWallet();
   const [selectedCert, setSelectedCert] = useState<CertificateWithMeta | null>(null);
-
-  const address = signerInfo?.address?.addressStr;
 
   const { data: certificates = [], isLoading, error } = useQuery({
     queryKey: ['certificates', address],
@@ -29,6 +29,14 @@ export default function CertificatesPage() {
     },
     enabled: !!address,
   });
+
+  if (isLoadingAddress) {
+    return (
+      <div className="flex justify-center py-24">
+        <Spinner label="Resolving wallet address..." />
+      </div>
+    );
+  }
 
   if (!address) {
     return (
@@ -41,6 +49,12 @@ export default function CertificatesPage() {
           <p className="text-sm text-ash-veil leading-relaxed">
             Connect your wallet to view your portable, verifiable Spore DOB certificates.
           </p>
+          <div className="pt-2">
+            <Button onClick={() => open()} className="gap-2 shadow-glow-green/30">
+              <Wallet className="w-4 h-4" />
+              <span>Connect Wallet</span>
+            </Button>
+          </div>
           <p className="text-xs text-mid-ash pt-2 border-t border-fog-line/10">
             Supported wallets: JoyID Passkeys, MetaMask, WalletConnect
           </p>
@@ -94,7 +108,7 @@ export default function CertificatesPage() {
         onSelect={setSelectedCert}
         emptyTitle="No certificates found"
         emptyDescription="Certificates issued to your address will appear here. Connect with an accredited course provider or cluster to receive your first credential."
-        emptyAction={() => window.location.href = '/clusters'}
+        emptyAction={() => router.push('/clusters')}
       />
 
       {error && (

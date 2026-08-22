@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useCcc } from '@ckb-ccc/connector-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useWallet } from '@/hooks/useWallet';
 import { useMutation } from '@tanstack/react-query';
 import { Card, Button, Modal, Spinner } from '@/components/ui';
 import { CertificateForm, type CertificateData } from '@/components/certificate';
@@ -12,16 +12,14 @@ import { getCluster } from '@/lib/credentials';
 import { issueCertificate } from '@/lib/credentials';
 
 function IssuePageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const { signerInfo } = useCcc();
+  const { signer, address, isLoadingAddress, open } = useWallet();
   const clusterId = searchParams.get('cluster');
 
   const [cluster, setCluster] = useState<Cluster | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [result, setResult] = useState<{ certificateId: string; transactionHash: string } | null>(null);
-
-  const address = signerInfo?.address?.addressStr;
-  const signer = signerInfo?.signer;
 
   useEffect(() => {
     if (clusterId) {
@@ -40,7 +38,7 @@ function IssuePageContent() {
         issuerName: cluster.name,
         issuerDescription: cluster.description,
         subject: {
-          id: data.recipientAddress,
+          id: data.recipientAddress || address || '',
           type: 'CourseCertificate',
           name: data.recipientName,
           courseName: data.courseName,
@@ -57,6 +55,14 @@ function IssuePageContent() {
     },
   });
 
+  if (isLoadingAddress) {
+    return (
+      <div className="flex justify-center py-24">
+        <Spinner label="Resolving wallet address..." />
+      </div>
+    );
+  }
+
   if (!address || !signer) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
@@ -68,7 +74,7 @@ function IssuePageContent() {
           <p className="text-sm text-ash-veil leading-relaxed">
             Connect your wallet to issue sovereign on-chain certificates as Spore DOBs.
           </p>
-          <Button onClick={() => window.location.href = '/clusters'} className="text-xs">
+          <Button onClick={() => router.push('/clusters')} className="text-xs">
             Go to Clusters
           </Button>
         </Card>
@@ -84,7 +90,7 @@ function IssuePageContent() {
           <p className="text-sm text-ash-veil leading-relaxed">
             Please choose an issuing provider cluster before creating a certificate.
           </p>
-          <Button onClick={() => window.location.href = '/clusters'} className="text-xs">
+          <Button onClick={() => router.push('/clusters')} className="text-xs">
             Go to Clusters
           </Button>
         </Card>
@@ -110,7 +116,7 @@ function IssuePageContent() {
           clusterId={clusterId}
           clusterName={cluster.name}
           onSubmit={(data) => issueMutation.mutate(data)}
-          onCancel={() => window.history.back()}
+          onCancel={() => router.back()}
           loading={issueMutation.isPending}
         />
       </Card>
@@ -127,7 +133,7 @@ function IssuePageContent() {
         isOpen={showSuccessModal}
         onClose={() => {
           setShowSuccessModal(false);
-          window.location.href = '/certificates';
+          router.push('/certificates');
         }}
         title="Certificate Minted On CKB!"
         size="md"
@@ -176,7 +182,7 @@ function IssuePageContent() {
             <Button
               onClick={() => {
                 setShowSuccessModal(false);
-                window.location.href = '/certificates';
+                router.push('/certificates');
               }}
               className="flex-1 text-xs shadow-glow-green/30"
             >
