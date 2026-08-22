@@ -4,6 +4,7 @@ import { Card, Badge, Button } from '@/components/ui';
 import type { CertificateDNA } from '@/types';
 import { formatDate, truncateAddress, copyToClipboard } from '@/utils';
 import { formatCertificateDisplay, isExpired, isRevoked } from '@/lib/credentials';
+import { getTransactionUrl } from '@/lib/ckb';
 import { Award, Calendar, User, Building, ExternalLink, Copy, Check, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useNetwork } from '@/hooks';
@@ -154,6 +155,20 @@ export function CertificateDetail({
               {truncateAddress(certificate.issuer.id, 12, 8)}
             </span>
           </div>
+          {transactionHash && (
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1.5 p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+              <span className="text-mid-ash uppercase tracking-wider font-medium">Transaction Hash</span>
+              <a
+                href={getTransactionUrl(transactionHash)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-lavender-spark hover:underline flex items-center gap-1"
+              >
+                {truncateAddress(transactionHash, 12, 8)}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          )}
           <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
             <span className="text-mid-ash uppercase tracking-wider font-medium">Issued Date</span>
             <span className="text-bone-white">{formatDate(certificate.issuanceDate)}</span>
@@ -163,14 +178,14 @@ export function CertificateDetail({
 
       {/* Actions */}
       <div className="flex flex-wrap gap-3">
-        {explorerUrl && transactionHash && (
+        {transactionHash && (
           <a
-            href={`${explorerUrl}/transaction/${transactionHash}`}
+            href={getTransactionUrl(transactionHash)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 min-w-[140px]"
           >
-            <Button variant="secondary" className="w-full text-xs gap-1.5">
+            <Button variant="secondary" className="w-full text-xs gap-1.5 shadow-glow-violet/20">
               <ExternalLink className="w-3.5 h-3.5" />
               View on CKB Explorer
             </Button>

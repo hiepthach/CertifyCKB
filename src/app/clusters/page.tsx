@@ -15,6 +15,7 @@ import {
   saveClusterToMockStorage,
   getAllCertificates,
 } from '@/lib/credentials';
+import { getTransactionUrl } from '@/lib/ckb';
 
 export default function ClustersPage() {
   const router = useRouter();
@@ -201,6 +202,21 @@ export default function ClustersPage() {
           onCancel={() => setShowCreateModal(false)}
           loading={createMutation.isPending}
         />
+        {createMutation.isError && (
+          <div className="mt-4 p-3 bg-red-950/40 border border-red-800/40 rounded-xl">
+            <p className="text-sm text-red-400">{createMutation.error?.message}</p>
+            {(createMutation.error?.message || '').includes('faucet') && (
+              <a
+                href="https://faucet.nervos.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-xs text-lavender-spark hover:underline"
+              >
+                Get free testnet CKB →
+              </a>
+            )}
+          </div>
+        )}
       </Modal>
 
       {selectedCluster && (
@@ -247,14 +263,27 @@ export default function ClustersPage() {
 
             <div className="p-3.5 bg-midnight-plum rounded-xl border border-fog-line/10">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-mid-ash uppercase tracking-wider font-semibold">On-Chain Cluster ID</span>
-                <button
-                  onClick={() => handleCopyClusterId(selectedCluster.clusterId)}
-                  className="flex items-center gap-1 text-[11px] text-lavender-spark hover:underline"
-                >
-                  {copied ? <Check className="w-3 h-3 text-signal-green" /> : <Copy className="w-3 h-3" />}
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
+                <span className="text-xs text-mid-ash uppercase tracking-wider font-semibold">On-Chain Cluster ID / Tx</span>
+                <div className="flex items-center gap-3">
+                  {selectedCluster.clusterId.startsWith('0x') && selectedCluster.clusterId.length === 66 && (
+                    <a
+                      href={getTransactionUrl(selectedCluster.clusterId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-lavender-spark hover:underline flex items-center gap-1"
+                    >
+                      Explorer
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                  <button
+                    onClick={() => handleCopyClusterId(selectedCluster.clusterId)}
+                    className="flex items-center gap-1 text-[11px] text-lavender-spark hover:underline"
+                  >
+                    {copied ? <Check className="w-3 h-3 text-signal-green" /> : <Copy className="w-3 h-3" />}
+                    {copied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
               </div>
               <p className="font-mono text-xs text-bone-white break-all bg-shadow-plum/60 p-2 rounded-lg border border-fog-line/10">
                 {selectedCluster.clusterId}

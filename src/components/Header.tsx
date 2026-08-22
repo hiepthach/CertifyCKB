@@ -36,7 +36,7 @@ export function Header() {
 
   const getExplorerLink = () => {
     const explorers: Record<string, string | null> = {
-      testnet: 'https://explorer.nervos.org/aggron2',
+      testnet: 'https://testnet.explorer.nervos.org',
       mainnet: 'https://explorer.nervos.org',
     };
     return explorers[process.env.NEXT_PUBLIC_NETWORK || 'testnet'] || null;

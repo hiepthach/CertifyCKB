@@ -6,10 +6,10 @@ import { useWallet } from '@/hooks/useWallet';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, Button, Modal, Spinner } from '@/components/ui';
 import { CertificateForm, type CertificateData } from '@/components/certificate';
-import { CheckCircle2, ArrowRight } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ExternalLink } from 'lucide-react';
 import type { Cluster } from '@/types';
-import { getCluster } from '@/lib/credentials';
-import { issueCertificate } from '@/lib/credentials';
+import { getCluster, issueCertificate } from '@/lib/credentials';
+import { getTransactionUrl } from '@/lib/ckb';
 
 function IssuePageContent() {
   const router = useRouter();
@@ -130,6 +130,16 @@ function IssuePageContent() {
           <p className="text-sm text-red-400">
             Failed to issue certificate: {issueMutation.error?.message || 'Unknown error'}
           </p>
+          {(issueMutation.error?.message || '').includes('faucet') && (
+            <a
+              href="https://faucet.nervos.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-xs text-lavender-spark hover:underline"
+            >
+              Get free testnet CKB →
+            </a>
+          )}
         </div>
       )}
 
@@ -164,7 +174,18 @@ function IssuePageContent() {
                 </p>
               </div>
               <div>
-                <p className="text-mid-ash uppercase tracking-wider font-semibold">Transaction Hash</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-mid-ash uppercase tracking-wider font-semibold">Transaction Hash</p>
+                  <a
+                    href={getTransactionUrl(result.transactionHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-lavender-spark hover:underline flex items-center gap-1"
+                  >
+                    View on CKB Explorer
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
                 <p className="font-mono text-bone-white break-all mt-0.5 bg-shadow-plum/50 p-2 rounded-lg border border-fog-line/10">
                   {result.transactionHash}
                 </p>

@@ -17,7 +17,7 @@ const NETWORK_CONFIGS: Record<Network, NetworkConfig> = {
   testnet: {
     ckbNodeUrl: 'https://testnet.ckb.dev',
     ckbIndexerUrl: 'https://testnet.ckb.dev',
-    explorerUrl: 'https://explorer.nervos.org/aggron2',
+    explorerUrl: 'https://testnet.explorer.nervos.org',
   },
   mainnet: {
     ckbNodeUrl: 'https://mainnet.ckb.com',

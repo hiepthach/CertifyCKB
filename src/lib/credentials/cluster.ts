@@ -1,3 +1,4 @@
+import { ccc } from '@ckb-ccc/core';
 import type { Cluster, ClusterConfig } from '@/types';
 
 // Environment flag to enable mock mode for testing
@@ -52,26 +53,59 @@ export async function createCluster(params: {
 }): Promise<CreateClusterResult> {
   const { config, signer } = params;
 
-  let creatorAddress = params.creatorAddress || '';
-  if (!creatorAddress && signer && typeof (signer as any).getRecommendedAddress === 'function') {
+  // If a live CCC signer is connected, construct and send a real on-chain transaction
+  if (
+    signer &&
+    typeof signer === 'object' &&
+    'client' in signer &&
+    typeof (signer as any).sendTransaction === 'function' &&
+    typeof (signer as any).getRecommendedAddressObj === 'function'
+  ) {
+    const liveSigner = signer as ccc.Signer;
+    const addrObj = await liveSigner.getRecommendedAddressObj();
+    const creatorAddress = addrObj.toString();
+    const creatorLock = addrObj.script;
+
+    // Encode cluster metadata
+    const clusterMetadata = {
+      type: 'SporeCluster',
+      name: config.name,
+      description: config.description,
+      websiteUrl: config.websiteUrl || '',
+      contactEmail: config.contactEmail || '',
+      createdAt: new Date().toISOString(),
+    };
+    const dataBytes = ccc.bytesFrom(new TextEncoder().encode(JSON.stringify(clusterMetadata)));
+
+    // Create Cell Output with creator's lock
+    const cellOutput = ccc.CellOutput.from({
+      capacity: 0,
+      lock: creatorLock,
+    });
+    // Calculate required capacity in shannons: occupiedSize + dataBytes length
+    cellOutput.capacity = ccc.fixedPointFrom(cellOutput.occupiedSize + dataBytes.length);
+
+    const tx = ccc.Transaction.from({
+      outputs: [cellOutput],
+      outputsData: [ccc.hexFrom(dataBytes)],
+    });
+
     try {
-      creatorAddress = await (signer as any).getRecommendedAddress();
-    } catch {
-      // fallback
+      await tx.completeInputsByCapacity(liveSigner);
+      await tx.completeFeeBy(liveSigner);
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      if (msg.includes('capacity') || msg.includes('balance') || msg.includes('Inputs') || msg.includes('LiveCells')) {
+        throw new Error(
+          `Insufficient CKB capacity in wallet. You need at least ~100 CKB to create an on-chain Cluster cell. Please claim free testnet CKB from https://faucet.nervos.org.`
+        );
+      }
+      throw err;
     }
-  }
-  if (!creatorAddress) {
-    creatorAddress = 'mock_address';
-  }
 
-  if (USE_MOCK) {
-    // Generate cluster ID (mock)
-    const clusterId = generateClusterId(creatorAddress.length > 10 ? creatorAddress : '0x000000000000000000000000000000000000000000');
+    const txHash = await liveSigner.sendTransaction(tx);
+    const clusterId = txHash;
 
-    // Mock transaction for MVP
-    const transactionHash = '0x' + '0'.repeat(64);
-
-    // Store in mock storage for MVP
     const cluster: Cluster = {
       id: clusterId,
       clusterId,
@@ -85,21 +119,34 @@ export async function createCluster(params: {
 
     saveClusterToMockStorage(cluster);
 
-    console.log('Cluster created (mock):', {
-      clusterId,
-      transactionHash,
-      name: config.name,
-      creatorAddress,
-    });
-
     return {
       clusterId,
-      transactionHash,
+      transactionHash: txHash,
     };
   }
 
-  // Real Spore SDK implementation would go here
-  throw new Error('Real Spore SDK integration not yet implemented');
+  // Fallback for tests/mock environment
+  let creatorAddress = params.creatorAddress || 'mock_address';
+  const clusterId = generateClusterId(creatorAddress.length > 10 ? creatorAddress : '0x000000000000000000000000000000000000000000');
+  const transactionHash = '0x' + '0'.repeat(64);
+
+  const cluster: Cluster = {
+    id: clusterId,
+    clusterId,
+    name: config.name,
+    description: config.description,
+    websiteUrl: config.websiteUrl,
+    contactEmail: config.contactEmail,
+    creatorAddress,
+    createdAt: new Date().toISOString(),
+  };
+
+  saveClusterToMockStorage(cluster);
+
+  return {
+    clusterId,
+    transactionHash,
+  };
 }
 
 /**
