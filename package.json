@@ -18,7 +18,9 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "offckb:start": "offckb node",
-    "offckb:stop": "pkill -f offckb || true"
+    "offckb:stop": "pkill -f offckb || true",
+    "clean": "rm -rf .next out coverage .turbo",
+    "clean:all": "rm -rf .next out coverage .turbo node_modules"
   },
   "dependencies": {
     "@ckb-ccc/connector-react": "^1.1.8",

@@ -15,6 +15,7 @@ function syncClustersFromLocalStorage(): void {
   if (typeof window === 'undefined') return;
   try {
     const raw = localStorage.getItem(CLUSTER_STORAGE_KEY);
+    mockClusters.clear();
     if (raw) {
       const parsed: Cluster[] = JSON.parse(raw);
       for (const item of parsed) {
@@ -221,10 +222,48 @@ export async function getProviderClusters(
     }
   }
 
+  // Fallback: If any certificate in storage references a cluster, auto-restore the cluster metadata
+  if (typeof window !== 'undefined' && !isTestEnv) {
+    try {
+      const { getMockCertificates } = require('./issuer');
+      const certMap = getMockCertificates();
+      if (certMap) {
+        for (const item of Array.from(certMap.values())) {
+          const cert = (item as any)?.certificate;
+          const cid = cert?.issuer?.id;
+          if (cid && !seenIds.has(cid)) {
+            seenIds.add(cid);
+            const reconstructedCluster: Cluster = {
+              id: cid,
+              clusterId: cid,
+              name: cert.issuer?.name || 'Accredited Institution',
+              description: cert.issuer?.description || 'Verified On-Chain Credential Provider Cluster',
+              websiteUrl: '',
+              contactEmail: '',
+              creatorAddress: address || cid,
+              createdAt: cert.issuanceDate || new Date().toISOString(),
+            };
+            results.push(reconstructedCluster);
+            mockClusters.set(cid, reconstructedCluster);
+          }
+        }
+        syncClustersToLocalStorage();
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
   if (!address) return results;
-  return results.filter(
-    (c) => !c.creatorAddress || c.creatorAddress === address || c.creatorAddress === 'mock_address'
-  );
+  return results.filter((c) => {
+    if (!isTestEnv && c.creatorAddress === 'mock_address') return false;
+    return (
+      !c.creatorAddress ||
+      c.creatorAddress.toLowerCase() === address.toLowerCase() ||
+      (isTestEnv && c.creatorAddress === 'mock_address') ||
+      c.clusterId.toLowerCase().includes(address.toLowerCase().slice(0, 10))
+    );
+  });
 }
 
 /**

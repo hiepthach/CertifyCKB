@@ -16,6 +16,7 @@ function syncCertificatesFromLocalStorage(): void {
   if (typeof window === 'undefined') return;
   try {
     const raw = localStorage.getItem(CERT_STORAGE_KEY);
+    mockCertificates.clear();
     if (raw) {
       const parsed: [string, { certificate: CertificateDNA; txHash: string }][] = JSON.parse(raw);
       for (const [key, value] of parsed) {
@@ -270,6 +271,10 @@ export async function getHolderCertificates(
 
   // 1. Get from local cache
   for (const [certId, mock] of Array.from(mockCertificates.entries())) {
+    const isMockHash = mock.txHash.startsWith('0xaaaa') || mock.txHash === '0x' + '0'.repeat(64);
+    if (holderAddress && isMockHash && !isTestEnv) {
+      continue;
+    }
     const cert = mock.certificate;
     if (!holderAddress || cert.credentialSubject.id === holderAddress || !cert.credentialSubject.id) {
       results.push({
@@ -371,6 +376,10 @@ export async function getAllCertificates(
 
   // 1. Get all certificates from local storage (both issued by user and received by user)
   for (const [certId, mock] of Array.from(mockCertificates.entries())) {
+    const isMockHash = mock.txHash.startsWith('0xaaaa') || mock.txHash === '0x' + '0'.repeat(64);
+    if (address && isMockHash && !isTestEnv) {
+      continue;
+    }
     const cid = mock.certificate.issuer?.id || '';
     results.push({
       certificate: mock.certificate,
