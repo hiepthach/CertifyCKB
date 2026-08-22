@@ -120,7 +120,7 @@ export function CertificateDetail({
             <h3 className="text-sm font-medium text-slate-400 mb-2">Skills Acquired</h3>
             <div className="flex flex-wrap gap-2">
               {subject.skills.map((skill, index) => (
-                <Badge key={index} variant="info">{skill}</Badge>
+                <Badge key={index} variant="lavender">{skill}</Badge>
               ))}
             </div>
           </div>

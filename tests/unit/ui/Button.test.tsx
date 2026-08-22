@@ -29,7 +29,7 @@ describe('Button', () => {
     render(<Button variant="primary">Primary</Button>);
     const button = screen.getByRole('button');
 
-    expect(button.className).toContain('bg-blue-600');
+    expect(button.className).toContain('bg-iris');
   });
 
   // Test: Render button with secondary variant
@@ -39,7 +39,7 @@ describe('Button', () => {
     render(<Button variant="secondary">Secondary</Button>);
     const button = screen.getByRole('button');
 
-    expect(button.className).toContain('bg-slate-700');
+    expect(button.className).toContain('bg-deep-indigo');
   });
 
   // Test: Render button with danger variant
@@ -49,7 +49,7 @@ describe('Button', () => {
     render(<Button variant="danger">Delete</Button>);
     const button = screen.getByRole('button');
 
-    expect(button.className).toContain('bg-red-600');
+    expect(button.className).toContain('bg-red-900');
   });
 
   // Test: Render button with ghost variant
@@ -199,7 +199,7 @@ describe('Button', () => {
     render(<Button>Focus</Button>);
     const button = screen.getByRole('button');
 
-    expect(button.className).toContain('focus:ring-2');
-    expect(button.className).toContain('focus:ring-blue-500');
+    expect(button.className).toContain('focus-visible:ring-2');
+    expect(button.className).toContain('focus-visible:ring-lavender');
   });
 });

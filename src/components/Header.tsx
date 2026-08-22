@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useCcc } from '@ckb-ccc/connector-react';
 import { Button } from '@/components/ui';
 import { Wallet, LogOut, Menu, X, ExternalLink, Copy, Check } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { NetworkSelector } from './wallet/NetworkSelector';
 
 function truncateAddress(address: string): string {
@@ -37,7 +37,6 @@ export function Header() {
     }
   };
 
-  // Get network-specific explorer URL
   const getExplorerLink = () => {
     const explorers: Record<string, string | null> = {
       testnet: 'https://explorer.nervos.org/aggron2',
@@ -49,28 +48,31 @@ export function Header() {
   const explorerUrl = getExplorerLink();
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-900/95 backdrop-blur supports-[backdrop-filter]:bg-slate-900/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+    <div className="sticky top-0 z-40 w-full pt-4 px-4">
+      <div className="max-w-[1200px] mx-auto">
+        {/* Floating nav pill — midnight surface with inset rim-light glow */}
+        <header className="relative bg-midnight border border-dusk/20 rounded-nav shadow-glow-md flex items-center justify-between px-4 py-2">
           {/* Logo */}
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">CK</span>
+          <div className="flex items-center gap-6">
+            <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+              <div className="w-7 h-7 bg-deep-indigo rounded-btn flex items-center justify-center border border-lavender/30 shadow-glow-violet">
+                <span className="text-lavender font-semibold text-xs">CK</span>
               </div>
-              <span className="font-semibold text-white hidden sm:block">Credential Registry</span>
+              <span className="font-display text-sm font-medium text-lilac-white hidden sm:block tracking-wide">
+                Credential Registry
+              </span>
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 text-sm font-normal rounded-btn transition-colors duration-200 ${
                     pathname === item.href
-                      ? 'text-blue-400'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'text-lilac-white bg-deep-indigo/60'
+                      : 'text-fog hover:text-lilac-white hover:bg-deep-indigo/30'
                   }`}
                 >
                   {item.label}
@@ -80,7 +82,7 @@ export function Header() {
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* Network Selector */}
             <NetworkSelector />
 
@@ -91,16 +93,16 @@ export function Header() {
                 <div className="hidden sm:flex items-center gap-1">
                   <button
                     onClick={handleCopyAddress}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 hover:border-blue-500 transition-colors group"
+                    className="flex items-center gap-1.5 px-3 py-1 bg-deep-indigo rounded-btn border border-dusk/30 hover:border-lavender/40 transition-colors group"
                     title="Copy address"
                   >
-                    <span className="text-sm font-mono text-white">
+                    <span className="text-xs font-mono text-lilac-white">
                       {truncateAddress(address)}
                     </span>
                     {copied ? (
-                      <Check className="w-3.5 h-3.5 text-green-400" />
+                      <Check className="w-3 h-3 text-emerald-400" />
                     ) : (
-                      <Copy className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300" />
+                      <Copy className="w-3 h-3 text-steel group-hover:text-fog transition-colors" />
                     )}
                   </button>
 
@@ -110,85 +112,63 @@ export function Header() {
                       href={`${explorerUrl}/address/${address}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1.5 bg-slate-800 rounded-lg border border-slate-700 hover:border-blue-500 transition-colors text-slate-500 hover:text-slate-300"
+                      className="p-1.5 bg-deep-indigo rounded-btn border border-dusk/30 hover:border-lavender/40 transition-colors text-steel hover:text-fog"
                       title="View on explorer"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
+                      <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
                 </div>
 
-                {/* Mobile address */}
-                <div className="sm:hidden px-2 py-1 bg-slate-800 rounded border border-slate-700">
-                  <span className="text-xs font-mono text-white">
-                    {truncateAddress(address)}
-                  </span>
-                </div>
-
                 {/* Disconnect button */}
                 <Button
-                  variant="danger"
+                  variant="ghost"
                   size="sm"
                   onClick={disconnect}
-                  className="gap-1"
+                  className="gap-1 border border-dusk/30"
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden sm:inline">Disconnect</span>
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-xs">Disconnect</span>
                 </Button>
               </div>
             ) : (
               <Button onClick={open} size="sm" className="gap-1">
-                <Wallet className="w-4 h-4" />
-                Connect Wallet
+                <Wallet className="w-3.5 h-3.5" />
+                <span className="text-xs">Connect</span>
               </Button>
             )}
 
             {/* Mobile menu button */}
             <button
-              className="md:hidden p-2 text-slate-400 hover:text-white"
+              className="md:hidden p-2 text-fog hover:text-lilac-white transition-colors rounded-btn hover:bg-deep-indigo"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
-        </div>
 
-        {/* Connection Status Bar */}
-        {isConnected && (
-          <div className="hidden md:flex items-center gap-4 py-2 px-1 border-t border-slate-800/50 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-green-400 font-medium">Connected</span>
-            </div>
-            <div className="text-slate-600">|</div>
-            <div className="text-slate-400">
-              Address: <span className="font-mono text-slate-300">{truncateAddress(address)}</span>
-            </div>
-            <div className="text-slate-600">|</div>
-            <div className="text-slate-400">
-              Network: <span className="text-slate-300 capitalize">{process.env.NEXT_PUBLIC_NETWORK || 'testnet'}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <nav className="md:hidden py-4 border-t border-slate-800">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`block py-2 text-sm font-medium ${
-                  pathname === item.href ? 'text-blue-400' : 'text-slate-400'
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        )}
+          {/* Mobile Navigation */}
+          {mobileMenuOpen && (
+            <nav className="absolute top-full left-0 right-0 mt-2 mx-2 bg-midnight border border-dusk/20 rounded-card shadow-glow-lg p-3 flex flex-col gap-1 md:hidden">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`block px-3 py-2 text-sm rounded-btn transition-colors ${
+                    pathname === item.href
+                      ? 'text-lilac-white bg-deep-indigo/60'
+                      : 'text-fog hover:text-lilac-white hover:bg-deep-indigo/30'
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          )}
+        </header>
       </div>
-    </header>
+    </div>
   );
 }

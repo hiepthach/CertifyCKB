@@ -7,19 +7,17 @@ import { Globe, ChevronDown, Check, AlertTriangle } from 'lucide-react';
 const NETWORK_CONFIG = {
   testnet: {
     label: 'Testnet (Aggron)',
-    icon: '🧪',
-    variant: 'info' as const,
     description: 'Nervos test network',
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500',
+    color: 'text-lavender',
+    bgColor: 'bg-lavender/10',
+    borderColor: 'border-lavender/30',
   },
   mainnet: {
     label: 'Mainnet',
-    icon: '⚡',
-    variant: 'success' as const,
     description: 'CKB production network',
-    color: 'text-green-400',
-    bgColor: 'bg-green-500',
+    color: 'text-emerald-400',
+    bgColor: 'bg-emerald-500/10',
+    borderColor: 'border-emerald-500/30',
   },
 };
 
@@ -55,26 +53,28 @@ export function NetworkSelector({ className = '' }: NetworkSelectorProps) {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`
-          flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all
+          flex items-center gap-1.5 px-3 py-1.5 rounded-btn border transition-all text-xs
           ${isOpen
-            ? 'bg-slate-700 border-blue-500'
-            : 'bg-slate-800 border-slate-700 hover:border-slate-600'
+            ? 'bg-deep-indigo border-lavender/50 text-lilac-white'
+            : 'bg-deep-indigo/50 border-dusk/30 text-fog hover:text-lilac-white hover:border-dusk/50'
           }
         `}
       >
-        <span className="text-base">{currentConfig.icon}</span>
-        <span className="text-sm font-medium text-white hidden sm:inline">
+        <div className={`w-4 h-4 rounded-full flex items-center justify-center ${currentConfig.bgColor} ${currentConfig.color}`}>
+          <Globe className="w-2.5 h-2.5" strokeWidth={1.5} />
+        </div>
+        <span className="text-xs font-normal hidden sm:inline text-lilac-white/80">
           {currentConfig.label}
         </span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden">
-          <div className="p-3 border-b border-slate-700 bg-slate-900/50">
-            <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">Select Network</p>
+        <div className="absolute right-0 mt-2 w-72 bg-midnight border border-dusk/30 rounded-card shadow-glow-lg z-50 overflow-hidden animate-fade-in-scale">
+          <div className="p-3 border-b border-dusk/20">
+            <p className="text-xs text-fog uppercase tracking-wider font-medium">Select Network</p>
           </div>
-          <div className="p-2">
+          <div className="p-2 space-y-1">
             {(Object.keys(NETWORK_CONFIG) as Network[]).map((net) => {
               const config = NETWORK_CONFIG[net];
               const isSelected = net === network;
@@ -84,24 +84,24 @@ export function NetworkSelector({ className = '' }: NetworkSelectorProps) {
                   key={net}
                   onClick={() => handleNetworkSelect(net)}
                   className={`
-                    w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all
+                    w-full flex items-center gap-3 px-3 py-3 rounded-btn transition-all
                     ${isSelected
-                      ? 'bg-blue-900/30 text-blue-300 border border-blue-700/50'
-                      : 'text-slate-300 hover:bg-slate-700/50 border border-transparent'
+                      ? 'bg-deep-indigo/60 text-lilac-white border border-lavender/30'
+                      : 'text-ash hover:text-lilac-white hover:bg-deep-indigo/40 border border-transparent'
                     }
                   `}
                 >
-                  <div className={`w-10 h-10 rounded-full ${config.bgColor} bg-opacity-20 flex items-center justify-center`}>
-                    <span className="text-xl">{config.icon}</span>
+                  <div className={`w-10 h-10 rounded-btn flex items-center justify-center border ${config.bgColor} ${isSelected ? config.borderColor : 'border-dusk/20'}`}>
+                    <Globe className={`w-5 h-5 ${config.color}`} strokeWidth={1.5} />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-semibold">{config.label}</p>
-                    <p className="text-xs text-slate-500">{config.description}</p>
+                    <p className="text-sm font-medium">{config.label}</p>
+                    <p className="text-xs text-fog">{config.description}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isSelected && <Check className="w-4 h-4 text-blue-400" />}
+                    {isSelected && <Check className="w-4 h-4 text-lavender" />}
                     {net === 'mainnet' && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400 font-medium">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-badge bg-red-950/60 text-red-400 font-medium border border-red-800/40">
                         LIVE
                       </span>
                     )}
@@ -113,16 +113,16 @@ export function NetworkSelector({ className = '' }: NetworkSelectorProps) {
 
           {/* Warning for mainnet */}
           {network === 'mainnet' && (
-            <div className="mx-3 mb-3 p-2 bg-red-900/20 border border-red-800/50 rounded-lg flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-red-300">
+            <div className="mx-3 mb-3 p-2.5 bg-red-950/40 border border-red-800/40 rounded-btn flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
+              <p className="text-xs text-red-300 leading-relaxed">
                 You are connected to mainnet. Real transactions will occur.
               </p>
             </div>
           )}
 
-          <div className="p-2 border-t border-slate-700 bg-slate-900/30">
-            <p className="text-xs text-slate-500 text-center">
+          <div className="p-2 border-t border-dusk/20">
+            <p className="text-xs text-steel text-center">
               Settings are saved locally
             </p>
           </div>
@@ -132,14 +132,13 @@ export function NetworkSelector({ className = '' }: NetworkSelectorProps) {
   );
 }
 
-// Simple badge version
 export function NetworkBadge() {
   const { network } = useNetwork();
   const config = NETWORK_CONFIG[network];
 
   return (
-    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full ${config.bgColor} bg-opacity-20 border border-slate-700`}>
-      <span className="text-sm">{config.icon}</span>
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-badge ${config.bgColor} border ${config.borderColor}`}>
+      <Globe className={`w-3 h-3 ${config.color}`} strokeWidth={1.5} />
       <span className={`text-xs font-medium ${config.color}`}>
         {config.label}
       </span>
@@ -147,7 +146,6 @@ export function NetworkBadge() {
   );
 }
 
-// Status dot version
 export function NetworkStatusDot() {
   const { network } = useNetwork();
   const config = NETWORK_CONFIG[network];

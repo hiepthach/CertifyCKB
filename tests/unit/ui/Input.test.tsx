@@ -62,7 +62,7 @@ describe('Input', () => {
     const error = screen.getByText(/invalid email format/i);
 
     expect(error).toBeInTheDocument();
-    expect(error.className).toContain('text-red-500');
+    expect(error.className).toContain('text-red-400');
   });
 
   // Test: Input has error styling when error prop is set
@@ -84,7 +84,7 @@ describe('Input', () => {
     const helper = screen.getByText(/enter your email address/i);
 
     expect(helper).toBeInTheDocument();
-    expect(helper.className).toContain('text-slate-500');
+    expect(helper.className).toContain('text-fog');
   });
 
   // Test: Hide helper text when error is shown
@@ -166,7 +166,7 @@ describe('Input', () => {
     const input = screen.getByRole('textbox');
 
     expect(input.className).toContain('focus:ring-2');
-    expect(input.className).toContain('focus:ring-blue-500');
+    expect(input.className).toContain('focus:ring-lavender');
   });
 
   // Test: Generate id from label
@@ -206,9 +206,9 @@ describe('Input', () => {
     render(<Input />);
     const input = screen.getByRole('textbox');
 
-    expect(input.className).toContain('bg-slate-800');
-    expect(input.className).toContain('border-slate-700');
-    expect(input.className).toContain('text-white');
-    expect(input.className).toContain('placeholder-slate-500');
+    expect(input.className).toContain('bg-midnight');
+    expect(input.className).toContain('border-dusk');
+    expect(input.className).toContain('text-lilac-white');
+    expect(input.className).toContain('placeholder-steel');
   });
 });

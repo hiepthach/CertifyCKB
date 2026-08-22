@@ -23,26 +23,26 @@ describe('Badge', () => {
 
   // Test: Render badge with success variant
   // Input: Badge with variant="success"
-  // Expected: Badge has success styling (green)
+  // Expected: Badge has success styling (emerald)
   it('should render success variant', () => {
     render(<Badge variant="success">Success</Badge>);
     const badge = screen.getByText(/success/i);
 
-    expect(badge.className).toContain('bg-green-900');
-    expect(badge.className).toContain('text-green-400');
-    expect(badge.className).toContain('border-green-700');
+    expect(badge.className).toContain('bg-emerald-950');
+    expect(badge.className).toContain('text-emerald-400');
+    expect(badge.className).toContain('border-emerald-800');
   });
 
   // Test: Render badge with warning variant
   // Input: Badge with variant="warning"
-  // Expected: Badge has warning styling (yellow)
+  // Expected: Badge has warning styling (amber)
   it('should render warning variant', () => {
     render(<Badge variant="warning">Warning</Badge>);
     const badge = screen.getByText(/warning/i);
 
-    expect(badge.className).toContain('bg-yellow-900');
-    expect(badge.className).toContain('text-yellow-400');
-    expect(badge.className).toContain('border-yellow-700');
+    expect(badge.className).toContain('bg-amber-950');
+    expect(badge.className).toContain('text-amber-400');
+    expect(badge.className).toContain('border-amber-800');
   });
 
   // Test: Render badge with danger variant
@@ -52,33 +52,33 @@ describe('Badge', () => {
     render(<Badge variant="danger">Danger</Badge>);
     const badge = screen.getByText(/danger/i);
 
-    expect(badge.className).toContain('bg-red-900');
+    expect(badge.className).toContain('bg-red-950');
     expect(badge.className).toContain('text-red-400');
-    expect(badge.className).toContain('border-red-700');
+    expect(badge.className).toContain('border-red-800');
   });
 
-  // Test: Render badge with info variant
-  // Input: Badge with variant="info"
-  // Expected: Badge has info styling (blue)
-  it('should render info variant', () => {
-    render(<Badge variant="info">Info</Badge>);
-    const badge = screen.getByText(/info/i);
+  // Test: Render badge with lavender variant
+  // Input: Badge with variant="lavender"
+  // Expected: Badge has lavender styling (violet/iris accent)
+  it('should render lavender variant', () => {
+    render(<Badge variant="lavender">Lavender</Badge>);
+    const badge = screen.getByText(/lavender/i);
 
-    expect(badge.className).toContain('bg-blue-900');
-    expect(badge.className).toContain('text-blue-400');
-    expect(badge.className).toContain('border-blue-700');
+    expect(badge.className).toContain('bg-deep-indigo');
+    expect(badge.className).toContain('text-lavender');
+    expect(badge.className).toContain('border-iris');
   });
 
   // Test: Render badge with neutral variant (default)
   // Input: Badge with variant="neutral" or default
-  // Expected: Badge has neutral styling (gray)
+  // Expected: Badge has neutral styling (midnight surface)
   it('should render neutral variant', () => {
     render(<Badge variant="neutral">Neutral</Badge>);
     const badge = screen.getByText(/neutral/i);
 
-    expect(badge.className).toContain('bg-slate-700');
-    expect(badge.className).toContain('text-slate-300');
-    expect(badge.className).toContain('border-slate-600');
+    expect(badge.className).toContain('bg-midnight');
+    expect(badge.className).toContain('text-ash');
+    expect(badge.className).toContain('border-dusk');
   });
 
   // Test: Render with custom className
@@ -117,14 +117,14 @@ describe('Badge', () => {
     expect(badge.className).toContain('border');
   });
 
-  // Test: Apply rounded-full styling for pill shape
+  // Test: Apply rounded-badge styling for pill shape
   // Input: Badge component
-  // Expected: Badge has rounded-full class
+  // Expected: Badge has rounded-badge class (32px radius)
   it('should have pill shape', () => {
     render(<Badge>Pill Badge</Badge>);
     const badge = screen.getByText(/pill badge/i);
 
-    expect(badge.className).toContain('rounded-full');
+    expect(badge.className).toContain('rounded-badge');
   });
 
   // Test: Apply font size styling

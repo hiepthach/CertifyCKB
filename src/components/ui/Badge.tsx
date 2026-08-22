@@ -5,25 +5,32 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  variant?: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+  variant?: 'default' | 'lavender' | 'success' | 'warning' | 'danger' | 'neutral';
 }
 
 const variantStyles = {
-  success: 'bg-green-900/50 text-green-400 border-green-700',
-  warning: 'bg-yellow-900/50 text-yellow-400 border-yellow-700',
-  danger: 'bg-red-900/50 text-red-400 border-red-700',
-  info: 'bg-blue-900/50 text-blue-400 border-blue-700',
-  neutral: 'bg-slate-700 text-slate-300 border-slate-600',
+  default:
+    'bg-midnight text-lilac-white border border-dusk/30 shadow-glow-sm',
+  lavender:
+    'bg-deep-indigo text-lavender border border-iris/40 shadow-glow-violet',
+  success:
+    'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40',
+  warning:
+    'bg-amber-950/60 text-amber-400 border border-amber-800/40',
+  danger:
+    'bg-red-950/60 text-red-400 border border-red-800/40',
+  neutral:
+    'bg-midnight text-ash border border-dusk/30',
 };
 
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
-  ({ variant = 'neutral', className, children, ...props }, ref) => {
+  ({ variant = 'default', className, children, ...props }, ref) => {
     return (
       <span
         ref={ref}
         className={twMerge(
           clsx(
-            'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
+            'inline-flex items-center px-2.5 py-0.5 rounded-badge text-xs font-medium',
             variantStyles[variant],
             className
           )

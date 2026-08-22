@@ -24,24 +24,26 @@ describe('Card', () => {
 
   // Test: Render card with default variant
   // Input: Card with variant="default" or default
-  // Expected: Card has default styling (slate border)
+  // Expected: Card has default styling (midnight surface with rim-light glow)
   it('should render default variant', () => {
     render(<Card variant="default">Default Card</Card>);
     const card = screen.getByText(/default card/i);
 
-    expect(card.className).toContain('bg-slate-800');
-    expect(card.className).toContain('border-slate-700');
+    expect(card.className).toContain('bg-midnight');
+    expect(card.className).toContain('border-dusk');
+    expect(card.className).toContain('shadow-glow-sm');
   });
 
   // Test: Render card with highlighted variant
   // Input: Card with variant="highlighted"
-  // Expected: Card has highlighted styling (blue border)
+  // Expected: Card has highlighted styling (lavender border)
   it('should render highlighted variant', () => {
     render(<Card variant="highlighted">Highlighted</Card>);
     const card = screen.getByText(/highlighted/i);
 
-    expect(card.className).toContain('bg-slate-800');
-    expect(card.className).toContain('border-blue-500');
+    expect(card.className).toContain('bg-midnight');
+    expect(card.className).toContain('border-lavender');
+    expect(card.className).toContain('shadow-glow-md');
   });
 
   // Test: Render card with interactive variant
@@ -52,7 +54,7 @@ describe('Card', () => {
     const card = screen.getByText(/interactive/i);
 
     expect(card.className).toContain('cursor-pointer');
-    expect(card.className).toContain('hover:border-slate-500');
+    expect(card.className).toContain('hover:border-dusk');
   });
 
   // Test: Render card with no padding
@@ -110,12 +112,12 @@ describe('Card', () => {
 
   // Test: Apply rounded styling
   // Input: Card component
-  // Expected: Card has rounded-lg class
+  // Expected: Card has rounded-card class (16px radius)
   it('should have rounded corners', () => {
     render(<Card>Rounded</Card>);
     const card = screen.getByText(/rounded/i);
 
-    expect(card.className).toContain('rounded-lg');
+    expect(card.className).toContain('rounded-card');
   });
 
   // Test: Render with complex content

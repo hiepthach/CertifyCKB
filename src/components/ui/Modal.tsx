@@ -3,6 +3,8 @@
 import { ReactNode, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Button } from './Button';
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -43,23 +45,29 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-void/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal */}
+      {/* Modal — midnight surface with rim-light glow */}
       <div
-        className={`relative bg-slate-900 border border-slate-700 rounded-xl shadow-xl w-full mx-4 ${sizeStyles[size]}`}
+        className={twMerge(
+          clsx(
+            'relative bg-midnight border border-dusk/30 rounded-card shadow-glow-lg',
+            'w-full mx-4 animate-fade-in-scale',
+            sizeStyles[size]
+          )
+        )}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
-            <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-dusk/20">
+            <h2 className="text-base font-medium text-lilac-white">{title}</h2>
             <button
               onClick={onClose}
-              className="p-1 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800"
+              className="p-1 text-fog hover:text-lilac-white transition-colors rounded-btn hover:bg-deep-indigo"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -71,7 +79,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+          <div className="px-6 py-4 border-t border-dusk/20 flex justify-end gap-3">
             {footer}
           </div>
         )}

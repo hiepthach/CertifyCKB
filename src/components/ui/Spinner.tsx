@@ -18,8 +18,8 @@ const sizeStyles = {
 export function Spinner({ size = 'md', label, className }: SpinnerProps) {
   return (
     <div className={clsx('flex items-center gap-2', className)}>
-      <Loader2 className={clsx(sizeStyles[size], 'animate-spin text-blue-500')} />
-      {label && <span className="text-slate-400 text-sm">{label}</span>}
+      <Loader2 className={clsx(sizeStyles[size], 'animate-spin text-lavender')} />
+      {label && <span className="text-fog text-sm">{label}</span>}
     </div>
   );
 }

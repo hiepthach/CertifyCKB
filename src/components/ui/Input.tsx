@@ -24,10 +24,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-sm font-medium text-slate-300"
+            className="block text-sm font-medium text-ash"
           >
             {label}
-            {props.required && <span className="text-red-500 ml-1">*</span>}
+            {props.required && <span className="text-red-400 ml-1">*</span>}
           </label>
         )}
         <input
@@ -35,21 +35,21 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           id={inputId}
           className={twMerge(
             clsx(
-              'w-full px-3 py-2 rounded-lg',
-              'bg-slate-800 border border-slate-700',
-              'text-white placeholder-slate-500',
-              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+              'w-full px-3 py-2 rounded-btn',
+              'bg-midnight border border-dusk/30',
+              'text-lilac-white placeholder-steel',
+              'focus:outline-none focus:ring-2 focus:ring-lavender/50 focus:border-lavender/50',
               'disabled:opacity-50 disabled:cursor-not-allowed',
-              error && 'border-red-500 focus:ring-red-500',
+              error && 'border-red-500/60 focus:ring-red-500/50 focus:border-red-500/60',
               className
             )
           )}
           onChange={handleChange}
           {...props}
         />
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && <p className="text-sm text-red-400">{error}</p>}
         {helperText && !error && (
-          <p className="text-sm text-slate-500">{helperText}</p>
+          <p className="text-sm text-fog">{helperText}</p>
         )}
       </div>
     );

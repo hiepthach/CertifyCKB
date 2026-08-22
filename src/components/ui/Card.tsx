@@ -10,9 +10,12 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const variantStyles = {
-  default: 'bg-slate-800 border-slate-700',
-  highlighted: 'bg-slate-800 border-blue-500',
-  interactive: 'bg-slate-800 border-slate-700 hover:border-slate-500 cursor-pointer',
+  default:
+    'bg-midnight border border-dusk/20 shadow-glow-sm',
+  highlighted:
+    'bg-midnight border border-lavender/30 shadow-glow-md',
+  interactive:
+    'bg-midnight border border-dusk/20 shadow-glow-sm hover:border-dusk/50 hover:shadow-glow-md cursor-pointer transition-all duration-200',
 };
 
 const paddingStyles = {
@@ -29,7 +32,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         ref={ref}
         className={twMerge(
           clsx(
-            'rounded-lg border',
+            'rounded-card',
             variantStyles[variant],
             paddingStyles[padding],
             className
