@@ -13,7 +13,7 @@
 
 ## 2. Purpose
 
-The CKB Client Configuration module provides centralized setup for connecting to CKB networks (devnet, testnet, mainnet) and configures the Spore SDK with the correct script addresses.
+The CKB Client Configuration module provides centralized setup for connecting to CKB networks (testnet, mainnet) and configures the Spore SDK with the correct script addresses.
 
 ---
 
@@ -36,7 +36,7 @@ export function getDefaultClient(): ccc.Client;
 ### 3.2 Types
 
 ```typescript
-type Network = 'devnet' | 'testnet' | 'mainnet';
+type Network = 'testnet' | 'mainnet';
 
 interface NetworkConfig {
   ckbNodeUrl: string;
@@ -61,200 +61,25 @@ interface ScriptConfig {
 
 | Network | Node URL | Indexer URL | Explorer |
 |---------|----------|------------|----------|
-| **Devnet** | localhost:28114 | localhost:28114 | N/A |
 | **Testnet** | https://testnet.ckb.dev | https://testnet.ckb.dev | https://explorer.nervos.org/aggron2 |
 | **Mainnet** | https://mainnet.ckb.com | https://mainnet.ckb.com | https://explorer.nervos.org |
-
-### 4.2 Script Addresses (Devnet)
-
-```typescript
-const DEVNET_SCRIPTS = {
-  SECP256K1_BLAKE160: {
-    CODE_HASH: '0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8',
-    HASH_TYPE: 'type',
-    TX_HASH: '0x4d804f1495612631da202fe9902fa9899118554b08138cfe5dfb50e1ede76293',
-    INDEX: '0x0',
-    DEP_TYPE: 'depGroup',
-  },
-  SPORE: {
-    CODE_HASH: '0x7e8bf78a62232caa2f5d47e691e8db1a90d05e93dc6828ad3cb935c01ec6d208',
-    HASH_TYPE: 'data2',
-    TX_HASH: '0x1bb87da347a776a927ab6593e1e10304ca195f8e24279f039008d5e3115b1bf7',
-    INDEX: '0xa',
-    DEP_TYPE: 'code',
-  },
-  SPORE_CLUSTER: {
-    CODE_HASH: '0x7366a61534fa7c7e6225ecc0d828ea3b5366adec2b58206f2ee84995fe030075',
-    HASH_TYPE: 'data2',
-    TX_HASH: '0x1bb87da347a776a927ab6593e1e10304ca195f8e24279f039008d5e3115b1bf7',
-    INDEX: '0xb',
-    DEP_TYPE: 'code',
-  },
-};
-```
 
 ---
 
 ## 5. Spore Configuration
 
-### 5.0 Dynamic Script Loading
+### 5.1 Config Selection
 
-> ⚠️ **Important**: Devnet scripts should be loaded dynamically from OffCKB configuration rather than hardcoded.
-
-**Problem with hardcoded scripts**: If OffCKB updates script versions, hardcoded addresses become invalid.
-
-**Solution**: Load scripts from OffCKB's known scripts configuration.
-
-```typescript
-// Load devnet scripts dynamically
-async function loadDevnetScripts(): Promise<DevnetScripts> {
-  // Option 1: Fetch from OffCKB known scripts
-  const response = await fetch(
-    'https://raw.githubusercontent.com/nervosnetwork/godwoken/develop/crates/types/schemas/known_scripts.json'
-  );
-  const knownScripts = await response.json();
-
-  return {
-    SECP256K1_BLAKE160: knownScripts.secp256k1_blake160,
-    SPORE: knownScripts.spore,
-    SPORE_CLUSTER: knownScripts.spore_cluster,
-  };
-}
-
-// Option 2: Use @offckb/contracts package
-import { getSporeScripts, getClusterScripts } from '@offckb/contracts';
-
-const sporeScripts = await getSporeScripts('devnet');
-```
-
-**Fallback**: If dynamic loading fails, use bundled known-good values with version checking.
-
-```typescript
-const FALLBACK_DEVNET_SCRIPTS = {
-  SPORE: {
-    CODE_HASH: '0x7e8bf78a62232caa2f5d47e691e8db1a90d05e93dc6828ad3cb935c01ec6d208',
-    HASH_TYPE: 'data2' as const,
-  },
-};
-```
-
-### 5.1 Spore Config Structure
-
-```typescript
-import type { SporeConfig } from '@spore-sdk/core';
-
-export const devnetSporeConfig: SporeConfig = {
-  lumos: lumosConfig,
-  ckbNodeUrl: 'http://localhost:28114',
-  ckbIndexerUrl: 'http://localhost:28114',
-  defaultTags: ['latest'],
-  scripts: {
-    Spore: {
-      versions: [
-        {
-          tags: ['v2', 'latest'],
-          script: {
-            codeHash: DEVNET_SCRIPTS.SPORE.CODE_HASH,
-            hashType: DEVNET_SCRIPTS.SPORE.HASH_TYPE,
-          },
-          cellDep: {
-            outPoint: {
-              txHash: DEVNET_SCRIPTS.SPORE.TX_HASH,
-              index: DEVNET_SCRIPTS.SPORE.INDEX,
-            },
-            depType: DEVNET_SCRIPTS.SPORE.DEP_TYPE,
-          },
-          behaviors: {
-            lockProxy: true,
-            cobuild: true,
-          },
-        },
-      ],
-    },
-    Cluster: {
-      versions: [
-        {
-          tags: ['v2', 'latest'],
-          script: {
-            codeHash: DEVNET_SCRIPTS.SPORE_CLUSTER.CODE_HASH,
-            hashType: DEVNET_SCRIPTS.SPORE_CLUSTER.HASH_TYPE,
-          },
-          cellDep: {
-            outPoint: {
-              txHash: DEVNET_SCRIPTS.SPORE_CLUSTER.TX_HASH,
-              index: DEVNET_SCRIPTS.SPORE_CLUSTER.INDEX,
-            },
-            depType: DEVNET_SCRIPTS.SPORE_CLUSTER.DEP_TYPE,
-          },
-          behaviors: {
-            lockProxy: true,
-            cobuild: true,
-          },
-        },
-      ],
-    },
-  },
-};
-```
-
-### 5.1.1 Dynamic Config Creation
-
-```typescript
-import { getSporeScripts } from '@offckb/contracts';
-
-async function createDynamicSporeConfig(network: Network): Promise<SporeConfig> {
-  if (network === 'devnet') {
-    // Load scripts dynamically
-    const scripts = await getSporeScripts('devnet');
-
-    return {
-      lumos: predefinedSporeConfigs.Devnet.lumos,
-      ckbNodeUrl: 'http://localhost:28114',
-      ckbIndexerUrl: 'http://localhost:28114',
-      defaultTags: ['latest'],
-      scripts: {
-        Spore: {
-          versions: [
-            {
-              tags: ['latest'],
-              script: {
-                codeHash: scripts.SPORE.codeHash,
-                hashType: 'data2',
-              },
-              cellDep: {
-                outPoint: scripts.SPORE.cellDep,
-                depType: 'code',
-              },
-            },
-          ],
-        },
-      },
-    };
-  }
-
-  // For testnet/mainnet, use predefined configs
-  return predefinedSporeConfigs[network];
-}
-```
-
-### 5.2 Config Selection
+Both testnet and mainnet use predefined configurations from the Spore SDK.
 
 ```typescript
 export function getSporeConfig(): SporeConfig {
-  const network = process.env.NEXT_PUBLIC_NETWORK || 'devnet';
-
-  switch (network) {
-    case 'testnet':
-      return predefinedSporeConfigs.Testnet;
-    case 'mainnet':
-      return predefinedSporeConfigs.Mainnet;
-    default:
-      return devnetSporeConfig;
-  }
+  // Both testnet and mainnet use predefined config from Spore SDK
+  return undefined as unknown as SporeConfig;
 }
 
 export function getNetwork(): Network {
-  return (process.env.NEXT_PUBLIC_NETWORK || 'devnet') as Network;
+  return (process.env.NEXT_PUBLIC_NETWORK || 'testnet') as Network;
 }
 
 export function getExplorerUrl(): string {
@@ -265,46 +90,9 @@ export function getExplorerUrl(): string {
 
 ---
 
-## 6. Environment Variables
+## 6. Network Selection
 
-### 6.1 Required Variables
-
-```bash
-# .env.local
-
-# Network selection: 'devnet' | 'testnet' | 'mainnet'
-NEXT_PUBLIC_NETWORK=devnet
-
-# Devnet (OffCKB)
-NEXT_PUBLIC_CKB_NODE_URL=http://localhost:28114
-NEXT_PUBLIC_CKB_INDEXER_URL=http://localhost:28114
-
-# Testnet (uncomment for testnet)
-# NEXT_PUBLIC_NETWORK=testnet
-# NEXT_PUBLIC_CKB_NODE_URL=https://testnet.ckb.dev
-# NEXT_PUBLIC_CKB_INDEXER_URL=https://testnet.ckb.dev
-
-# Mainnet (uncomment for mainnet)
-# NEXT_PUBLIC_NETWORK=mainnet
-# NEXT_PUBLIC_CKB_NODE_URL=https://mainnet.ckb.com
-# NEXT_PUBLIC_CKB_INDEXER_URL=https://mainnet.ckb.com
-```
-
-### 6.2 Network Detection
-
-```typescript
-// Auto-detect network from URL for development
-export function detectNetwork(): Network {
-  if (typeof window === 'undefined') return 'devnet';
-
-  const host = window.location.hostname;
-  if (host.includes('localhost') || host.includes('127.0.0.1')) {
-    return 'devnet';
-  }
-  // Default to testnet for external deployments
-  return 'testnet';
-}
-```
+Network selection is done via the UI network selector, which stores the user's preference in localStorage. The default network is testnet.
 
 ---
 
@@ -325,9 +113,6 @@ export function createClient(): ccc.Client {
       return new ccc.ClientPublicTestnet();
     case 'mainnet':
       return new ccc.ClientPublicMainnet();
-    default:
-      // Devnet - use custom URL
-      return new ccc.ClientPublicRpc(process.env.NEXT_PUBLIC_CKB_NODE_URL!);
   }
 }
 
@@ -336,15 +121,6 @@ export function getDefaultClient(): ccc.Client {
     clientInstance = createClient();
   }
   return clientInstance;
-}
-
-// For server-side rendering
-export function createClientForServer(): ccc.Client {
-  const url = process.env.NEXT_PUBLIC_CKB_NODE_URL;
-  if (!url) {
-    throw new Error('NEXT_PUBLIC_CKB_NODE_URL is not set');
-  }
-  return new ccc.ClientPublicRpc(url);
 }
 ```
 
@@ -409,29 +185,15 @@ async function getCertificate(certificateId: string) {
 
 ---
 
-## 9. Script Reference Table
-
-### 9.1 Devnet Scripts
-
-| Script | Code Hash | Hash Type | Purpose |
-|--------|-----------|-----------|---------|
-| SECP256K1_BLAKE160 | 0x9bd7... | type | Standard lock |
-| SPORE | 0x7e8b... | data2 | DOB storage |
-| SPORE_CLUSTER | 0x7366... | data2 | Cluster storage |
-| SPORE_CLUSTER_AGENT | 0xc986... | data2 | Cluster proxy |
-| SPORE_LUA | 0x94a9... | data2 | Lua scripts |
-
-### 9.2 Network Constants
+## 9. Network Constants
 
 ```typescript
 export const EXPLORER_URLS: Record<Network, string> = {
-  devnet: '',  // No explorer for devnet
   testnet: 'https://explorer.nervos.org/aggron2',
   mainnet: 'https://explorer.nervos.org',
 };
 
 export const NETWORK_DISPLAY_NAMES: Record<Network, string> = {
-  devnet: 'Devnet (Local)',
   testnet: 'Testnet (Aggron)',
   mainnet: 'Mainnet',
 };
@@ -445,75 +207,17 @@ export const NETWORK_DISPLAY_NAMES: Record<Network, string> = {
 
 | Test Case | Expected Result |
 |-----------|-----------------|
-| getNetwork returns correct network | Matches env variable |
+| getNetwork returns correct network | Matches env variable or localStorage |
 | getSporeConfig returns correct config | Matches network |
 | createClient creates correct client type | Correct class for network |
-| loadDevnetScripts fetches scripts | Scripts loaded from remote |
-| Dynamic config with valid scripts | Config created successfully |
 
 ### 10.2 Connection Tests
 
 | Test Case | Expected Result |
 |-----------|-----------------|
-| Devnet connection | Connects to localhost:28114 |
 | Testnet connection | Connects to testnet.ckb.dev |
 | Mainnet connection | Connects to mainnet.ckb.com |
 | Client query works | Returns cells |
-| Script compatibility check | Scripts match OffCKB version |
-
-### 10.3 Dynamic Loading Tests
-
-```typescript
-describe('Dynamic Script Loading', () => {
-  it('should load devnet scripts from @offckb/contracts', async () => {
-    const scripts = await getSporeScripts('devnet');
-
-    expect(scripts).toHaveProperty('codeHash');
-    expect(scripts).toHaveProperty('hashType');
-    expect(scripts.codeHash).toMatch(/^0x[a-f0-9]{64}$/);
-  });
-
-  it('should fallback to bundled scripts on network error', async () => {
-    // Simulate fetch failure
-    global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
-
-    const config = await createSporeConfig('devnet');
-
-    // Should use fallback
-    expect(config.scripts.Spore.versions[0].script.codeHash)
-      .toBe(FALLBACK_DEVNET_SCRIPTS.SPORE.CODE_HASH);
-  });
-
-  it('should validate script version compatibility', async () => {
-    const config = await createDynamicSporeConfig('devnet');
-
-    // Check that all required scripts are present
-    expect(config.scripts.Spore).toBeDefined();
-    expect(config.scripts.Cluster).toBeDefined();
-  });
-});
-```
-
-### 10.4 Network Compatibility Tests
-
-```typescript
-describe('Network Compatibility', () => {
-  it('should use correct scripts for each network', async () => {
-    const devnetConfig = await createDynamicSporeConfig('devnet');
-    const testnetConfig = await createSporeConfig('testnet');
-
-    // Devnet and testnet should have different script hashes
-    expect(devnetConfig.scripts.Spore.versions[0].script.codeHash)
-      .not.toBe(testnetConfig.scripts.Spore.versions[0].script.codeHash);
-  });
-
-  it('should detect network from URL in development', () => {
-    // Mock window.location for localhost
-    const network = detectNetwork();
-    expect(network).toBe('devnet');
-  });
-});
-```
 
 ---
 

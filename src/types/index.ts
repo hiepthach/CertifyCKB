@@ -4,7 +4,7 @@ export * from './template';
 export * from './batch';
 
 // Network types
-export type Network = 'devnet' | 'testnet' | 'mainnet';
+export type Network = 'testnet' | 'mainnet';
 
 export interface NetworkConfig {
   ckbNodeUrl: string;

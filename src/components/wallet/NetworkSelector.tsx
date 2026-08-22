@@ -5,14 +5,6 @@ import { useNetwork, Network } from '@/hooks/useNetwork';
 import { Globe, ChevronDown, Check, AlertTriangle } from 'lucide-react';
 
 const NETWORK_CONFIG = {
-  devnet: {
-    label: 'Devnet (Local)',
-    icon: '🔧',
-    variant: 'warning' as const,
-    description: 'Local development',
-    color: 'text-yellow-400',
-    bgColor: 'bg-yellow-500',
-  },
   testnet: {
     label: 'Testnet (Aggron)',
     icon: '🧪',

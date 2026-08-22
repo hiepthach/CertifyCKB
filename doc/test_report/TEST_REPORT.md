@@ -43,14 +43,14 @@
 
 ### 1. CKB Config Tests (`tests/unit/ckb/config.test.ts`)
 
-**Coverage:** Network configuration, explorer URLs, devnet scripts
+**Coverage:** Network configuration, explorer URLs, network scripts
 
 | # | Test Case | Status |
 |---|-----------|--------|
-| 1 | should use devnet config by default | ✅ Pass |
+| 1 | should use testnet config by default | ✅ Pass |
 | 2 | should use testnet config when set | ✅ Pass |
 | 3 | should use mainnet config when set | ✅ Pass |
-| 4 | should return correct config for devnet | ✅ Pass |
+| 4 | should return correct config for testnet | ✅ Pass |
 | 5 | should have explorer URL for testnet | ✅ Pass |
 | 6 | should generate transaction URL | ✅ Pass |
 | 7 | should generate cell URL | ✅ Pass |
@@ -58,7 +58,7 @@
 | 9 | should return correct display names | ✅ Pass |
 | 10 | should have correct script configs | ✅ Pass |
 | 11 | should have correct hash types | ✅ Pass |
-| 12 | should return empty URL for devnet | ✅ Pass |
+| 12 | should return explorer URL for testnet | ✅ Pass |
 | 13 | should return explorer URL for testnet | ✅ Pass |
 
 ---

@@ -40,11 +40,10 @@ export function Header() {
   // Get network-specific explorer URL
   const getExplorerLink = () => {
     const explorers: Record<string, string | null> = {
-      devnet: null,
       testnet: 'https://explorer.nervos.org/aggron2',
       mainnet: 'https://explorer.nervos.org',
     };
-    return explorers[process.env.NEXT_PUBLIC_NETWORK || 'devnet'] || null;
+    return explorers[process.env.NEXT_PUBLIC_NETWORK || 'testnet'] || null;
   };
 
   const explorerUrl = getExplorerLink();
@@ -167,7 +166,7 @@ export function Header() {
             </div>
             <div className="text-slate-600">|</div>
             <div className="text-slate-400">
-              Network: <span className="text-slate-300 capitalize">{process.env.NEXT_PUBLIC_NETWORK || 'devnet'}</span>
+              Network: <span className="text-slate-300 capitalize">{process.env.NEXT_PUBLIC_NETWORK || 'testnet'}</span>
             </div>
           </div>
         )}

@@ -423,13 +423,13 @@ describe('Verification Service - Mock CCC SDK', () => {
 
 ```typescript
 describe('Verification Service - OffCKB Devnet', () => {
-  let devnetClient: ccc.Client;
+  let testnetClient: ccc.Client;
   let testSigner: ccc.Signer;
   let testCluster: Cluster;
 
   beforeAll(async () => {
-    devnetClient = new ccc.ClientPublicRpc('http://localhost:28114');
-    testSigner = await setupTestWallet(devnetClient);
+    testnetClient = new ccc.ClientPublicTestnet();
+    testSigner = await setupTestWallet(testnetClient);
 
     // Create test cluster
     testCluster = await createCluster(testSigner, {
@@ -453,7 +453,7 @@ describe('Verification Service - OffCKB Devnet', () => {
 
       // Verify the certificate
       const verifyResult = await verifyCertificate(
-        devnetClient,
+        testnetClient,
         issueResult.certificateId
       );
 
@@ -464,7 +464,7 @@ describe('Verification Service - OffCKB Devnet', () => {
 
     it('should return invalid for certificate from unknown cluster', async () => {
       const verifyResult = await verifyCertificate(
-        devnetClient,
+        testnetClient,
         '0x0000000000000000000000000000000000000000000000000000000000000000'
       );
 
@@ -485,7 +485,7 @@ describe('Verification Service - OffCKB Devnet', () => {
       });
 
       const verifyResult = await verifyCertificate(
-        devnetClient,
+        testnetClient,
         issueResult.certificateId
       );
 
@@ -504,7 +504,7 @@ describe('Verification Service - OffCKB Devnet', () => {
       });
 
       const verifyResult = await verifyCertificate(
-        devnetClient,
+        testnetClient,
         issueResult.certificateId
       );
 
@@ -528,7 +528,7 @@ describe('Verification Service - OffCKB Devnet', () => {
 
       // Verify - should be invalid due to revocation
       const verifyResult = await verifyCertificate(
-        devnetClient,
+        testnetClient,
         issueResult.certificateId
       );
 

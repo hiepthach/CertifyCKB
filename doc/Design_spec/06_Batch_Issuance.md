@@ -447,19 +447,19 @@ describe('Batch Issuance - Mock Spore SDK', () => {
 
 ```typescript
 describe('Batch Issuance - OffCKB Devnet', () => {
-  let devnetSigner: ccc.Signer;
-  let devnetClient: ccc.Client;
+  let testnetSigner: ccc.Signer;
+  let testnetClient: ccc.Client;
 
   beforeAll(async () => {
     // Setup OffCKB connection
-    devnetClient = new ccc.ClientPublicRpc('http://localhost:28114');
-    devnetSigner = await setupTestWallet(devnetClient);
+    testnetClient = new ccc.ClientPublicTestnet();
+    testnetSigner = await setupTestWallet(testnetClient);
   });
 
   describe('Happy Path', () => {
     it('should issue 10 certificates in batch', async () => {
       // Create test cluster
-      const cluster = await createCluster(devnetSigner, {
+      const cluster = await createCluster(testnetSigner, {
         name: 'Test Batch Cluster',
         description: 'Batch test provider',
       });
@@ -475,7 +475,7 @@ describe('Batch Issuance - OffCKB Devnet', () => {
         valid: true,
       }));
 
-      const result = await issueBatchCertificates(devnetSigner, {
+      const result = await issueBatchCertificates(testnetSigner, {
         clusterId: cluster.clusterId,
         issuerName: 'Test Issuer',
         entries,
@@ -486,7 +486,7 @@ describe('Batch Issuance - OffCKB Devnet', () => {
 
       // Verify all certificates on chain
       for (const cert of result.certificates) {
-        const onChain = await getCertificate(devnetClient, cert.certificateId!);
+        const onChain = await getCertificate(testnetClient, cert.certificateId!);
         expect(onChain).not.toBeNull();
       }
     });
@@ -494,7 +494,7 @@ describe('Batch Issuance - OffCKB Devnet', () => {
 
   describe('Edge Cases', () => {
     it('should handle insufficient balance', async () => {
-      const poorSigner = await createPoorTestWallet(devnetClient);
+      const poorSigner = await createPoorTestWallet(testnetClient);
 
       const entries = generateEntries(1);
       const result = await issueBatchCertificates(poorSigner, { entries });
@@ -506,7 +506,7 @@ describe('Batch Issuance - OffCKB Devnet', () => {
 
     it('should handle network timeout gracefully', async () => {
       // Mock network failure
-      const flakyClient = createFlakyClient(devnetClient);
+      const flakyClient = createFlakyClient(testnetClient);
 
       const entries = generateEntries(3);
       const result = await issueBatchCertificates(flakySigner, { entries });
@@ -527,7 +527,7 @@ describe('Batch Issuance - OffCKB Devnet', () => {
         },
       ];
 
-      const result = await issueBatchCertificates(devnetSigner, { entries });
+      const result = await issueBatchCertificates(testnetSigner, { entries });
 
       expect(result.successful).toBe(0);
       expect(result.certificates[0].success).toBe(false);
@@ -544,7 +544,7 @@ describe('Batch Issuance - Performance', () => {
     const entries = generateEntries(50);
 
     const start = Date.now();
-    const result = await issueBatchCertificates(devnetSigner, { entries });
+    const result = await issueBatchCertificates(testnetSigner, { entries });
     const duration = Date.now() - start;
 
     expect(result.successful).toBe(50);

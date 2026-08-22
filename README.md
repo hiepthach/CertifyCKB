@@ -14,7 +14,6 @@ A verifiable credentials system built on Nervos CKB using the Spore Protocol. Is
 ## Prerequisites
 
 1. **Node.js** 18+ installed
-2. **OffCKB** for local devnet (optional for development)
 
 ## Quick Start
 
@@ -24,32 +23,19 @@ A verifiable credentials system built on Nervos CKB using the Spore Protocol. Is
 npm install
 ```
 
-### 2. Setup Environment
-
-```bash
-# Copy example env file
-cp .env.local.example .env.local
-```
-
-### 3. Start OffCKB Devnet (Optional)
-
-```bash
-# Terminal 1: Start OffCKB node
-npx offckb node
-
-# Or use the npm script
-npm run offckb:start
-```
-
-OffCKB will start a local CKB devnet at `http://localhost:28114`.
-
-### 4. Start Development Server
+### 2. Start Development Server
 
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the app.
+
+### 3. Select Network
+
+Click the network selector in the top-right corner to switch between:
+- **Testnet (Aggron)** - For development and testing
+- **Mainnet** - For production use (real transactions)
 
 ## Project Structure
 
@@ -70,7 +56,7 @@ src/
 │   └── batch/            # Batch issuance
 ├── lib/
 │   ├── ckb/              # CKB config & client
-│   └── credentials/      # Core credential logic
+│   └── credentials/       # Core credential logic
 ├── types/                # TypeScript types
 ├── hooks/                # Custom React hooks
 └── utils/                # Utility functions
@@ -83,7 +69,7 @@ src/
 - [x] Project scaffold
 - [x] Wallet integration (JoyID, MetaMask, WalletConnect)
 - [x] Cluster creation/viewing
-- [x] OffCKB devnet setup
+- [x] Testnet setup
 
 ### Week 2: Certificate Issuance & View
 
@@ -110,17 +96,16 @@ src/
 
 | Wallet | Status | Notes |
 |--------|--------|-------|
-| JoyID | ✅ | Recommended for devnet |
+| JoyID | ✅ | Recommended |
 | MetaMask | ✅ | Via @ckb-ccc/core |
 | WalletConnect | ✅ | Requires project ID |
 
 ## Networks
 
-Configure via `NEXT_PUBLIC_NETWORK` in `.env.local`:
+Switch networks using the network selector in the app UI:
 
 | Network | Node URL | Explorer |
 |---------|----------|----------|
-| devnet | localhost:28114 | N/A |
 | testnet | testnet.ckb.dev | explorer.nervos.org/aggron2 |
 | mainnet | mainnet.ckb.com | explorer.nervos.org |
 
@@ -132,16 +117,12 @@ npm run build        # Build for production
 npm run start        # Start production server
 npm run lint         # Run ESLint
 npm run typecheck   # TypeScript check
-
-npm run offckb:start  # Start OffCKB devnet
-npm run offckb:stop   # Stop OffCKB
 ```
 
 ## Resources
 
 - [CCC SDK Documentation](https://docs.ckbccc.com)
 - [Spore Protocol](https://docs.spore.pro/)
-- [OffCKB](https://github.com/nervosnetwork/offckb)
 - [W3C Verifiable Credentials](https://www.w3.org/TR/vc-data-model/)
 
 ## License

@@ -28,7 +28,7 @@
 
 ### Goals
 - Set up Next.js project with TypeScript
-- Configure CCC SDK and Spore SDK for devnet
+- Configure CCC SDK and Spore SDK for testnet
 - Implement wallet connection
 - Create Course Provider registration (Cluster creation)
 
@@ -52,15 +52,13 @@
 
 #### 2. CKB Client & SDK Configuration (2h)
 
-- [ ] Configure CKB client for OffCKB devnet
-  - Network: `http://localhost:28114`
+- [ ] Configure CKB client for testnet
+  - Network: `https://testnet.ckb.dev`
   - Reference: [CCC Client Setup](https://docs.ckbccc.com)
 
 - [ ] Configure Spore SDK
-  - Use `predefinedSporeConfigs.Devnet`
+  - Use `predefinedSporeConfigs.Testnet`
   - Reference: [Spore SDK Config](https://docs.spore.pro/)
-
-- [ ] Set up environment variables (`.env.local`)
 
 #### 3. Wallet Connection (2h)
 
@@ -108,7 +106,7 @@
 ### Definition of Done
 - [ ] Project runs on localhost
 - [ ] Can connect wallet (JoyID or MetaMask)
-- [ ] Can create a Cluster on devnet
+- [ ] Can create a Cluster on testnet
 - [ ] Can view list of created Clusters
 
 ---
@@ -414,7 +412,7 @@
 ### Week 9
 - [ ] Create Next.js project with TypeScript
 - [ ] Install CCC SDK and Spore SDK
-- [ ] Configure devnet connection
+- [ ] Configure testnet connection
 - [ ] Implement wallet connection (JoyID, MetaMask)
 - [ ] Define Cluster/Credential interfaces
 - [ ] Implement createCluster service

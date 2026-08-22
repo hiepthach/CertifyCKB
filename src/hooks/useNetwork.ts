@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getNetwork as getEnvNetwork, getNetworkConfig as getEnvNetworkConfig, getExplorerUrl as getEnvExplorerUrl } from '@/lib/ckb/config';
 
-export type Network = 'devnet' | 'testnet' | 'mainnet';
+export type Network = 'testnet' | 'mainnet';
 
 const STORAGE_KEY = 'ckb_credential_network';
 
@@ -14,11 +14,6 @@ interface NetworkConfig {
 }
 
 const NETWORK_CONFIGS: Record<Network, NetworkConfig> = {
-  devnet: {
-    ckbNodeUrl: process.env.NEXT_PUBLIC_CKB_NODE_URL || 'http://localhost:28114',
-    ckbIndexerUrl: process.env.NEXT_PUBLIC_CKB_INDEXER_URL || 'http://localhost:28114',
-    explorerUrl: '',
-  },
   testnet: {
     ckbNodeUrl: 'https://testnet.ckb.dev',
     ckbIndexerUrl: 'https://testnet.ckb.dev',
@@ -32,7 +27,6 @@ const NETWORK_CONFIGS: Record<Network, NetworkConfig> = {
 };
 
 const NETWORK_DISPLAY_NAMES: Record<Network, string> = {
-  devnet: 'Devnet (Local)',
   testnet: 'Testnet (Aggron)',
   mainnet: 'Mainnet',
 };
@@ -42,7 +36,6 @@ interface UseNetworkResult {
   explorerUrl: string;
   networkConfig: NetworkConfig;
   displayName: string;
-  isDevnet: boolean;
   isTestnet: boolean;
   isMainnet: boolean;
   setNetwork: (network: Network) => void;
@@ -51,7 +44,7 @@ interface UseNetworkResult {
 function getStoredNetwork(): Network | null {
   if (typeof window === 'undefined') return null;
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === 'devnet' || stored === 'testnet' || stored === 'mainnet') {
+  if (stored === 'testnet' || stored === 'mainnet') {
     return stored;
   }
   return null;
@@ -70,10 +63,10 @@ export function useNetwork(): UseNetworkResult {
 
     // Fallback to environment variable
     const env = getEnvNetwork();
-    if (env === 'devnet' || env === 'testnet' || env === 'mainnet') {
+    if (env === 'testnet' || env === 'mainnet') {
       return env;
     }
-    return 'devnet';
+    return 'testnet';
   });
 
   const setNetwork = useCallback((newNetwork: Network) => {
@@ -98,7 +91,6 @@ export function useNetwork(): UseNetworkResult {
     explorerUrl,
     networkConfig,
     displayName,
-    isDevnet: network === 'devnet',
     isTestnet: network === 'testnet',
     isMainnet: network === 'mainnet',
     setNetwork,
