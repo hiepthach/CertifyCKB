@@ -3,7 +3,7 @@
 import { Card, Badge, Button } from '@/components/ui';
 import type { VerificationResult } from '@/types';
 import { formatDate, truncateAddress } from '@/utils';
-import { CheckCircle, XCircle, AlertTriangle, ExternalLink, Award } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, ExternalLink, Award, ArrowRight } from 'lucide-react';
 import { useNetwork } from '@/hooks';
 
 interface VerifyResultProps {
@@ -44,49 +44,48 @@ function ValidResult({
   result: VerificationResult;
   onViewDetails?: () => void;
 }) {
-  const { explorerUrl } = useNetwork();
-
   return (
-    <Card variant="highlighted" padding="lg">
+    <Card variant="highlighted" padding="xl" className="border-signal-green/40 shadow-glow-green/20 animate-fade-in-scale">
       <div className="text-center py-6">
-        <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
-          <CheckCircle className="w-10 h-10 text-green-500" />
+        <div className="w-16 h-16 mx-auto mb-4 bg-midnight-plum border border-signal-green/40 rounded-2xl flex items-center justify-center text-signal-green shadow-glow-green/30 animate-float">
+          <CheckCircle2 className="w-9 h-9" />
         </div>
-        <h2 className="text-xl font-semibold text-green-400 mb-2">
-          Valid Certificate
+        <h2 className="text-xl font-bold text-bone-white mb-1.5 tracking-tight">
+          Authentic & Valid DOB Credential
         </h2>
-        <p className="text-slate-400 text-sm">
-          This certificate is authentic and currently valid
+        <p className="text-ash-veil text-xs max-w-sm mx-auto">
+          Cryptographically verified on Nervos CKB layer-1. Zero tampering detected.
         </p>
       </div>
 
-      <div className="space-y-3 mt-6 pt-6 border-t border-slate-700">
-        <div className="flex justify-between">
-          <span className="text-slate-400">Certificate ID</span>
-          <span className="font-mono text-white">
+      <div className="space-y-3 mt-4 pt-5 border-t border-fog-line/10 text-xs">
+        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+          <span className="text-mid-ash uppercase tracking-wider font-semibold">Certificate ID</span>
+          <span className="font-mono text-bone-white">
             {truncateAddress(result.certificateId, 10, 8)}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-slate-400">Issuer</span>
-          <span className="text-white">{result.issuer.name}</span>
+        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+          <span className="text-mid-ash uppercase tracking-wider font-semibold">Issuer Authority</span>
+          <span className="text-bone-white font-medium">{result.issuer.name}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-slate-400">Issued</span>
-          <span className="text-white">
+        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+          <span className="text-mid-ash uppercase tracking-wider font-semibold">Minted Date</span>
+          <span className="text-bone-white">
             {formatDate(result.certificate.issuanceDate)}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-slate-400">Status</span>
-          <Badge variant="success">Active</Badge>
+        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+          <span className="text-mid-ash uppercase tracking-wider font-semibold">On-Chain State</span>
+          <Badge variant="success" pulse>Active & Valid</Badge>
         </div>
       </div>
 
       {onViewDetails && (
-        <Button className="w-full mt-6" onClick={onViewDetails}>
+        <Button className="w-full mt-6 text-xs gap-1.5 shadow-glow-green/30" onClick={onViewDetails}>
           <Award className="w-4 h-4" />
-          View Details
+          <span>View Complete Credential DNA</span>
+          <ArrowRight className="w-3.5 h-3.5" />
         </Button>
       )}
     </Card>
@@ -95,40 +94,40 @@ function ValidResult({
 
 function ExpiredResult({ result }: { result: VerificationResult }) {
   return (
-    <Card variant="default" padding="lg">
+    <Card variant="default" padding="xl" className="border-yellow-500/40 animate-fade-in-scale">
       <div className="text-center py-6">
-        <div className="w-16 h-16 mx-auto mb-4 bg-yellow-500/20 rounded-full flex items-center justify-center">
-          <AlertTriangle className="w-10 h-10 text-yellow-500" />
+        <div className="w-16 h-16 mx-auto mb-4 bg-midnight-plum border border-yellow-500/40 rounded-2xl flex items-center justify-center text-yellow-400 shadow-glow-sm animate-float">
+          <AlertTriangle className="w-9 h-9" />
         </div>
-        <h2 className="text-xl font-semibold text-yellow-400 mb-2">
-          Expired Certificate
+        <h2 className="text-xl font-bold text-yellow-400 mb-1.5 tracking-tight">
+          Expired Credential
         </h2>
-        <p className="text-slate-400 text-sm">
-          This certificate was valid but has expired
+        <p className="text-ash-veil text-xs max-w-sm mx-auto">
+          This credential was authentic but has passed its expiration date.
         </p>
       </div>
 
-      <div className="space-y-3 mt-6 pt-6 border-t border-slate-700">
-        <div className="flex justify-between">
-          <span className="text-slate-400">Certificate ID</span>
-          <span className="font-mono text-white">
+      <div className="space-y-3 mt-4 pt-5 border-t border-fog-line/10 text-xs">
+        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+          <span className="text-mid-ash uppercase tracking-wider font-semibold">Certificate ID</span>
+          <span className="font-mono text-bone-white">
             {truncateAddress(result.certificateId, 10, 8)}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-slate-400">Issuer</span>
-          <span className="text-white">{result.issuer.name}</span>
+        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+          <span className="text-mid-ash uppercase tracking-wider font-semibold">Issuer Authority</span>
+          <span className="text-bone-white">{result.issuer.name}</span>
         </div>
         {result.certificate.expirationDate && (
-          <div className="flex justify-between">
-            <span className="text-slate-400">Expired</span>
+          <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+            <span className="text-mid-ash uppercase tracking-wider font-semibold">Expired On</span>
             <span className="text-yellow-400">
               {formatDate(result.certificate.expirationDate)}
             </span>
           </div>
         )}
-        <div className="flex justify-between">
-          <span className="text-slate-400">Status</span>
+        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+          <span className="text-mid-ash uppercase tracking-wider font-semibold">Status</span>
           <Badge variant="warning">Expired</Badge>
         </div>
       </div>
@@ -138,32 +137,32 @@ function ExpiredResult({ result }: { result: VerificationResult }) {
 
 function RevokedResult({ result }: { result: VerificationResult }) {
   return (
-    <Card variant="default" padding="lg">
+    <Card variant="default" padding="xl" className="border-red-500/40 animate-fade-in-scale">
       <div className="text-center py-6">
-        <div className="w-16 h-16 mx-auto mb-4 bg-red-500/20 rounded-full flex items-center justify-center">
-          <XCircle className="w-10 h-10 text-red-500" />
+        <div className="w-16 h-16 mx-auto mb-4 bg-midnight-plum border border-red-500/40 rounded-2xl flex items-center justify-center text-red-400 shadow-glow-sm animate-float">
+          <XCircle className="w-9 h-9" />
         </div>
-        <h2 className="text-xl font-semibold text-red-400 mb-2">
-          Revoked Certificate
+        <h2 className="text-xl font-bold text-red-400 mb-1.5 tracking-tight">
+          Revoked Credential
         </h2>
-        <p className="text-slate-400 text-sm">
-          This certificate has been revoked by the issuer
+        <p className="text-ash-veil text-xs max-w-sm mx-auto">
+          This certificate has been revoked by the issuing authority.
         </p>
       </div>
 
-      <div className="space-y-3 mt-6 pt-6 border-t border-slate-700">
-        <div className="flex justify-between">
-          <span className="text-slate-400">Certificate ID</span>
-          <span className="font-mono text-white">
+      <div className="space-y-3 mt-4 pt-5 border-t border-fog-line/10 text-xs">
+        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+          <span className="text-mid-ash uppercase tracking-wider font-semibold">Certificate ID</span>
+          <span className="font-mono text-bone-white">
             {truncateAddress(result.certificateId, 10, 8)}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-slate-400">Issuer</span>
-          <span className="text-white">{result.issuer.name}</span>
+        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+          <span className="text-mid-ash uppercase tracking-wider font-semibold">Issuer Authority</span>
+          <span className="text-bone-white">{result.issuer.name}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-slate-400">Status</span>
+        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+          <span className="text-mid-ash uppercase tracking-wider font-semibold">Status</span>
           <Badge variant="danger">Revoked</Badge>
         </div>
       </div>
@@ -173,25 +172,25 @@ function RevokedResult({ result }: { result: VerificationResult }) {
 
 function InvalidResult({ result }: { result: VerificationResult }) {
   return (
-    <Card variant="default" padding="lg">
+    <Card variant="default" padding="xl" className="border-red-500/40 animate-fade-in-scale">
       <div className="text-center py-6">
-        <div className="w-16 h-16 mx-auto mb-4 bg-red-500/20 rounded-full flex items-center justify-center">
-          <XCircle className="w-10 h-10 text-red-500" />
+        <div className="w-16 h-16 mx-auto mb-4 bg-midnight-plum border border-red-500/40 rounded-2xl flex items-center justify-center text-red-400 shadow-glow-sm animate-float">
+          <XCircle className="w-9 h-9" />
         </div>
-        <h2 className="text-xl font-semibold text-red-400 mb-2">
-          Invalid Certificate
+        <h2 className="text-xl font-bold text-red-400 mb-1.5 tracking-tight">
+          Invalid Credential
         </h2>
-        <p className="text-slate-400 text-sm">
-          {result.errors?.join('. ') || 'This certificate could not be verified'}
+        <p className="text-ash-veil text-xs max-w-sm mx-auto">
+          {result.errors?.join('. ') || 'This certificate could not be verified on the blockchain'}
         </p>
       </div>
 
       {result.errors && result.errors.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-slate-700">
-          <h3 className="text-sm font-medium text-slate-400 mb-2">Errors</h3>
-          <ul className="space-y-1">
+        <div className="mt-4 pt-5 border-t border-fog-line/10">
+          <h3 className="text-xs font-semibold text-mid-ash uppercase tracking-wider mb-2">Errors</h3>
+          <ul className="space-y-1 text-xs text-red-400">
             {result.errors.map((error, index) => (
-              <li key={index} className="text-sm text-red-400">
+              <li key={index}>
                 • {error}
               </li>
             ))}
@@ -201,3 +200,4 @@ function InvalidResult({ result }: { result: VerificationResult }) {
     </Card>
   );
 }
+

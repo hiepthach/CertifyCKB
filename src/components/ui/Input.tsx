@@ -35,19 +35,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           id={inputId}
           className={twMerge(
             clsx(
-              'w-full px-3 py-2 rounded-btn',
-              'bg-midnight border border-dusk/30',
+              'w-full px-3.5 py-2.5 rounded-btn text-sm',
+              'bg-midnight border border-dusk',
               'text-lilac-white placeholder-steel',
-              'focus:outline-none focus:ring-2 focus:ring-lavender/50 focus:border-lavender/50',
+              'transition-all duration-200 ease-out',
+              'focus:outline-none focus:ring-2 focus:ring-lavender',
               'disabled:opacity-50 disabled:cursor-not-allowed',
-              error && 'border-red-500/60 focus:ring-red-500/50 focus:border-red-500/60',
+              error && 'border-red-500 focus:ring-red-500',
               className
             )
           )}
           onChange={handleChange}
           {...props}
         />
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-red-400 animate-fade-in">{error}</p>}
         {helperText && !error && (
           <p className="text-sm text-fog">{helperText}</p>
         )}
@@ -57,3 +58,5 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = 'Input';
+
+

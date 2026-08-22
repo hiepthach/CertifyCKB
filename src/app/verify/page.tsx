@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { VerifyForm, VerifyResult } from '@/components/verification';
-import { Spinner } from '@/components/ui';
+import { Spinner, Card, Badge } from '@/components/ui';
 import type { VerificationResult } from '@/types';
 import { verifyCertificate } from '@/lib/credentials';
+import { Shield, CheckCircle2, Lock, Cpu } from 'lucide-react';
 
 export default function VerifyPage() {
   const [certificateId, setCertificateId] = useState<string | null>(null);
@@ -24,20 +25,27 @@ export default function VerifyPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Verify Certificate</h1>
-        <p className="text-slate-400">
-          Enter a certificate ID to verify its authenticity and validity on-chain
+    <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-shadow-plum border border-lavender-spark/30 shadow-glow-sm mb-2">
+          <span className="text-lavender-spark text-xs font-semibold">✱</span>
+          <span className="text-xs font-medium text-bone-white">Zero-Knowledge & On-Chain Audit</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">
+          Verify Credential Authenticity
+        </h1>
+        <p className="text-sm text-ash-veil max-w-md mx-auto leading-relaxed">
+          Verify any Spore DOB credential directly against the Nervos CKB layer-1 consensus state
         </p>
       </div>
 
       <div className="space-y-6">
-        <VerifyForm onVerify={handleVerify} />
+        <VerifyForm onVerify={handleVerify} loading={isLoading} />
 
         {isLoading && (
           <div className="flex justify-center py-8">
-            <Spinner label="Verifying certificate..." />
+            <Spinner label="Querying CKB nodes and validating Spore DNA..." />
           </div>
         )}
 
@@ -46,42 +54,46 @@ export default function VerifyPage() {
         )}
 
         {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-            <p className="text-red-400">Verification failed: {String(error)}</p>
+          <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-xl">
+            <p className="text-sm text-red-400">Verification failed: {String(error)}</p>
           </div>
         )}
       </div>
 
       {/* Info Section */}
-      <div className="mt-12 p-6 bg-slate-800/50 rounded-lg border border-slate-700">
-        <h3 className="text-lg font-semibold text-white mb-4">How Verification Works</h3>
-        <ul className="space-y-3 text-sm text-slate-400">
+      <Card variant="default" padding="xl" className="border-fog-line/15">
+        <h3 className="text-base font-semibold text-bone-white mb-4 tracking-tight flex items-center gap-2">
+          <Cpu className="w-4 h-4 text-lavender-spark" />
+          <span>How Cryptographic Verification Works</span>
+        </h3>
+        <ul className="space-y-4 text-xs text-ash-veil">
           <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-600/30 text-blue-400 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="w-6 h-6 bg-shadow-plum border border-lavender-spark/30 text-lavender-spark rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-[11px]">
               1
             </span>
-            <span>
-              <strong className="text-white">On-chain verification</strong> — Certificate data is stored directly on CKB blockchain as Spore DOB
+            <span className="leading-relaxed">
+              <strong className="text-bone-white font-medium">On-chain Spore DOB Cell</strong> — Credential payload is bound to an immutable CKB cell backed by native CKBytes capacity.
             </span>
           </li>
           <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-600/30 text-blue-400 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="w-6 h-6 bg-shadow-plum border border-lavender-spark/30 text-lavender-spark rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-[11px]">
               2
             </span>
-            <span>
-              <strong className="text-white">W3C VC format</strong> — Verifiable Credential standard ensures interoperability
+            <span className="leading-relaxed">
+              <strong className="text-bone-white font-medium">W3C Verifiable Credential Data Model</strong> — Ensures cryptographic signature standards and universal wallet interoperability.
             </span>
           </li>
           <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-600/30 text-blue-400 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="w-6 h-6 bg-shadow-plum border border-lavender-spark/30 text-lavender-spark rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-[11px]">
               3
             </span>
-            <span>
-              <strong className="text-white">Expiration & revocation</strong> — Status checks ensure certificates are still valid
+            <span className="leading-relaxed">
+              <strong className="text-bone-white font-medium">Real-Time Revocation & Expiration Status</strong> — Immediate check against issuer cluster state preventing fraudulent credential reuse.
             </span>
           </li>
         </ul>
-      </div>
+      </Card>
     </div>
   );
 }
+

@@ -1,42 +1,54 @@
 'use client';
 
-import { HTMLAttributes, forwardRef } from 'react';
+import { ReactNode, HTMLAttributes, forwardRef } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+export type BadgeVariant = 'neutral' | 'success' | 'warning' | 'danger' | 'lavender' | 'default';
+
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'lavender' | 'success' | 'warning' | 'danger' | 'neutral';
+  variant?: BadgeVariant;
+  pulse?: boolean;
 }
 
-const variantStyles = {
-  default:
-    'bg-midnight text-lilac-white border border-dusk/30 shadow-glow-sm',
-  lavender:
-    'bg-deep-indigo text-lavender border border-iris/40 shadow-glow-violet',
-  success:
-    'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40',
-  warning:
-    'bg-amber-950/60 text-amber-400 border border-amber-800/40',
-  danger:
-    'bg-red-950/60 text-red-400 border border-red-800/40',
-  neutral:
-    'bg-midnight text-ash border border-dusk/30',
+const variantStyles: Record<BadgeVariant, string> = {
+  default: 'bg-midnight text-ash border-dusk',
+  neutral: 'bg-midnight text-ash border-dusk',
+  success: 'bg-emerald-950 text-emerald-400 border-emerald-800',
+  warning: 'bg-amber-950 text-amber-400 border-amber-800',
+  danger: 'bg-red-950 text-red-400 border-red-800',
+  lavender: 'bg-deep-indigo text-lavender border-iris shadow-glow-violet',
+};
+
+const pulseColors: Record<BadgeVariant, string> = {
+  default: 'bg-ash',
+  neutral: 'bg-ash',
+  success: 'bg-emerald-400',
+  warning: 'bg-amber-400',
+  danger: 'bg-red-400',
+  lavender: 'bg-lavender',
 };
 
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
-  ({ variant = 'default', className, children, ...props }, ref) => {
+  ({ variant = 'neutral', pulse = false, className, children, ...props }, ref) => {
     return (
       <span
         ref={ref}
         className={twMerge(
           clsx(
-            'inline-flex items-center px-2.5 py-0.5 rounded-badge text-xs font-medium',
+            'inline-flex items-center gap-1.5 px-3 py-1 rounded-badge text-xs font-medium tracking-wide transition-all duration-200 border',
             variantStyles[variant],
             className
           )
         )}
         {...props}
       >
+        {pulse && (
+          <span className="relative flex h-2 w-2 mr-0.5">
+            <span className={clsx('animate-ping-slow absolute inline-flex h-full w-full rounded-full opacity-75', pulseColors[variant])} />
+            <span className={clsx('relative inline-flex rounded-full h-2 w-2', pulseColors[variant])} />
+          </span>
+        )}
         {children}
       </span>
     );
@@ -44,3 +56,4 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
 );
 
 Badge.displayName = 'Badge';
+

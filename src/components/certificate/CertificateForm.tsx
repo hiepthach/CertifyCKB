@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card, Button, Input, Modal } from '@/components/ui';
 import type { CredentialSubject } from '@/types';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
 interface CertificateFormProps {
   clusterId: string;
@@ -97,14 +98,19 @@ export function CertificateForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="p-4 bg-slate-800/50 rounded-lg mb-6">
-        <p className="text-sm text-slate-400">Issuing certificate for:</p>
-        <p className="font-semibold text-white">{clusterName}</p>
+      <div className="p-4 bg-midnight-plum rounded-xl border border-fog-line/10 mb-6 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-mid-ash uppercase tracking-wider font-semibold">Issuing Provider Authority</p>
+          <p className="font-semibold text-bone-white text-base mt-0.5">{clusterName}</p>
+        </div>
+        <span className="text-xs font-mono px-2 py-1 rounded bg-shadow-plum text-lavender-spark border border-lavender-spark/20">
+          Spore Cluster
+        </span>
       </div>
 
       <Input
         label="Recipient CKB Address"
-        placeholder="ckt1q..."
+        placeholder="ckt1qzda0cr08m85hc8j..."
         value={formData.recipientAddress}
         onChange={(v) => updateField('recipientAddress', v)}
         error={errors.recipientAddress}
@@ -112,8 +118,8 @@ export function CertificateForm({
       />
 
       <Input
-        label="Recipient Name"
-        placeholder="John Doe"
+        label="Recipient Full Name"
+        placeholder="e.g., Jane Doe"
         value={formData.recipientName}
         onChange={(v) => updateField('recipientName', v)}
         error={errors.recipientName}
@@ -121,8 +127,8 @@ export function CertificateForm({
       />
 
       <Input
-        label="Course Name"
-        placeholder="CKB Development Fundamentals"
+        label="Course / Program Name"
+        placeholder="e.g., Advanced CKB Cell Model & DOB Engineering"
         value={formData.courseName}
         onChange={(v) => updateField('courseName', v)}
         error={errors.courseName}
@@ -140,17 +146,17 @@ export function CertificateForm({
 
       {/* Grade */}
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-slate-300">
+        <label className="block text-sm font-medium text-ash-veil">
           Grade (Optional)
         </label>
         <select
           value={formData.grade}
           onChange={(e) => updateField('grade', e.target.value || undefined)}
-          className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3.5 py-2.5 rounded-xl bg-midnight-plum border border-fog-line/15 text-bone-white text-sm focus:outline-none focus:ring-2 focus:ring-lavender-spark/40 focus:border-lavender-spark/50 transition-all duration-200"
         >
-          <option value="">Select grade...</option>
+          <option value="" className="bg-midnight-plum text-ash-veil">Select grade...</option>
           {GRADE_OPTIONS.map((grade) => (
-            <option key={grade} value={grade}>
+            <option key={grade} value={grade} className="bg-midnight-plum text-bone-white">
               {grade}
             </option>
           ))}
@@ -158,40 +164,42 @@ export function CertificateForm({
       </div>
 
       <Input
-        label="Score (%)"
+        label="Score (% - Optional)"
         type="number"
-        placeholder="95"
+        placeholder="98"
         value={formData.score?.toString() || ''}
         onChange={(v) => updateField('score', v ? parseInt(v, 10) : undefined)}
         error={errors.score}
       />
 
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-slate-300">
-          Skills (Optional)
+        <label className="block text-sm font-medium text-ash-veil">
+          Skills Certified (Optional)
         </label>
         <input
           type="text"
-          placeholder="Rust, CKB-VM, Cell Model (comma-separated)"
+          placeholder="Rust, CKB-VM, Spore DOBs, Cryptography (comma-separated)"
           value={skillsInput}
           onChange={(e) => setSkillsInput(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3.5 py-2.5 rounded-xl bg-midnight-plum border border-fog-line/15 text-bone-white placeholder-mid-ash text-sm focus:outline-none focus:ring-2 focus:ring-lavender-spark/40 focus:border-lavender-spark/50 transition-all duration-200"
         />
-        <p className="text-xs text-slate-500">
-          Enter skills separated by commas
+        <p className="text-[11px] text-mid-ash">
+          Enter acquired skills separated by commas
         </p>
       </div>
 
-      <div className="flex gap-3 pt-4">
+      <div className="flex gap-3 pt-5 border-t border-fog-line/10">
         {onCancel && (
-          <Button type="button" variant="secondary" onClick={onCancel}>
+          <Button type="button" variant="secondary" onClick={onCancel} className="text-xs">
             Cancel
           </Button>
         )}
-        <Button type="submit" loading={loading} className="flex-1">
-          Issue Certificate
+        <Button type="submit" loading={loading} className="flex-1 text-xs shadow-glow-green/30 gap-1.5">
+          <span>Mint Spore DOB Certificate</span>
+          <ArrowRight className="w-3.5 h-3.5" />
         </Button>
       </div>
     </form>
   );
 }
+

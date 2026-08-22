@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCcc } from '@ckb-ccc/connector-react';
 import { Button } from '@/components/ui';
-import { Wallet, LogOut, Menu, X, ExternalLink, Copy, Check } from 'lucide-react';
+import { Wallet, LogOut, Menu, X, ExternalLink, Copy, Check, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { NetworkSelector } from './wallet/NetworkSelector';
 
@@ -48,61 +48,67 @@ export function Header() {
   const explorerUrl = getExplorerLink();
 
   return (
-    <div className="sticky top-0 z-40 w-full pt-4 px-4">
+    <div className="sticky top-0 z-40 w-full pt-3 px-4 sm:px-6">
       <div className="max-w-[1200px] mx-auto">
-        {/* Floating nav pill — midnight surface with inset rim-light glow */}
-        <header className="relative bg-midnight border border-dusk/20 rounded-nav shadow-glow-md flex items-center justify-between px-4 py-2">
-          {/* Logo */}
-          <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-7 h-7 bg-deep-indigo rounded-btn flex items-center justify-center border border-lavender/30 shadow-glow-violet">
-                <span className="text-lavender font-semibold text-xs">CK</span>
+        {/* Doppler Glass Header Nav — midnight plum with frosted blur & hairline border */}
+        <header className="relative bg-midnight-plum/85 backdrop-blur-xl border border-fog-line/10 rounded-2xl shadow-glow-sm flex items-center justify-between px-4 sm:px-6 py-2.5 transition-all duration-300">
+          {/* Left: Asterisk Logo Lockup */}
+          <div className="flex items-center gap-7">
+            <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
+              {/* Lavender Asterisk visual anchor */}
+              <div className="w-8 h-8 rounded-xl bg-shadow-plum border border-lavender-spark/30 flex items-center justify-center shadow-[0_0_16px_rgba(185,151,255,0.2)] group-hover:scale-105 group-hover:border-lavender-spark/50 transition-all duration-200">
+                <span className="text-lavender-spark text-lg font-bold select-none leading-none">✱</span>
               </div>
-              <span className="font-display text-sm font-medium text-lilac-white hidden sm:block tracking-wide">
-                Credential Registry
-              </span>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-bone-white tracking-tight flex items-center gap-1.5">
+                  CKB Credential Registry
+                </span>
+              </div>
             </Link>
 
-            {/* Desktop Navigation */}
+            {/* Center: Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-3 py-1.5 text-sm font-normal rounded-btn transition-colors duration-200 ${
-                    pathname === item.href
-                      ? 'text-lilac-white bg-deep-indigo/60'
-                      : 'text-fog hover:text-lilac-white hover:bg-deep-indigo/30'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {navItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`px-3.5 py-1.5 text-sm rounded-xl font-medium transition-all duration-200 ${isActive
+                        ? 'text-bone-white bg-shadow-plum border border-fog-line/15 shadow-sm'
+                        : 'text-ash-veil hover:text-bone-white hover:bg-shadow-plum/50'
+                      }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
 
-          {/* Right side */}
-          <div className="flex items-center gap-2">
+          {/* Right: Network Selector + Wallet Cluster */}
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Network Selector */}
             <NetworkSelector />
 
-            {/* Wallet Connection Status */}
+            {/* Wallet Connection */}
             {isConnected ? (
               <div className="flex items-center gap-2">
-                {/* Address with copy button */}
-                <div className="hidden sm:flex items-center gap-1">
+                {/* Address with copy feedback */}
+                <div className="hidden sm:flex items-center gap-1.5">
                   <button
                     onClick={handleCopyAddress}
-                    className="flex items-center gap-1.5 px-3 py-1 bg-deep-indigo rounded-btn border border-dusk/30 hover:border-lavender/40 transition-colors group"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-shadow-plum rounded-xl border border-fog-line/15 hover:border-lavender-spark/40 transition-all duration-200 group"
                     title="Copy address"
                   >
-                    <span className="text-xs font-mono text-lilac-white">
+                    <span className="w-1.5 h-1.5 rounded-full bg-signal-green" />
+                    <span className="text-xs font-mono text-bone-white">
                       {truncateAddress(address)}
                     </span>
                     {copied ? (
-                      <Check className="w-3 h-3 text-emerald-400" />
+                      <Check className="w-3.5 h-3.5 text-signal-green animate-fade-in" />
                     ) : (
-                      <Copy className="w-3 h-3 text-steel group-hover:text-fog transition-colors" />
+                      <Copy className="w-3.5 h-3.5 text-mid-ash group-hover:text-bone-white transition-colors" />
                     )}
                   </button>
 
@@ -112,10 +118,10 @@ export function Header() {
                       href={`${explorerUrl}/address/${address}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1.5 bg-deep-indigo rounded-btn border border-dusk/30 hover:border-lavender/40 transition-colors text-steel hover:text-fog"
-                      title="View on explorer"
+                      className="p-2 bg-shadow-plum rounded-xl border border-fog-line/15 hover:border-lavender-spark/40 transition-colors text-mid-ash hover:text-bone-white"
+                      title="View on CKB Explorer"
                     >
-                      <ExternalLink className="w-3 h-3" />
+                      <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                   )}
                 </div>
@@ -125,22 +131,23 @@ export function Header() {
                   variant="ghost"
                   size="sm"
                   onClick={disconnect}
-                  className="gap-1 border border-dusk/30"
+                  className="gap-1.5 border border-fog-line/15"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline text-xs">Disconnect</span>
                 </Button>
               </div>
             ) : (
-              <Button onClick={open} size="sm" className="gap-1">
+              <Button onClick={open} size="sm" className="gap-1.5 shadow-glow-green/30">
                 <Wallet className="w-3.5 h-3.5" />
-                <span className="text-xs">Connect</span>
+                <span className="text-xs font-semibold">Connect</span>
+                <span className="group-hover:translate-x-0.5 transition-transform">→</span>
               </Button>
             )}
 
             {/* Mobile menu button */}
             <button
-              className="md:hidden p-2 text-fog hover:text-lilac-white transition-colors rounded-btn hover:bg-deep-indigo"
+              className="md:hidden p-2 text-ash-veil hover:text-bone-white transition-colors rounded-xl hover:bg-shadow-plum"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
@@ -148,23 +155,25 @@ export function Header() {
             </button>
           </div>
 
-          {/* Mobile Navigation */}
+          {/* Mobile Navigation Dropdown */}
           {mobileMenuOpen && (
-            <nav className="absolute top-full left-0 right-0 mt-2 mx-2 bg-midnight border border-dusk/20 rounded-card shadow-glow-lg p-3 flex flex-col gap-1 md:hidden">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`block px-3 py-2 text-sm rounded-btn transition-colors ${
-                    pathname === item.href
-                      ? 'text-lilac-white bg-deep-indigo/60'
-                      : 'text-fog hover:text-lilac-white hover:bg-deep-indigo/30'
-                  }`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              ))}
+            <nav className="absolute top-full left-0 right-0 mt-2 bg-shadow-plum border border-fog-line/15 rounded-2xl shadow-screenshot-frame p-3 flex flex-col gap-1.5 md:hidden animate-fade-in-scale z-50">
+              {navItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`block px-3.5 py-2.5 text-sm rounded-xl transition-colors font-medium ${isActive
+                        ? 'text-bone-white bg-midnight-plum border border-fog-line/15'
+                        : 'text-ash-veil hover:text-bone-white hover:bg-midnight-plum/50'
+                      }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             </nav>
           )}
         </header>
@@ -172,3 +181,4 @@ export function Header() {
     </div>
   );
 }
+

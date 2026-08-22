@@ -4,7 +4,7 @@ import { Card, Badge, Button } from '@/components/ui';
 import type { CertificateDNA } from '@/types';
 import { formatDate, truncateAddress } from '@/utils';
 import { formatCertificateDisplay, isExpired, isRevoked } from '@/lib/credentials';
-import { Award, Calendar, User, ExternalLink } from 'lucide-react';
+import { Award, Calendar, User, ExternalLink, ArrowRight } from 'lucide-react';
 import { useNetwork } from '@/hooks';
 
 interface CertificateCardProps {
@@ -29,50 +29,52 @@ export function CertificateCard({
 
   const getStatusBadge = () => {
     if (revoked) return <Badge variant="danger">Revoked</Badge>;
-    if (expired) return <Badge variant="danger">Expired</Badge>;
-    return <Badge variant="success">Valid</Badge>;
+    if (expired) return <Badge variant="warning">Expired</Badge>;
+    return <Badge variant="success" pulse>Valid DOB</Badge>;
   };
 
   return (
     <Card
       variant="interactive"
       padding="lg"
-      className="hover:border-blue-500/50 transition-colors"
+      className="group flex flex-col justify-between"
       onClick={onClick}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
-            <Award className="w-6 h-6 text-white" />
+      <div>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 bg-midnight-plum rounded-xl border border-lavender-spark/30 flex items-center justify-center text-lavender-spark shadow-glow-sm group-hover:scale-105 transition-transform duration-200">
+              <Award className="w-5 h-5" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-bone-white tracking-tight line-clamp-1">{display.course}</h3>
+              <p className="text-xs text-ash-veil">{display.issuer}</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-white">{display.course}</h3>
-            <p className="text-sm text-slate-400">{display.issuer}</p>
+          {getStatusBadge()}
+        </div>
+
+        {/* Details */}
+        <div className="space-y-2 mb-4">
+          <div className="flex items-center gap-2 text-xs text-ash-veil">
+            <User className="w-3.5 h-3.5 text-mid-ash" />
+            <span className="text-bone-white font-medium">{display.recipient}</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-mid-ash">
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Completed {display.date}</span>
           </div>
         </div>
-        {getStatusBadge()}
-      </div>
 
-      {/* Details */}
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <User className="w-4 h-4" />
-          <span>{display.recipient}</span>
+        {/* Certificate ID */}
+        <div className="text-[11px] text-mid-ash font-mono truncate mb-4 p-2 bg-midnight-plum/60 rounded-lg border border-fog-line/10">
+          ID: {truncateAddress(certificateId, 8, 6)}
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <Calendar className="w-4 h-4" />
-          <span>Completed {display.date}</span>
-        </div>
-      </div>
-
-      {/* Certificate ID */}
-      <div className="text-xs text-slate-500 font-mono truncate mb-4">
-        ID: {truncateAddress(certificateId, 8, 6)}
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 pt-3 border-t border-slate-700">
+      <div className="flex gap-2 pt-3 border-t border-fog-line/10" onClick={(e) => e.stopPropagation()}>
         {explorerUrl && transactionHash && (
           <a
             href={`${explorerUrl}/transaction/${transactionHash}`}
@@ -80,16 +82,17 @@ export function CertificateCard({
             rel="noopener noreferrer"
             className="flex-1"
           >
-            <Button variant="ghost" size="sm" className="w-full">
-              <ExternalLink className="w-4 h-4" />
+            <Button variant="ghost" size="sm" className="w-full text-xs gap-1 border border-fog-line/15">
+              <ExternalLink className="w-3.5 h-3.5" />
               Explorer
             </Button>
           </a>
         )}
-        <Button variant="secondary" size="sm" className="flex-1" onClick={onShare}>
+        <Button variant="secondary" size="sm" className="flex-1 text-xs" onClick={onShare}>
           Share
         </Button>
       </div>
     </Card>
   );
 }
+

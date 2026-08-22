@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useCcc } from '@ckb-ccc/connector-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button, Modal, Card } from '@/components/ui';
+import { Button, Modal, Card, Badge } from '@/components/ui';
 import { ClusterList, ClusterForm } from '@/components/cluster';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, Globe, Mail, Copy, Check, ArrowRight, ExternalLink } from 'lucide-react';
 import type { Cluster, ClusterConfig } from '@/types';
 import {
   createCluster,
@@ -19,6 +19,7 @@ export default function ClustersPage() {
   const queryClient = useQueryClient();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCluster, setSelectedCluster] = useState<Cluster | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const address = signerInfo?.address?.addressStr;
   const signer = signerInfo?.signer;
@@ -74,19 +75,25 @@ export default function ClustersPage() {
     await createMutation.mutateAsync(config);
   };
 
+  const handleCopyClusterId = async (id: string) => {
+    await navigator.clipboard.writeText(id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (!address) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <Card variant="default" padding="lg" className="max-w-md text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
-            <span className="text-3xl">👛</span>
+        <Card variant="default" padding="xl" className="max-w-md text-center space-y-4">
+          <div className="w-16 h-16 mx-auto bg-midnight-plum border border-lavender-spark/30 rounded-2xl flex items-center justify-center text-2xl shadow-glow-violet/30 animate-float">
+            👛
           </div>
-          <h2 className="text-xl font-semibold text-white mb-2">Wallet Not Connected</h2>
-          <p className="text-slate-400 mb-6">
-            Connect your wallet to view and create course provider clusters.
+          <h2 className="text-xl font-bold text-bone-white tracking-tight">Wallet Not Connected</h2>
+          <p className="text-sm text-ash-veil leading-relaxed">
+            Connect your wallet to create and manage sovereign credential provider clusters on CKB.
           </p>
-          <p className="text-sm text-slate-500">
-            Supported wallets: JoyID, MetaMask, WalletConnect
+          <p className="text-xs text-mid-ash pt-2 border-t border-fog-line/10">
+            Supported wallets: JoyID Passkeys, MetaMask, WalletConnect
           </p>
         </Card>
       </div>
@@ -94,21 +101,26 @@ export default function ClustersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-fade-in">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-fog-line/10">
         <div>
-          <h1 className="text-3xl font-bold text-white">Clusters</h1>
-          <p className="text-slate-400 mt-1">
-            Manage your course provider clusters
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lavender-spark text-sm font-bold">✱</span>
+            <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">Institution Registry</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Clusters</h1>
+          <p className="text-sm text-ash-veil mt-1">
+            Manage your accredited course provider clusters and on-chain authority
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => refetch()}>
-            <RefreshCw className="w-4 h-4" />
+        <div className="flex items-center gap-2.5">
+          <Button variant="secondary" onClick={() => refetch()} className="gap-1.5 text-xs">
+            <RefreshCw className="w-3.5 h-3.5" />
             Refresh
           </Button>
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus className="w-4 h-4" />
+          <Button onClick={() => setShowCreateModal(true)} className="gap-1.5 text-xs shadow-glow-green/30">
+            <Plus className="w-3.5 h-3.5" />
             Create Cluster
           </Button>
         </div>
@@ -127,7 +139,7 @@ export default function ClustersPage() {
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="Create New Cluster"
+        title="Register Spore Cluster"
         size="md"
       >
         <ClusterForm
@@ -144,51 +156,71 @@ export default function ClustersPage() {
           title={selectedCluster.name}
           size="lg"
         >
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <h3 className="text-sm text-slate-400 mb-1">Description</h3>
-              <p className="text-white">{selectedCluster.description}</p>
+              <h3 className="text-xs text-mid-ash uppercase tracking-wider mb-1.5 font-semibold">About Institution</h3>
+              <p className="text-sm text-bone-white leading-relaxed">{selectedCluster.description}</p>
             </div>
 
-            {selectedCluster.websiteUrl && (
-              <div>
-                <h3 className="text-sm text-slate-400 mb-1">Website</h3>
-                <a
-                  href={selectedCluster.websiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:text-blue-300"
+            <div className="grid sm:grid-cols-2 gap-3">
+              {selectedCluster.websiteUrl && (
+                <div className="p-3 bg-midnight-plum rounded-xl border border-fog-line/10">
+                  <h3 className="text-xs text-mid-ash mb-1 flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-lavender-spark" />
+                    Website
+                  </h3>
+                  <a
+                    href={selectedCluster.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-lavender-spark hover:underline truncate block"
+                  >
+                    {selectedCluster.websiteUrl}
+                  </a>
+                </div>
+              )}
+
+              {selectedCluster.contactEmail && (
+                <div className="p-3 bg-midnight-plum rounded-xl border border-fog-line/10">
+                  <h3 className="text-xs text-mid-ash mb-1 flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-lavender-spark" />
+                    Contact
+                  </h3>
+                  <p className="text-xs text-bone-white">{selectedCluster.contactEmail}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-3.5 bg-midnight-plum rounded-xl border border-fog-line/10">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs text-mid-ash uppercase tracking-wider font-semibold">On-Chain Cluster ID</span>
+                <button
+                  onClick={() => handleCopyClusterId(selectedCluster.clusterId)}
+                  className="flex items-center gap-1 text-[11px] text-lavender-spark hover:underline"
                 >
-                  {selectedCluster.websiteUrl}
-                </a>
+                  {copied ? <Check className="w-3 h-3 text-signal-green" /> : <Copy className="w-3 h-3" />}
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
               </div>
-            )}
-
-            {selectedCluster.contactEmail && (
-              <div>
-                <h3 className="text-sm text-slate-400 mb-1">Contact</h3>
-                <p className="text-white">{selectedCluster.contactEmail}</p>
-              </div>
-            )}
-
-            <div>
-              <h3 className="text-sm text-slate-400 mb-1">Cluster ID</h3>
-              <p className="font-mono text-sm text-white break-all">
+              <p className="font-mono text-xs text-bone-white break-all bg-shadow-plum/60 p-2 rounded-lg border border-fog-line/10">
                 {selectedCluster.clusterId}
               </p>
             </div>
 
-            <div className="pt-4 border-t border-slate-700 flex gap-3">
+            <div className="pt-4 border-t border-fog-line/10 flex gap-3">
               <Button
                 onClick={() => {
                   window.location.href = `/certificates/issue?cluster=${selectedCluster.clusterId}`;
                 }}
+                className="flex-1 text-xs gap-1.5 shadow-glow-green/30"
               >
-                Issue Certificate
+                <span>Issue Certificate</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </Button>
               <Button
                 variant="secondary"
                 onClick={() => setSelectedCluster(null)}
+                className="text-xs"
               >
                 Close
               </Button>
@@ -198,10 +230,11 @@ export default function ClustersPage() {
       )}
 
       {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-red-400">Failed to load clusters: {String(error)}</p>
+        <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-xl">
+          <p className="text-sm text-red-400">Failed to load clusters: {String(error)}</p>
         </div>
       )}
     </div>
   );
 }
+

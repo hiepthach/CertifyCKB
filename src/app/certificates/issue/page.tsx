@@ -6,7 +6,7 @@ import { useCcc } from '@ckb-ccc/connector-react';
 import { useMutation } from '@tanstack/react-query';
 import { Card, Button, Modal, Spinner } from '@/components/ui';
 import { CertificateForm, type CertificateData } from '@/components/certificate';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle2, ArrowRight } from 'lucide-react';
 import type { Cluster } from '@/types';
 import { getCluster } from '@/lib/credentials';
 import { issueCertificate } from '@/lib/credentials';
@@ -60,15 +60,15 @@ function IssuePageContent() {
   if (!address || !signer) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <Card variant="default" padding="lg" className="max-w-md text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
-            <span className="text-3xl">👛</span>
+        <Card variant="default" padding="xl" className="max-w-md text-center space-y-4">
+          <div className="w-16 h-16 mx-auto bg-midnight-plum border border-lavender-spark/30 rounded-2xl flex items-center justify-center text-2xl shadow-glow-violet/30 animate-float">
+            👛
           </div>
-          <h2 className="text-xl font-semibold text-white mb-2">Wallet Not Connected</h2>
-          <p className="text-slate-400 mb-6">
-            Connect your wallet to issue certificates.
+          <h2 className="text-xl font-bold text-bone-white tracking-tight">Wallet Not Connected</h2>
+          <p className="text-sm text-ash-veil leading-relaxed">
+            Connect your wallet to issue sovereign on-chain certificates as Spore DOBs.
           </p>
-          <Button onClick={() => window.location.href = '/clusters'}>
+          <Button onClick={() => window.location.href = '/clusters'} className="text-xs">
             Go to Clusters
           </Button>
         </Card>
@@ -79,12 +79,12 @@ function IssuePageContent() {
   if (!clusterId || !cluster) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <Card variant="default" padding="lg" className="max-w-md text-center">
-          <h2 className="text-xl font-semibold text-white mb-2">Cluster Not Found</h2>
-          <p className="text-slate-400 mb-6">
-            Please select a cluster from the clusters page.
+        <Card variant="default" padding="xl" className="max-w-md text-center space-y-4">
+          <h2 className="text-xl font-bold text-bone-white tracking-tight">Cluster Not Selected</h2>
+          <p className="text-sm text-ash-veil leading-relaxed">
+            Please choose an issuing provider cluster before creating a certificate.
           </p>
-          <Button onClick={() => window.location.href = '/clusters'}>
+          <Button onClick={() => window.location.href = '/clusters'} className="text-xs">
             Go to Clusters
           </Button>
         </Card>
@@ -93,15 +93,19 @@ function IssuePageContent() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-white">Issue Certificate</h1>
-        <p className="text-slate-400 mt-1">
-          Issue a new course completion certificate
+    <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
+      <div className="pb-6 border-b border-fog-line/10">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-lavender-spark text-sm font-bold">✱</span>
+          <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">DOB Minting Pipeline</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Issue Certificate</h1>
+        <p className="text-sm text-ash-veil mt-1">
+          Mint an immutable Spore DOB credential directly to a student's CKB address
         </p>
       </div>
 
-      <Card variant="default" padding="lg">
+      <Card variant="default" padding="xl">
         <CertificateForm
           clusterId={clusterId}
           clusterName={cluster.name}
@@ -112,8 +116,8 @@ function IssuePageContent() {
       </Card>
 
       {issueMutation.isError && (
-        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-red-400">
+        <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-xl">
+          <p className="text-sm text-red-400">
             Failed to issue certificate: {issueMutation.error?.message || 'Unknown error'}
           </p>
         </div>
@@ -125,45 +129,47 @@ function IssuePageContent() {
           setShowSuccessModal(false);
           window.location.href = '/certificates';
         }}
-        title="Certificate Issued!"
+        title="Certificate Minted On CKB!"
         size="md"
       >
-        <div className="text-center py-6">
-          <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
-            <CheckCircle className="w-10 h-10 text-green-500" />
+        <div className="text-center py-4 space-y-4">
+          <div className="w-16 h-16 mx-auto bg-midnight-plum border border-signal-green/40 rounded-2xl flex items-center justify-center text-signal-green shadow-glow-green/30 animate-float">
+            <CheckCircle2 className="w-9 h-9" />
           </div>
-          <h2 className="text-xl font-semibold text-white mb-2">
-            Certificate Issued Successfully!
-          </h2>
-          <p className="text-slate-400 mb-6">
-            Your certificate has been created and stored on the CKB blockchain.
-          </p>
+          <div>
+            <h2 className="text-xl font-bold text-bone-white tracking-tight">
+              Certificate Minted Successfully!
+            </h2>
+            <p className="text-sm text-ash-veil mt-1 leading-relaxed">
+              Your credential has been converted into a Spore DOB cell and stored permanently on the Nervos CKB blockchain.
+            </p>
+          </div>
 
           {result && (
-            <div className="p-4 bg-slate-800 rounded-lg text-left space-y-2 mb-6">
+            <div className="p-4 bg-midnight-plum rounded-xl text-left space-y-2.5 border border-fog-line/10 text-xs">
               <div>
-                <p className="text-sm text-slate-400">Certificate ID</p>
-                <p className="font-mono text-sm text-white break-all">
+                <p className="text-mid-ash uppercase tracking-wider font-semibold">Certificate ID</p>
+                <p className="font-mono text-bone-white break-all mt-0.5 bg-shadow-plum/50 p-2 rounded-lg border border-fog-line/10">
                   {result.certificateId}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-slate-400">Transaction Hash</p>
-                <p className="font-mono text-sm text-white break-all">
+                <p className="text-mid-ash uppercase tracking-wider font-semibold">Transaction Hash</p>
+                <p className="font-mono text-bone-white break-all mt-0.5 bg-shadow-plum/50 p-2 rounded-lg border border-fog-line/10">
                   {result.transactionHash}
                 </p>
               </div>
             </div>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-2">
             <Button
               variant="secondary"
               onClick={() => {
                 setShowSuccessModal(false);
                 setResult(null);
               }}
-              className="flex-1"
+              className="flex-1 text-xs"
             >
               Issue Another
             </Button>
@@ -172,9 +178,9 @@ function IssuePageContent() {
                 setShowSuccessModal(false);
                 window.location.href = '/certificates';
               }}
-              className="flex-1"
+              className="flex-1 text-xs shadow-glow-green/30"
             >
-              View Certificates
+              View Certificates →
             </Button>
           </div>
         </div>
@@ -190,3 +196,4 @@ export default function IssuePage() {
     </Suspense>
   );
 }
+

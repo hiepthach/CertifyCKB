@@ -14,13 +14,13 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles = {
   primary:
-    'bg-iris hover:bg-iris/90 text-white border border-transparent',
+    'bg-signal-green bg-iris text-black font-medium hover:bg-signal-green/90 hover:shadow-glow-green border border-transparent active:scale-[0.98]',
   secondary:
-    'bg-deep-indigo hover:bg-deep-indigo/80 text-lilac-white border border-dusk/30',
+    'bg-shadow-plum bg-deep-indigo hover:bg-[#383042] text-bone-white text-lilac-white border border-fog-line/15 border-dusk/30 hover:border-fog-line/30 active:scale-[0.98]',
   danger:
-    'bg-red-900/50 hover:bg-red-900/70 text-red-300 border border-red-800/50',
+    'bg-red-950/60 bg-red-900/50 hover:bg-red-900/70 text-red-300 border border-red-800/50 active:scale-[0.98]',
   ghost:
-    'bg-transparent hover:bg-midnight text-fog hover:text-lilac-white border border-transparent',
+    'bg-transparent hover:bg-shadow-plum/60 text-ash-veil hover:text-bone-white border border-transparent hover:border-fog-line/15 active:scale-[0.98]',
 };
 
 const sizeStyles = {
@@ -49,10 +49,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || loading}
         className={twMerge(
           clsx(
-            'inline-flex items-center justify-center gap-2 font-medium transition-all duration-200',
+            'group inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 ease-out select-none',
             'rounded-btn focus:outline-none',
-            'focus-visible:ring-2 focus-visible:ring-lavender focus-visible:ring-offset-2 focus-visible:ring-offset-void',
-            'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none',
+            'focus-visible:ring-2 focus-visible:ring-lavender focus-visible:ring-offset-2 focus-visible:ring-offset-midnight-plum',
+            'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100',
             variantStyles[variant],
             sizeStyles[size],
             fullWidth && 'w-full',
@@ -69,3 +69,4 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = 'Button';
+
