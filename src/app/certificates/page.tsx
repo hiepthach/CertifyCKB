@@ -23,14 +23,14 @@ interface CertificateWithMeta {
 
 export default function CertificatesPage() {
   const router = useRouter();
-  const { address, isConnected, isLoadingAddress, open } = useWallet();
+  const { address, client, isConnected, isLoadingAddress, open } = useWallet();
   const [selectedCert, setSelectedCert] = useState<CertificateWithMeta | null>(null);
   const [filterMode, setFilterMode] = useState<'all' | 'received' | 'issued'>('all');
 
   const { data: rawCertificates = [], isLoading, refetch, error } = useQuery({
     queryKey: ['certificates', address],
     queryFn: async () => {
-      const allCerts = await getAllCertificates();
+      const allCerts = await getAllCertificates(client, address || undefined);
       return allCerts;
     },
     enabled: true,
@@ -39,7 +39,7 @@ export default function CertificatesPage() {
   const { data: userClusters = [] } = useQuery({
     queryKey: ['clusters', address],
     queryFn: async () => {
-      return getProviderClusters(address || undefined);
+      return getProviderClusters(address || undefined, client);
     },
     enabled: true,
   });

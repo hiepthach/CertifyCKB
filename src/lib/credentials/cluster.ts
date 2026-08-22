@@ -1,9 +1,10 @@
-import { ccc } from '@ckb-ccc/core';
+import { ccc, Address, ClientPublicTestnet } from '@ckb-ccc/core';
 import type { Cluster, ClusterConfig } from '@/types';
 
 // Environment flag to enable mock mode for testing
 // Default to mock for development, set to 'false' for production
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
+const isTestEnv = typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST));
 
 const CLUSTER_STORAGE_KEY = 'ckb_credential_clusters';
 
@@ -170,17 +171,60 @@ export async function getCluster(clusterId: string): Promise<Cluster | null> {
 /**
  * Get all clusters owned by an address
  */
-export async function getProviderClusters(address?: string): Promise<Cluster[]> {
+export async function getProviderClusters(
+  address?: string,
+  client?: unknown
+): Promise<Cluster[]> {
   syncClustersFromLocalStorage();
-  if (USE_MOCK) {
-    const all = Array.from(mockClusters.values());
-    if (!address) return all;
-    // Return clusters created by this address or general mock clusters
-    return all.filter(c => !c.creatorAddress || c.creatorAddress === address || c.creatorAddress === 'mock_address');
+  const results = Array.from(mockClusters.values());
+  const seenIds = new Set(results.map((c) => c.clusterId));
+
+  if (address && typeof window !== 'undefined' && !isTestEnv) {
+    try {
+      const ckbClient = (client as ccc.Client) || (ClientPublicTestnet ? new ClientPublicTestnet() : new ccc.ClientPublicTestnet());
+      const AddressClass = Address || ccc?.Address;
+      if (AddressClass?.fromString) {
+        const addrObj = await AddressClass.fromString(address, ckbClient);
+
+        for await (const cell of ckbClient.findCellsByLock(addrObj.script, undefined, true)) {
+          try {
+            if (!cell.outputData || cell.outputData === '0x' || cell.outputData.length < 10) continue;
+            const text = new TextDecoder().decode(ccc.bytesFrom(cell.outputData));
+            if (!text.includes('SporeCluster')) continue;
+
+            const meta = JSON.parse(text);
+            const clusterId = cell.outPoint.txHash;
+
+            if (!seenIds.has(clusterId)) {
+              seenIds.add(clusterId);
+              const cluster: Cluster = {
+                id: clusterId,
+                clusterId,
+                name: meta.name || 'Unnamed Cluster',
+                description: meta.description || '',
+                websiteUrl: meta.websiteUrl || '',
+                contactEmail: meta.contactEmail || '',
+                creatorAddress: address,
+                createdAt: meta.createdAt || new Date().toISOString(),
+              };
+              results.push(cluster);
+              mockClusters.set(clusterId, cluster);
+            }
+          } catch {
+            // Ignore non-cluster cells
+          }
+        }
+        syncClustersToLocalStorage();
+      }
+    } catch (e) {
+      console.warn('Error querying on-chain cluster cells:', e);
+    }
   }
 
-  // Real Spore SDK implementation would go here
-  return [];
+  if (!address) return results;
+  return results.filter(
+    (c) => !c.creatorAddress || c.creatorAddress === address || c.creatorAddress === 'mock_address'
+  );
 }
 
 /**

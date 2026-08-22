@@ -13,13 +13,14 @@ import {
   getCluster,
   getProviderClusters,
   saveClusterToMockStorage,
+  getClustersFromMockStorage,
   getAllCertificates,
 } from '@/lib/credentials';
 import { getTransactionUrl } from '@/lib/ckb';
 
 export default function ClustersPage() {
   const router = useRouter();
-  const { signer, address, isLoadingAddress, open } = useWallet();
+  const { signer, address, client, isLoadingAddress, open } = useWallet();
   const queryClient = useQueryClient();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCluster, setSelectedCluster] = useState<Cluster | null>(null);
@@ -28,9 +29,7 @@ export default function ClustersPage() {
   const { data: clusters = [], isLoading, refetch, error } = useQuery({
     queryKey: ['clusters', address],
     queryFn: async () => {
-      const onChainClusters = await getProviderClusters(address || undefined);
-
-      const { getClustersFromMockStorage } = await import('@/lib/credentials');
+      const onChainClusters = await getProviderClusters(address || undefined, client);
       const mockClusters = getClustersFromMockStorage();
 
       const allClusters = [...onChainClusters];
@@ -46,9 +45,9 @@ export default function ClustersPage() {
   });
 
   const { data: allCertificates = [], refetch: refetchCerts } = useQuery({
-    queryKey: ['certificates', 'all'],
+    queryKey: ['certificates', 'all', address],
     queryFn: async () => {
-      return getAllCertificates();
+      return getAllCertificates(client, address || undefined);
     },
     enabled: true,
   });

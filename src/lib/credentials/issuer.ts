@@ -1,10 +1,11 @@
-import { ccc } from '@ckb-ccc/core';
+import { ccc, Address, ClientPublicTestnet } from '@ckb-ccc/core';
 import type { CertificateDNA, CredentialSubject, CredentialStatus } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
 
 // Environment flag to enable mock mode for testing
 // Default to mock for development, set to 'false' for production
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
+const isTestEnv = typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST));
 
 const CERT_STORAGE_KEY = 'ckb_credential_certificates';
 
@@ -120,7 +121,8 @@ export async function issueCertificate(
     try {
       const recipientAddr = subject.id || '';
       if (!recipientAddr) throw new Error('Missing recipient address');
-      const addrObj = await ccc.Address.fromString(recipientAddr, liveSigner.client);
+      const AddressClass = Address || ccc?.Address;
+      const addrObj = await AddressClass.fromString(recipientAddr, liveSigner.client);
       recipientLock = addrObj.script;
     } catch {
       // If parsing fails or invalid format, fallback to sender's own lock script
@@ -182,11 +184,14 @@ export async function issueCertificate(
 }
 
 /**
- * Get certificate by ID
+ * Get certificate by ID or Transaction Hash
  */
-export async function getCertificate(certificateId: string): Promise<GetCertificateResult | null> {
+export async function getCertificate(
+  certificateId: string,
+  client?: unknown
+): Promise<GetCertificateResult | null> {
   syncCertificatesFromLocalStorage();
-  // Try mock storage first
+  // 1. Try local storage by ID
   const mock = mockCertificates.get(certificateId);
   if (mock) {
     return {
@@ -197,22 +202,73 @@ export async function getCertificate(certificateId: string): Promise<GetCertific
     };
   }
 
-  if (USE_MOCK) {
-    return null;
+  // 2. Search local storage by transaction hash
+  for (const [id, item] of Array.from(mockCertificates.entries())) {
+    if (item.txHash === certificateId) {
+      return {
+        certificate: item.certificate,
+        certificateId: id,
+        transactionHash: item.txHash,
+        clusterId: item.certificate.issuer.id,
+      };
+    }
   }
 
-  // Real Spore SDK implementation would go here
+  // 3. Query on-chain CKB Testnet transaction if given a 66-character hex hash
+  if (
+    typeof window !== 'undefined' &&
+    !isTestEnv &&
+    certificateId.startsWith('0x') &&
+    certificateId.length === 66
+  ) {
+    try {
+      const ckbClient =
+        (client as ccc.Client) ||
+        (ClientPublicTestnet ? new ClientPublicTestnet() : new ccc.ClientPublicTestnet());
+      const tx = await ckbClient.getTransaction(certificateId as `0x${string}`);
+      if (tx?.transaction?.outputsData) {
+        for (let i = 0; i < tx.transaction.outputsData.length; i++) {
+          const hex = tx.transaction.outputsData[i];
+          if (!hex || hex === '0x' || hex.length < 10) continue;
+          try {
+            const text = new TextDecoder().decode(ccc.bytesFrom(hex));
+            if (text.includes('@context') && text.includes('CourseCertificate')) {
+              const certDna = JSON.parse(text) as CertificateDNA;
+              const certId = certDna.id || certificateId;
+              mockCertificates.set(certId, { certificate: certDna, txHash: certificateId });
+              syncCertificatesToLocalStorage();
+              return {
+                certificate: certDna,
+                certificateId: certId,
+                transactionHash: certificateId,
+                clusterId: certDna.issuer?.id || '',
+              };
+            }
+          } catch {
+            // Ignore non-VC outputs
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Error fetching on-chain tx for certificate:', e);
+    }
+  }
+
   return null;
 }
 
 /**
  * Get all certificates for a holder address
  */
-export async function getHolderCertificates(holderAddress?: string): Promise<GetCertificateResult[]> {
+export async function getHolderCertificates(
+  holderAddress?: string,
+  client?: unknown
+): Promise<GetCertificateResult[]> {
   syncCertificatesFromLocalStorage();
   const results: GetCertificateResult[] = [];
+  const seenIds = new Set<string>();
 
-  // Get from mock storage
+  // 1. Get from local cache
   for (const [certId, mock] of Array.from(mockCertificates.entries())) {
     const cert = mock.certificate;
     if (!holderAddress || cert.credentialSubject.id === holderAddress || !cert.credentialSubject.id) {
@@ -222,6 +278,58 @@ export async function getHolderCertificates(holderAddress?: string): Promise<Get
         transactionHash: mock.txHash,
         clusterId: cert.issuer.id,
       });
+      seenIds.add(certId);
+      if (mock.txHash) seenIds.add(mock.txHash);
+    }
+  }
+
+  // 2. Query live CKB blockchain cells if holderAddress is available
+  if (holderAddress && typeof window !== 'undefined' && !isTestEnv) {
+    try {
+      const ckbClient = (client as ccc.Client) || (ClientPublicTestnet ? new ClientPublicTestnet() : new ccc.ClientPublicTestnet());
+      const AddressClass = Address || ccc?.Address;
+      if (AddressClass?.fromString) {
+        const addrObj = await AddressClass.fromString(holderAddress, ckbClient);
+
+        // Search all live cells owned by the recipient lock script
+        for await (const cell of ckbClient.findCellsByLock(addrObj.script, undefined, true)) {
+          try {
+            if (!cell.outputData || cell.outputData === '0x' || cell.outputData.length < 10) continue;
+
+            // Decode hex outputData to UTF-8 string
+            const text = new TextDecoder().decode(ccc.bytesFrom(cell.outputData));
+            if (!text.includes('@context') || !text.includes('CourseCertificate')) continue;
+
+            const certDna = JSON.parse(text) as CertificateDNA;
+            const certId = certDna.id || cell.outPoint.txHash;
+
+            if (!seenIds.has(certId) && !seenIds.has(cell.outPoint.txHash)) {
+              seenIds.add(certId);
+              seenIds.add(cell.outPoint.txHash);
+
+              const item: GetCertificateResult = {
+                certificate: certDna,
+                certificateId: certId,
+                transactionHash: cell.outPoint.txHash,
+                clusterId: certDna.issuer?.id || '',
+              };
+
+              results.push(item);
+
+              // Persist to local storage for fast caching
+              mockCertificates.set(certId, {
+                certificate: certDna,
+                txHash: cell.outPoint.txHash,
+              });
+            }
+          } catch {
+            // Ignore cells that are not valid JSON certificates
+          }
+        }
+        syncCertificatesToLocalStorage();
+      }
+    } catch (e) {
+      console.warn('Error querying on-chain certificate cells for holder:', e);
     }
   }
 
@@ -251,9 +359,15 @@ export async function getClusterCertificates(clusterId: string): Promise<GetCert
 }
 
 /**
- * Get all certificates in system
+ * Get all certificates in system (or for an active wallet)
  */
-export async function getAllCertificates(): Promise<GetCertificateResult[]> {
+export async function getAllCertificates(
+  client?: unknown,
+  address?: string
+): Promise<GetCertificateResult[]> {
+  if (address) {
+    return getHolderCertificates(address, client);
+  }
   syncCertificatesFromLocalStorage();
   const results: GetCertificateResult[] = [];
 
