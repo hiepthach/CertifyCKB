@@ -44,13 +44,25 @@ export default function CertificatesPage() {
     enabled: true,
   });
 
-  const userClusterIds = new Set(userClusters.map((c) => c.clusterId));
+  const userClusterIds = new Set(
+    userClusters.flatMap((c) => [
+      c.clusterId,
+      c.clusterId?.toLowerCase(),
+      c.id,
+      c.id?.toLowerCase(),
+    ].filter(Boolean))
+  );
 
   // Compute filtered list
   const certificates = rawCertificates.filter((c) => {
     if (!address) return true;
-    const isRecipient = c.certificate.credentialSubject.id === address;
-    const isIssuer = userClusterIds.has(c.clusterId || c.certificate.issuer.id);
+    const recipientAddr = c.certificate.credentialSubject.id || '';
+    const isRecipient = recipientAddr.toLowerCase() === address.toLowerCase();
+    const cid = (c.clusterId || c.certificate.issuer?.id || '').toLowerCase();
+    const isIssuer =
+      userClusterIds.has(cid) ||
+      userClusterIds.has(c.clusterId || '') ||
+      userClusterIds.has(c.certificate.issuer?.id || '');
 
     if (filterMode === 'received') return isRecipient;
     if (filterMode === 'issued') return isIssuer;

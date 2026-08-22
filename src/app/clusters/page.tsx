@@ -55,9 +55,12 @@ export default function ClustersPage() {
   const certificateCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const cert of allCertificates) {
-      const cid = cert.clusterId || cert.certificate.issuer.id;
+      const cid = cert.clusterId || cert.certificate.issuer?.id;
       if (cid) {
         counts[cid] = (counts[cid] || 0) + 1;
+        if (cid.toLowerCase() !== cid) {
+          counts[cid.toLowerCase()] = (counts[cid.toLowerCase()] || 0) + 1;
+        }
       }
     }
     return counts;
@@ -65,9 +68,11 @@ export default function ClustersPage() {
 
   const selectedClusterCerts = useMemo(() => {
     if (!selectedCluster) return [];
-    return allCertificates.filter(
-      (c) => (c.clusterId || c.certificate.issuer.id) === selectedCluster.clusterId
-    );
+    const target = (selectedCluster.clusterId || selectedCluster.id || '').toLowerCase();
+    return allCertificates.filter((c) => {
+      const cid = (c.clusterId || c.certificate.issuer?.id || '').toLowerCase();
+      return cid === target;
+    });
   }, [selectedCluster, allCertificates]);
 
   const createMutation = useMutation({

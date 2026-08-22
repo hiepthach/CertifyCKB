@@ -365,19 +365,37 @@ export async function getAllCertificates(
   client?: unknown,
   address?: string
 ): Promise<GetCertificateResult[]> {
-  if (address) {
-    return getHolderCertificates(address, client);
-  }
   syncCertificatesFromLocalStorage();
   const results: GetCertificateResult[] = [];
+  const seenIds = new Set<string>();
 
+  // 1. Get all certificates from local storage (both issued by user and received by user)
   for (const [certId, mock] of Array.from(mockCertificates.entries())) {
+    const cid = mock.certificate.issuer?.id || '';
     results.push({
       certificate: mock.certificate,
       certificateId: certId,
       transactionHash: mock.txHash,
-      clusterId: mock.certificate.issuer.id,
+      clusterId: cid,
     });
+    seenIds.add(certId);
+    if (mock.txHash) seenIds.add(mock.txHash);
+  }
+
+  // 2. If address is provided, also scan on-chain cells for this address and add any discovered certificates
+  if (address && typeof window !== 'undefined' && !isTestEnv) {
+    try {
+      const holderCerts = await getHolderCertificates(address, client);
+      for (const item of holderCerts) {
+        if (!seenIds.has(item.certificateId) && (!item.transactionHash || !seenIds.has(item.transactionHash))) {
+          seenIds.add(item.certificateId);
+          if (item.transactionHash) seenIds.add(item.transactionHash);
+          results.push(item);
+        }
+      }
+    } catch (e) {
+      console.warn('Error syncing on-chain certificates:', e);
+    }
   }
 
   return results;
