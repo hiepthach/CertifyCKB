@@ -187,6 +187,7 @@ export async function getProviderClusters(
       if (AddressClass?.fromString) {
         const addrObj = await AddressClass.fromString(address, ckbClient);
 
+        // 1. Search live cells owned by the creator for SporeCluster cells
         for await (const cell of ckbClient.findCellsByLock(addrObj.script, undefined, true)) {
           try {
             if (!cell.outputData || cell.outputData === '0x' || cell.outputData.length < 10) continue;
@@ -215,42 +216,73 @@ export async function getProviderClusters(
             // Ignore non-cluster cells
           }
         }
+
+        // 2. Scan transactions sent by this creator (input = creator lock)
+        // If this wallet created clusters or issued certificates on-chain, discover them!
+        let txCount = 0;
+        for await (const txRecord of ckbClient.findTransactionsByLock(addrObj.script, undefined, false, 'desc', 20)) {
+          if (txCount++ > 20) break;
+          try {
+            if (!txRecord.isInput) continue;
+            const txResponse = await ckbClient.getTransaction(txRecord.txHash);
+            if (!txResponse?.transaction?.outputsData) continue;
+
+            for (let i = 0; i < txResponse.transaction.outputsData.length; i++) {
+              const hex = txResponse.transaction.outputsData[i];
+              if (!hex || hex === '0x' || hex.length < 10) continue;
+              try {
+                const text = new TextDecoder().decode(ccc.bytesFrom(hex));
+                
+                // If it's a Cluster Cell created by this sender
+                if (text.includes('SporeCluster')) {
+                  const meta = JSON.parse(text);
+                  const clusterId = txRecord.txHash;
+                  if (!seenIds.has(clusterId)) {
+                    seenIds.add(clusterId);
+                    const cluster: Cluster = {
+                      id: clusterId,
+                      clusterId,
+                      name: meta.name || 'Unnamed Cluster',
+                      description: meta.description || '',
+                      websiteUrl: meta.websiteUrl || '',
+                      contactEmail: meta.contactEmail || '',
+                      creatorAddress: address,
+                      createdAt: meta.createdAt || new Date().toISOString(),
+                    };
+                    results.push(cluster);
+                    mockClusters.set(clusterId, cluster);
+                  }
+                }
+
+                // If it's a Certificate Cell issued by this sender
+                if (text.includes('@context') && text.includes('CourseCertificate')) {
+                  const certDna = JSON.parse(text);
+                  const cid = certDna.issuer?.id;
+                  if (cid && !seenIds.has(cid)) {
+                    seenIds.add(cid);
+                    const cluster: Cluster = {
+                      id: cid,
+                      clusterId: cid,
+                      name: certDna.issuer?.name || 'Accredited Institution',
+                      description: certDna.issuer?.description || 'Verified On-Chain Credential Provider Cluster',
+                      websiteUrl: '',
+                      contactEmail: '',
+                      creatorAddress: address,
+                      createdAt: certDna.issuanceDate || new Date().toISOString(),
+                    };
+                    results.push(cluster);
+                    mockClusters.set(cid, cluster);
+                  }
+                }
+              } catch {}
+            }
+          } catch {}
+        }
+
         syncClustersToLocalStorage();
       }
     } catch (e) {
       console.warn('Error querying on-chain cluster cells:', e);
-    }
-  }
-
-  // Fallback: If any certificate in storage references a cluster, auto-restore the cluster metadata
-  if (typeof window !== 'undefined' && !isTestEnv) {
-    try {
-      const { getMockCertificates } = require('./issuer');
-      const certMap = getMockCertificates();
-      if (certMap) {
-        for (const item of Array.from(certMap.values())) {
-          const cert = (item as any)?.certificate;
-          const cid = cert?.issuer?.id;
-          if (cid && !seenIds.has(cid)) {
-            seenIds.add(cid);
-            const reconstructedCluster: Cluster = {
-              id: cid,
-              clusterId: cid,
-              name: cert.issuer?.name || 'Accredited Institution',
-              description: cert.issuer?.description || 'Verified On-Chain Credential Provider Cluster',
-              websiteUrl: '',
-              contactEmail: '',
-              creatorAddress: address || cid,
-              createdAt: cert.issuanceDate || new Date().toISOString(),
-            };
-            results.push(reconstructedCluster);
-            mockClusters.set(cid, reconstructedCluster);
-          }
-        }
-        syncClustersToLocalStorage();
-      }
-    } catch {
-      // Ignore
     }
   }
 
@@ -260,8 +292,7 @@ export async function getProviderClusters(
     return (
       !c.creatorAddress ||
       c.creatorAddress.toLowerCase() === address.toLowerCase() ||
-      (isTestEnv && c.creatorAddress === 'mock_address') ||
-      c.clusterId.toLowerCase().includes(address.toLowerCase().slice(0, 10))
+      (isTestEnv && c.creatorAddress === 'mock_address')
     );
   });
 }

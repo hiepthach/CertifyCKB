@@ -391,7 +391,7 @@ export async function getAllCertificates(
     if (mock.txHash) seenIds.add(mock.txHash);
   }
 
-  // 2. If address is provided, also scan on-chain cells for this address and add any discovered certificates
+  // 2. If address is provided, also scan on-chain cells for this address (as holder/recipient)
   if (address && typeof window !== 'undefined' && !isTestEnv) {
     try {
       const holderCerts = await getHolderCertificates(address, client);
@@ -401,6 +401,54 @@ export async function getAllCertificates(
           if (item.transactionHash) seenIds.add(item.transactionHash);
           results.push(item);
         }
+      }
+
+      // 3. Scan on-chain transactions where address was the sender/issuer (input lock = address)
+      const ckbClient = (client as ccc.Client) || (ClientPublicTestnet ? new ClientPublicTestnet() : new ccc.ClientPublicTestnet());
+      const AddressClass = Address || ccc?.Address;
+      if (AddressClass?.fromString) {
+        const addrObj = await AddressClass.fromString(address, ckbClient);
+        let txCount = 0;
+        for await (const txRecord of ckbClient.findTransactionsByLock(addrObj.script, undefined, false, 'desc', 20)) {
+          if (txCount++ > 20) break;
+          try {
+            if (!txRecord.isInput) continue;
+            const txResponse = await ckbClient.getTransaction(txRecord.txHash);
+            if (!txResponse?.transaction?.outputsData) continue;
+
+            for (let i = 0; i < txResponse.transaction.outputsData.length; i++) {
+              const hex = txResponse.transaction.outputsData[i];
+              if (!hex || hex === '0x' || hex.length < 10) continue;
+              try {
+                const text = new TextDecoder().decode(ccc.bytesFrom(hex));
+                if (text.includes('@context') && text.includes('CourseCertificate')) {
+                  const certDna = JSON.parse(text) as CertificateDNA;
+                  const certId = certDna.id || txRecord.txHash;
+
+                  if (!seenIds.has(certId) && !seenIds.has(txRecord.txHash)) {
+                    seenIds.add(certId);
+                    seenIds.add(txRecord.txHash);
+
+                    const item: GetCertificateResult = {
+                      certificate: certDna,
+                      certificateId: certId,
+                      transactionHash: txRecord.txHash,
+                      clusterId: certDna.issuer?.id || '',
+                    };
+
+                    results.push(item);
+
+                    mockCertificates.set(certId, {
+                      certificate: certDna,
+                      txHash: txRecord.txHash,
+                    });
+                  }
+                }
+              } catch {}
+            }
+          } catch {}
+        }
+        syncCertificatesToLocalStorage();
       }
     } catch (e) {
       console.warn('Error syncing on-chain certificates:', e);
