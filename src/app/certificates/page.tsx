@@ -81,7 +81,7 @@ export default function CertificatesPage() {
       }
 
       // 2. Check against user's cluster IDs
-      for (const ucid of userClusterIds) {
+      for (const ucid of Array.from(userClusterIds)) {
         if (isAddressMatch(ucid, issuerId) || isAddressMatch(ucid, clusterId)) {
           return true;
         }
