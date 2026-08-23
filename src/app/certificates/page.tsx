@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { useQuery } from '@tanstack/react-query';
@@ -44,30 +44,82 @@ export default function CertificatesPage() {
     enabled: true,
   });
 
-  const userClusterIds = new Set(
-    userClusters.flatMap((c) => [
-      c.clusterId,
-      c.clusterId?.toLowerCase(),
-      c.id,
-      c.id?.toLowerCase(),
-    ].filter(Boolean))
-  );
+  const { receivedCerts, issuedCerts, allUserCerts, certificates } = useMemo(() => {
+    const userClusterIds = new Set(
+      userClusters.flatMap((c) => [
+        c.clusterId,
+        c.clusterId?.toLowerCase(),
+        c.id,
+        c.id?.toLowerCase(),
+      ].filter(Boolean) as string[])
+    );
 
-  // Compute filtered list
-  const certificates = rawCertificates.filter((c) => {
-    if (!address) return true;
-    const recipientAddr = c.certificate.credentialSubject.id || '';
-    const isRecipient = recipientAddr.toLowerCase() === address.toLowerCase();
-    const cid = (c.clusterId || c.certificate.issuer?.id || '').toLowerCase();
-    const isIssuer =
-      userClusterIds.has(cid) ||
-      userClusterIds.has(c.clusterId || '') ||
-      userClusterIds.has(c.certificate.issuer?.id || '');
+    const isAddressMatch = (addr1?: string, addr2?: string): boolean => {
+      if (!addr1 || !addr2) return false;
+      const a1 = addr1.toLowerCase().replace(/^0x/, '').trim();
+      const a2 = addr2.toLowerCase().replace(/^0x/, '').trim();
+      if (!a1 || !a2) return false;
+      if (a1 === a2) return true;
+      if (a1.length >= 10 && a2.length >= 10 && (a1.startsWith(a2) || a2.startsWith(a1))) return true;
+      return false;
+    };
 
-    if (filterMode === 'received') return isRecipient;
-    if (filterMode === 'issued') return isIssuer;
-    return true; // 'all' shows all available DOBs in session/wallet
-  });
+    const checkIsRecipient = (c: CertificateWithMeta): boolean => {
+      if (!address) return false;
+      const recipientAddr = c.certificate?.credentialSubject?.id || '';
+      return isAddressMatch(recipientAddr, address);
+    };
+
+    const checkIsIssuer = (c: CertificateWithMeta): boolean => {
+      if (!address) return false;
+      const issuerId = c.certificate?.issuer?.id || '';
+      const clusterId = c.clusterId || '';
+
+      // 1. Direct address match with issuer ID or cluster ID
+      if (isAddressMatch(issuerId, address) || isAddressMatch(clusterId, address)) {
+        return true;
+      }
+
+      // 2. Check against user's cluster IDs
+      for (const ucid of userClusterIds) {
+        if (isAddressMatch(ucid, issuerId) || isAddressMatch(ucid, clusterId)) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    const received: CertificateWithMeta[] = [];
+    const issued: CertificateWithMeta[] = [];
+    const allUser: CertificateWithMeta[] = [];
+
+    // Single-pass partition
+    for (const cert of rawCertificates) {
+      const isRec = checkIsRecipient(cert);
+      const isIss = checkIsIssuer(cert);
+
+      if (isRec) received.push(cert);
+      if (isIss) issued.push(cert);
+      if (isRec || isIss) allUser.push(cert);
+    }
+
+    let activeList: CertificateWithMeta[] = [];
+    if (filterMode === 'received') {
+      activeList = received;
+    } else if (filterMode === 'issued') {
+      activeList = issued;
+    } else {
+      activeList = allUser;
+    }
+
+    return {
+      receivedCerts: received,
+      issuedCerts: issued,
+      allUserCerts: allUser,
+      certificates: activeList,
+    };
+  }, [rawCertificates, userClusters, address, filterMode]);
 
   if (isLoadingAddress) {
     return (
@@ -145,33 +197,33 @@ export default function CertificatesPage() {
           <div className="flex bg-midnight-plum p-1 rounded-xl border border-fog-line/10 text-xs">
             <button
               onClick={() => setFilterMode('all')}
-              className={`px-3 py-1 rounded-lg transition-colors ${
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
                 filterMode === 'all'
                   ? 'bg-shadow-plum text-bone-white font-medium border border-fog-line/20'
                   : 'text-mid-ash hover:text-bone-white'
               }`}
             >
-              All ({rawCertificates.length})
+              All ({allUserCerts.length})
             </button>
             <button
               onClick={() => setFilterMode('received')}
-              className={`px-3 py-1 rounded-lg transition-colors ${
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
                 filterMode === 'received'
                   ? 'bg-shadow-plum text-bone-white font-medium border border-fog-line/20'
                   : 'text-mid-ash hover:text-bone-white'
               }`}
             >
-              Received
+              Received ({receivedCerts.length})
             </button>
             <button
               onClick={() => setFilterMode('issued')}
-              className={`px-3 py-1 rounded-lg transition-colors ${
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
                 filterMode === 'issued'
                   ? 'bg-shadow-plum text-bone-white font-medium border border-fog-line/20'
                   : 'text-mid-ash hover:text-bone-white'
               }`}
             >
-              Issued by You
+              Issued by You ({issuedCerts.length})
             </button>
           </div>
 
@@ -191,9 +243,21 @@ export default function CertificatesPage() {
         certificates={certificates}
         loading={isLoading}
         onSelect={setSelectedCert}
-        emptyTitle="No certificates found"
-        emptyDescription="Certificates issued to your address or minted by your clusters will appear here."
-        emptyAction={() => router.push('/clusters')}
+        emptyTitle={
+          filterMode === 'received'
+            ? 'No received certificates'
+            : filterMode === 'issued'
+            ? 'No certificates issued yet'
+            : 'No certificates found'
+        }
+        emptyDescription={
+          filterMode === 'received'
+            ? 'You have not received any verifiable certificates at this address yet.'
+            : filterMode === 'issued'
+            ? 'You have not issued any certificates from your clusters yet.'
+            : 'Certificates issued to your address or minted by your clusters will appear here.'
+        }
+        emptyAction={filterMode === 'issued' ? () => router.push('/clusters') : undefined}
       />
 
       {error && (

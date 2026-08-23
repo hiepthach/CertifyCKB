@@ -1,7 +1,7 @@
 # CKB Credential Registry - Test Report
 
 **Project:** CKB Credential Registry
-**Test Date:** 2026-08-17
+**Test Date:** 2026-08-23
 **Test Framework:** Vitest 2.0.5
 **Total Tests:** 182
 **Status:** ✅ ALL PASSING
@@ -16,7 +16,7 @@
 | Total Tests | 182 |
 | Passed | 182 |
 | Failed | 0 |
-| Test Duration | ~5.1s |
+| Test Duration | ~8.2s |
 
 ---
 
@@ -24,12 +24,12 @@
 
 | File | Tests | Status |
 |------|-------|--------|
-| `tests/unit/ckb/config.test.ts` | 13 | ✅ Pass |
+| `tests/unit/ckb/config.test.ts` | 12 | ✅ Pass |
 | `tests/unit/credentials/encoder.test.ts` | 9 | ✅ Pass |
 | `tests/unit/credentials/decoder.test.ts` | 22 | ✅ Pass |
 | `tests/unit/credentials/batch.test.ts` | 14 | ✅ Pass |
 | `tests/unit/credentials/cluster.test.ts` | 9 | ✅ Pass |
-| `tests/unit/credentials/verifier.test.ts` | 11 | ✅ Pass |
+| `tests/unit/credentials/verifier.test.ts` | 12 | ✅ Pass |
 | `tests/unit/credentials/issuer.test.ts` | 18 | ✅ Pass |
 | `tests/unit/credentials/services.test.ts` | 26 | ✅ Pass |
 | `tests/unit/ui/Button.test.tsx` | 17 | ✅ Pass |
@@ -59,7 +59,6 @@
 | 10 | should have correct script configs | ✅ Pass |
 | 11 | should have correct hash types | ✅ Pass |
 | 12 | should return explorer URL for testnet | ✅ Pass |
-| 13 | should return explorer URL for testnet | ✅ Pass |
 
 ---
 
@@ -218,23 +217,24 @@
 |---|-----------|--------|
 | 1 | should consider valid certificate as valid | ✅ Pass |
 | 2 | should detect expired certificate | ✅ Pass |
-| 3 | should detect revoked certificate | ✅ Pass |
-| 4 | should validate W3C VC structure | ✅ Pass |
-| 5 | should extract issuer information correctly | ✅ Pass |
-| 6 | should handle certificate with no expiration | ✅ Pass |
+| 3 | should detect revoked certificate with revoked flag | ✅ Pass |
+| 4 | should not consider certificate revoked if revoked flag is false | ✅ Pass |
+| 5 | should validate W3C VC structure | ✅ Pass |
+| 6 | should extract issuer information correctly | ✅ Pass |
+| 7 | should handle certificate with no expiration | ✅ Pass |
 
 #### Verification Result Structure
 | # | Test Case | Status |
 |---|-----------|--------|
-| 7 | should build valid verification result | ✅ Pass |
-| 8 | should include errors in invalid result | ✅ Pass |
-| 9 | should include expiration status in result | ✅ Pass |
+| 8 | should build valid verification result | ✅ Pass |
+| 9 | should include errors in invalid result | ✅ Pass |
+| 10 | should include expiration status in result | ✅ Pass |
 
 #### Credential Subject Validation
 | # | Test Case | Status |
 |---|-----------|--------|
-| 10 | should validate required subject fields | ✅ Pass |
 | 11 | should handle optional fields correctly | ✅ Pass |
+| 12 | should validate required subject fields | ✅ Pass |
 
 ---
 
@@ -505,8 +505,9 @@ Tests implemented according to `doc/Design_spec/`:
 - Mock data is used for CKB SDK dependencies
 - Tests follow the arrange-act-assert pattern with descriptive comments
 - UI components tested with @testing-library/react
-- New tests added: issuer.test.ts, services.test.ts
+- Soft revocation tests: `issuer.test.ts` now covers soft revocation with DNA update
+- Revocation flag tests: `verifier.test.ts` now validates revoked flag in credentialStatus
 
 ---
 
-**Report Generated:** 2026-08-17
+**Report Generated:** 2026-08-23
