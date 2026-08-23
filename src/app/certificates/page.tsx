@@ -26,6 +26,7 @@ export default function CertificatesPage() {
   const { address, client, isConnected, isLoadingAddress, open } = useWallet();
   const [selectedCert, setSelectedCert] = useState<CertificateWithMeta | null>(null);
   const [filterMode, setFilterMode] = useState<'all' | 'received' | 'issued'>('all');
+  const [shareResult, setShareResult] = useState<{ message: string; success: boolean } | null>(null);
 
   const { data: rawCertificates = [], isLoading, refetch, error } = useQuery({
     queryKey: ['certificates', address],
@@ -121,6 +122,13 @@ export default function CertificatesPage() {
     };
   }, [rawCertificates, userClusters, address, filterMode]);
 
+  const handleShare = async (cert: CertificateWithMeta) => {
+    const { shareCertificate } = await import('@/lib/share');
+    const result = await shareCertificate(cert.certificateId);
+    setShareResult({ message: result.message, success: result.success });
+    setTimeout(() => setShareResult(null), 3000);
+  };
+
   if (isLoadingAddress) {
     return (
       <div className="flex justify-center py-24">
@@ -168,10 +176,22 @@ export default function CertificatesPage() {
             <span>Back to certificates</span>
           </Button>
         </div>
+        {shareResult && (
+          <div
+            className={`px-4 py-2 rounded-xl text-xs font-medium ${
+              shareResult.success
+                ? 'bg-signal-green/10 border border-signal-green/30 text-signal-green'
+                : 'bg-red-950/40 border border-red-800/40 text-red-400'
+            }`}
+          >
+            {shareResult.message}
+          </div>
+        )}
         <CertificateDetail
           certificate={selectedCert.certificate}
           certificateId={selectedCert.certificateId}
           transactionHash={selectedCert.transactionHash}
+          onShare={() => handleShare(selectedCert)}
         />
       </div>
     );
@@ -243,6 +263,7 @@ export default function CertificatesPage() {
         certificates={certificates}
         loading={isLoading}
         onSelect={setSelectedCert}
+        onShare={handleShare}
         emptyTitle={
           filterMode === 'received'
             ? 'No received certificates'

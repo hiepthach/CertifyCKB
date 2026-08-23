@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { VerifyForm, VerifyResult } from '@/components/verification';
 import { Spinner, Card, Badge } from '@/components/ui';
@@ -8,8 +9,11 @@ import type { VerificationResult } from '@/types';
 import { verifyCertificate } from '@/lib/credentials';
 import { Shield, CheckCircle2, Lock, Cpu } from 'lucide-react';
 
-export default function VerifyPage() {
-  const [certificateId, setCertificateId] = useState<string | null>(null);
+function VerifyPageContent() {
+  const searchParams = useSearchParams();
+  const [certificateId, setCertificateId] = useState<string | null>(
+    searchParams.get('certId') ?? null
+  );
 
   const { data: result, isLoading, error } = useQuery({
     queryKey: ['verify', certificateId],
@@ -25,23 +29,13 @@ export default function VerifyPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-shadow-plum border border-lavender-spark/30 shadow-glow-sm mb-2">
-          <span className="text-lavender-spark text-xs font-semibold">✱</span>
-          <span className="text-xs font-medium text-bone-white">Zero-Knowledge & On-Chain Audit</span>
-        </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">
-          Verify Credential Authenticity
-        </h1>
-        <p className="text-sm text-ash-veil max-w-md mx-auto leading-relaxed">
-          Verify any Spore DOB credential directly against the Nervos CKB layer-1 consensus state
-        </p>
-      </div>
-
+    <>
       <div className="space-y-6">
-        <VerifyForm onVerify={handleVerify} loading={isLoading} />
+        <VerifyForm
+          initialValue={certificateId ?? ''}
+          onVerify={handleVerify}
+          loading={isLoading}
+        />
 
         {isLoading && (
           <div className="flex justify-center py-8">
@@ -59,6 +53,36 @@ export default function VerifyPage() {
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-shadow-plum border border-lavender-spark/30 shadow-glow-sm mb-2">
+          <span className="text-lavender-spark text-xs font-semibold">✱</span>
+          <span className="text-xs font-medium text-bone-white">Zero-Knowledge & On-Chain Audit</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">
+          Verify Credential Authenticity
+        </h1>
+        <p className="text-sm text-ash-veil max-w-md mx-auto leading-relaxed">
+          Verify any Spore DOB credential directly against the Nervos CKB layer-1 consensus state
+        </p>
+      </div>
+
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-8">
+            <Spinner label="Loading..." />
+          </div>
+        }
+      >
+        <VerifyPageContent />
+      </Suspense>
 
       {/* Info Section */}
       <Card variant="default" padding="xl" className="border-fog-line/15">
@@ -96,4 +120,3 @@ export default function VerifyPage() {
     </div>
   );
 }
-

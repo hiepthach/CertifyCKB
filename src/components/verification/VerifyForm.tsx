@@ -1,17 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button, Input, Card } from '@/components/ui';
 import { Search, ShieldCheck } from 'lucide-react';
 
 interface VerifyFormProps {
+  initialValue?: string;
   onVerify: (certificateId: string) => void;
   loading?: boolean;
 }
 
-export function VerifyForm({ onVerify, loading = false }: VerifyFormProps) {
-  const [certificateId, setCertificateId] = useState('');
+export function VerifyForm({
+  initialValue = '',
+  onVerify,
+  loading = false,
+}: VerifyFormProps) {
+  const [certificateId, setCertificateId] = useState(initialValue);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (initialValue) {
+      setCertificateId(initialValue);
+    }
+  }, [initialValue]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
