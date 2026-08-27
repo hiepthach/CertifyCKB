@@ -84,7 +84,7 @@ describe('Input', () => {
     const helper = screen.getByText(/enter your email address/i);
 
     expect(helper).toBeInTheDocument();
-    expect(helper.className).toContain('text-fog');
+    expect(helper.className).toContain('text-ash-veil');
   });
 
   // Test: Hide helper text when error is shown
@@ -206,9 +206,9 @@ describe('Input', () => {
     render(<Input />);
     const input = screen.getByRole('textbox');
 
-    expect(input.className).toContain('bg-midnight');
-    expect(input.className).toContain('border-dusk');
-    expect(input.className).toContain('text-lilac-white');
-    expect(input.className).toContain('placeholder-steel');
+    expect(input.className).toContain('bg-midnight-plum');
+    expect(input.className).toContain('border-fog-line/15');
+    expect(input.className).toContain('text-bone-white');
+    expect(input.className).toContain('placeholder-mid-ash');
   });
 });
