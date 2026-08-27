@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, Button, Spinner, Badge } from '@/components/ui';
 import { CertificateList, CertificateDetail } from '@/components/certificate';
 import type { CertificateDNA } from '@/types';
@@ -11,6 +11,7 @@ import {
   getHolderCertificates,
   getAllCertificates,
   getProviderClusters,
+  revokeCertificate,
 } from '@/lib/credentials';
 import { ArrowLeft, Wallet, RefreshCw, Sparkles, Filter } from 'lucide-react';
 
@@ -23,7 +24,8 @@ interface CertificateWithMeta {
 
 export default function CertificatesPage() {
   const router = useRouter();
-  const { address, client, isConnected, isLoadingAddress, open } = useWallet();
+  const queryClient = useQueryClient();
+  const { signer, address, client, isConnected, isLoadingAddress, open } = useWallet();
   const [selectedCert, setSelectedCert] = useState<CertificateWithMeta | null>(null);
   const [filterMode, setFilterMode] = useState<'all' | 'received' | 'issued'>('all');
   const [shareResult, setShareResult] = useState<{ message: string; success: boolean } | null>(null);
@@ -129,6 +131,30 @@ export default function CertificatesPage() {
     setTimeout(() => setShareResult(null), 3000);
   };
 
+  const handleRevoke = async (cert: CertificateWithMeta, reason: string) => {
+    await revokeCertificate(signer, cert.certificateId, reason);
+    await queryClient.invalidateQueries({ queryKey: ['certificates'] });
+    await refetch();
+
+    // Update selected cert state so it reflects revoked immediately
+    setSelectedCert((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        certificate: {
+          ...prev.certificate,
+          credentialStatus: {
+            id: `revocation:${prev.certificateId}`,
+            type: 'RevocationList2023Status',
+            revoked: true,
+            revocationReason: reason,
+            revokedAt: new Date().toISOString(),
+          },
+        },
+      };
+    });
+  };
+
   if (isLoadingAddress) {
     return (
       <div className="flex justify-center py-24">
@@ -163,6 +189,10 @@ export default function CertificatesPage() {
   }
 
   if (selectedCert) {
+    const isIssuerOfSelected = issuedCerts.some(
+      (c) => c.certificateId === selectedCert.certificateId
+    );
+
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between pb-4 border-b border-fog-line/10">
@@ -191,7 +221,9 @@ export default function CertificatesPage() {
           certificate={selectedCert.certificate}
           certificateId={selectedCert.certificateId}
           transactionHash={selectedCert.transactionHash}
+          isIssuer={isIssuerOfSelected}
           onShare={() => handleShare(selectedCert)}
+          onRevoke={(reason) => handleRevoke(selectedCert, reason)}
         />
       </div>
     );

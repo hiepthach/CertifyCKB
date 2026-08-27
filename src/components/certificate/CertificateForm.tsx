@@ -19,6 +19,7 @@ export interface CertificateData {
   recipientName: string;
   courseName: string;
   completionDate: string;
+  expirationDate?: string;
   grade?: string;
   score?: number;
   skills?: string[];
@@ -39,6 +40,7 @@ export function CertificateForm({
     recipientName: '',
     courseName: '',
     completionDate: new Date().toISOString().split('T')[0],
+    expirationDate: '',
     grade: '',
     score: undefined,
     skills: [],
@@ -67,6 +69,13 @@ export function CertificateForm({
       newErrors.completionDate = 'Completion date is required';
     }
 
+    if (formData.expirationDate) {
+      const expDate = new Date(formData.expirationDate);
+      if (isNaN(expDate.getTime())) {
+        newErrors.expirationDate = 'Invalid expiration date format';
+      }
+    }
+
     if (formData.score !== undefined && (formData.score < 0 || formData.score > 100)) {
       newErrors.score = 'Score must be between 0 and 100';
     }
@@ -81,6 +90,7 @@ export function CertificateForm({
 
     onSubmit({
       ...formData,
+      expirationDate: formData.expirationDate ? formData.expirationDate : undefined,
       skills: skillsInput
         ? skillsInput.split(',').map((s) => s.trim()).filter(Boolean)
         : undefined,
@@ -152,14 +162,25 @@ export function CertificateForm({
         required
       />
 
-      <Input
-        label="Completion Date"
-        type="date"
-        value={formData.completionDate}
-        onChange={(v) => updateField('completionDate', v)}
-        error={errors.completionDate}
-        required
-      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input
+          label="Completion Date"
+          type="date"
+          value={formData.completionDate}
+          onChange={(v) => updateField('completionDate', v)}
+          error={errors.completionDate}
+          required
+        />
+
+        <Input
+          label="Expiration Date (Optional)"
+          type="date"
+          value={formData.expirationDate || ''}
+          onChange={(v) => updateField('expirationDate', v)}
+          error={errors.expirationDate}
+          helperText="Leave blank for lifetime validity"
+        />
+      </div>
 
       {/* Grade */}
       <div className="space-y-1.5">

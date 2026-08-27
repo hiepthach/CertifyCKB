@@ -48,6 +48,7 @@ function IssuePageContent() {
           score: data.score,
           skills: data.skills,
         },
+        expirationDate: data.expirationDate,
       });
     },
     onSuccess: async (data) => {

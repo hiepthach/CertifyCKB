@@ -6,7 +6,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Modal, Card, Badge, Spinner } from '@/components/ui';
 import { ClusterList, ClusterForm } from '@/components/cluster';
-import { Plus, RefreshCw, Globe, Mail, Copy, Check, ArrowRight, ExternalLink, Wallet, Award } from 'lucide-react';
+import { Plus, RefreshCw, Globe, Mail, Copy, Check, ArrowRight, ExternalLink, Wallet, Award, FileText, Layers } from 'lucide-react';
 import type { Cluster, ClusterConfig } from '@/types';
 import {
   createCluster,
@@ -331,23 +331,53 @@ export default function ClustersPage() {
               )}
             </div>
 
-            <div className="pt-4 border-t border-fog-line/10 flex gap-3">
-              <Button
-                onClick={() => {
-                  router.push(`/certificates/issue?cluster=${selectedCluster.clusterId}`);
-                }}
-                className="flex-1 text-xs gap-1.5 shadow-glow-green/30"
-              >
-                <span>Issue Certificate</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setSelectedCluster(null)}
-                className="text-xs"
-              >
-                Close
-              </Button>
+            <div className="pt-4 border-t border-fog-line/10">
+              {/* Quick Actions */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <Button
+                  onClick={() => {
+                    router.push(`/certificates/issue?cluster=${selectedCluster.clusterId}`);
+                    setSelectedCluster(null);
+                  }}
+                  className="text-xs gap-1.5 shadow-glow-green/30"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  Issue Single
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    router.push(`/certificates/issue/batch?cluster=${selectedCluster.clusterId}`);
+                    setSelectedCluster(null);
+                  }}
+                  className="text-xs gap-1.5"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  Batch Issue
+                </Button>
+              </div>
+
+              {/* Secondary Actions */}
+              <div className="flex gap-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    router.push(`/certificates/templates?cluster=${selectedCluster.clusterId}`);
+                    setSelectedCluster(null);
+                  }}
+                  className="flex-1 text-xs gap-1.5 border border-fog-line/15"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  Templates
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setSelectedCluster(null)}
+                  className="text-xs"
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
         </Modal>

@@ -9,9 +9,15 @@ import { Plus, FileText, Pencil, Trash2, Copy } from 'lucide-react';
 
 interface TemplateListProps {
   clusterId: string;
+  onSelect?: (template: Template) => void;
+  onCreateNew?: () => void;
+  onDelete?: (templateId: string) => void;
+  // Legacy props (for backwards compatibility)
   onSelectTemplate?: (template: Template) => void;
   onCreateTemplate?: () => void;
   onEditTemplate?: (template: Template) => void;
+  // Optional: pass templates directly to avoid internal loading
+  templates?: Template[];
 }
 
 const LAYOUT_LABELS: Record<string, string> = {
@@ -33,23 +39,35 @@ const THEME_COLORS: Record<string, string> = {
 
 export function TemplateList({
   clusterId,
+  onSelect,
+  onCreateNew,
+  onDelete,
+  // Legacy props
   onSelectTemplate,
   onCreateTemplate,
   onEditTemplate,
+  templates: externalTemplates,
 }: TemplateListProps) {
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [internalTemplates, setInternalTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Use external templates if provided, otherwise load internally
+  const templates = externalTemplates ?? internalTemplates;
+
   useEffect(() => {
-    loadTemplates();
-  }, [clusterId]);
+    if (!externalTemplates) {
+      loadTemplates();
+    } else {
+      setLoading(false);
+    }
+  }, [clusterId, externalTemplates]);
 
   const loadTemplates = async () => {
     try {
       setLoading(true);
       const loaded = await getTemplates(clusterId);
-      setTemplates(loaded);
+      setInternalTemplates(loaded);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load templates');
@@ -63,22 +81,34 @@ export function TemplateList({
 
     try {
       await deleteTemplate(template.id);
-      await loadTemplates();
+
+      // If using external templates, notify parent
+      if (onDelete) {
+        onDelete(template.id);
+      } else {
+        // Otherwise, reload internally
+        await loadTemplates();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete template');
     }
   };
 
+  // Normalize callbacks
+  const handleSelect = onSelect ?? onSelectTemplate;
+  const handleCreate = onCreateNew ?? onCreateTemplate;
+  const handleEdit = onEditTemplate ?? onSelect;
+
   const handleDuplicate = (template: Template) => {
     // Clone template for editing
-    if (onEditTemplate) {
+    if (handleEdit) {
       const duplicated: Template = {
         ...template,
         id: '', // Will be assigned new ID on create
         name: `${template.name} (Copy)`,
         createdAt: new Date().toISOString(),
       };
-      onEditTemplate(duplicated);
+      handleEdit(duplicated);
     }
   };
 
@@ -129,8 +159,8 @@ export function TemplateList({
         title="No templates yet"
         description="Create your first certificate template to define the structure and design of your certificates."
         action={
-          onCreateTemplate
-            ? { label: 'Create Template', onClick: onCreateTemplate }
+          handleCreate
+            ? { label: 'Create Template', onClick: handleCreate }
             : undefined
         }
       />
@@ -143,8 +173,8 @@ export function TemplateList({
         <h3 className="text-lg font-semibold text-white">
           Certificate Templates ({templates.length})
         </h3>
-        {onCreateTemplate && (
-          <Button onClick={onCreateTemplate} size="sm">
+        {handleCreate && (
+          <Button onClick={handleCreate} size="sm">
             <Plus className="w-4 h-4 mr-1" />
             New Template
           </Button>
@@ -160,7 +190,7 @@ export function TemplateList({
               key={template.id}
               variant="interactive"
               padding="lg"
-              onClick={() => onSelectTemplate?.(template)}
+              onClick={() => handleSelect?.(template)}
               className="hover:border-slate-500 transition-colors"
             >
               <div className="flex items-start justify-between">
@@ -191,13 +221,13 @@ export function TemplateList({
                 </div>
 
                 <div className="flex items-center gap-2 ml-4">
-                  {onSelectTemplate && (
+                  {handleSelect && (
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onSelectTemplate(template);
+                        handleSelect(template);
                       }}
                     >
                       Use

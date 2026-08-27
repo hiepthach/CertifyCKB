@@ -79,6 +79,7 @@ export function BatchPreview({
               <th className="text-left py-2 px-3 text-slate-400 font-medium">Address</th>
               <th className="text-left py-2 px-3 text-slate-400 font-medium">Name</th>
               <th className="text-left py-2 px-3 text-slate-400 font-medium">Course</th>
+              <th className="text-left py-2 px-3 text-slate-400 font-medium">Expires</th>
               <th className="text-left py-2 px-3 text-slate-400 font-medium">Status</th>
             </tr>
           </thead>
@@ -94,6 +95,7 @@ export function BatchPreview({
                 </td>
                 <td className="py-2 px-3 text-white">{entry.recipientName || '-'}</td>
                 <td className="py-2 px-3 text-white">{entry.courseName}</td>
+                <td className="py-2 px-3 text-slate-400 text-xs">{entry.expirationDate || 'Never'}</td>
                 <td className="py-2 px-3">
                   {entry.valid ? (
                     <Badge variant="success">

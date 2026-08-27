@@ -1,11 +1,11 @@
 'use client';
 
-import { Card, Badge, Button } from '@/components/ui';
+import { Modal, Card, Badge, Button, Input } from '@/components/ui';
 import type { CertificateDNA } from '@/types';
 import { formatDate, truncateAddress, copyToClipboard } from '@/utils';
 import { formatCertificateDisplay, isExpired, isRevoked } from '@/lib/credentials';
 import { getTransactionUrl } from '@/lib/ckb';
-import { Award, Calendar, User, Building, ExternalLink, Copy, Check, Sparkles } from 'lucide-react';
+import { Award, Calendar, User, Building, ExternalLink, Copy, Check, Sparkles, AlertTriangle, Ban } from 'lucide-react';
 import { useState } from 'react';
 import { useNetwork } from '@/hooks';
 
@@ -13,20 +13,29 @@ interface CertificateDetailProps {
   certificate: CertificateDNA;
   certificateId: string;
   transactionHash?: string;
+  isIssuer?: boolean;
   onCopyId?: () => void;
   onOpenExplorer?: () => void;
   onShare?: () => void;
+  onRevoke?: (reason: string) => Promise<void> | void;
+  revoking?: boolean;
 }
 
 export function CertificateDetail({
   certificate,
   certificateId,
   transactionHash,
+  isIssuer = false,
   onOpenExplorer,
   onShare,
+  onRevoke,
+  revoking = false,
 }: CertificateDetailProps) {
   const { explorerUrl } = useNetwork();
   const [copied, setCopied] = useState(false);
+  const [showRevokeModal, setShowRevokeModal] = useState(false);
+  const [revokeReason, setRevokeReason] = useState('');
+  const [isSubmittingRevoke, setIsSubmittingRevoke] = useState(false);
   const display = formatCertificateDisplay(certificate);
   const expired = isExpired(certificate);
   const revoked = isRevoked(certificate);
@@ -194,7 +203,75 @@ export function CertificateDetail({
         <Button variant="secondary" className="flex-1 min-w-[140px] text-xs" onClick={onShare}>
           Share Certificate
         </Button>
+
+        {isIssuer && !revoked && onRevoke && (
+          <Button
+            variant="danger"
+            className="flex-1 min-w-[140px] text-xs gap-1.5 bg-red-950/50 hover:bg-red-900/60 border border-red-800/50 text-red-300"
+            onClick={() => setShowRevokeModal(true)}
+            disabled={revoking || isSubmittingRevoke}
+          >
+            <Ban className="w-3.5 h-3.5" />
+            Revoke Credential
+          </Button>
+        )}
       </div>
+
+      {/* Revoke Confirmation Modal */}
+      <Modal
+        isOpen={showRevokeModal}
+        onClose={() => setShowRevokeModal(false)}
+        title="Revoke Certificate"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="p-3 bg-red-950/40 border border-red-800/40 rounded-xl flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-red-300 leading-relaxed">
+              This action will mark the certificate as <strong>Revoked</strong> in its on-chain verifiable credential DNA state. This cannot be undone.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-ash-veil">
+              Revocation Reason (Optional)
+            </label>
+            <Input
+              placeholder="e.g., Issued in error, failed requirements..."
+              value={revokeReason}
+              onChange={(v) => setRevokeReason(v)}
+            />
+          </div>
+
+          <div className="flex gap-3 pt-3 border-t border-fog-line/10">
+            <Button
+              variant="secondary"
+              onClick={() => setShowRevokeModal(false)}
+              className="flex-1 text-xs"
+              disabled={isSubmittingRevoke}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              className="flex-1 text-xs bg-red-600 hover:bg-red-700 text-white"
+              loading={isSubmittingRevoke}
+              onClick={async () => {
+                if (!onRevoke) return;
+                try {
+                  setIsSubmittingRevoke(true);
+                  await onRevoke(revokeReason || 'Revoked by issuer authority');
+                  setShowRevokeModal(false);
+                } finally {
+                  setIsSubmittingRevoke(false);
+                }
+              }}
+            >
+              Confirm Revoke
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -71,20 +71,30 @@ export function BatchUpload({
 
   const downloadTemplate = (format: 'csv' | 'json') => {
     if (format === 'csv') {
-      const csv = `recipientAddress,recipientName,courseName,completionDate,grade,score,skills
-ckt1q...123,John Doe,CKB Basics,2024-01-15,A,95,Rust;CKB-VM
-ckt1q...456,Jane Smith,CKB Basics,2024-01-16,B+,88,CKB-VM`;
+      const csv = `recipientAddress,recipientName,courseName,completionDate,expirationDate,grade,score,skills
+ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,John Doe,CKB Basics,2026-01-15,2027-01-15,A,95,Rust;CKB-VM
+ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,Jane Smith,CKB Basics,2026-01-16,,B+,88,CKB-VM`;
       downloadFile(csv, 'certificate_template.csv', 'text/csv');
     } else {
       const json = JSON.stringify([
         {
-          recipientAddress: 'ckt1q...123',
+          recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
           recipientName: 'John Doe',
           courseName: 'CKB Basics',
-          completionDate: '2024-01-15',
+          completionDate: '2026-01-15',
+          expirationDate: '2027-01-15',
           grade: 'A',
           score: 95,
           skills: ['Rust', 'CKB-VM'],
+        },
+        {
+          recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+          recipientName: 'Jane Smith',
+          courseName: 'CKB Basics',
+          completionDate: '2026-01-16',
+          grade: 'B+',
+          score: 88,
+          skills: ['CKB-VM'],
         },
       ], null, 2);
       downloadFile(json, 'certificate_template.json', 'application/json');

@@ -49,6 +49,7 @@ export function parseCSV(content: string): {
     recipientName: row.recipientName || '',
     courseName: row.courseName || '',
     completionDate: row.completionDate || '',
+    expirationDate: row.expirationDate || undefined,
     grade: row.grade || undefined,
     score: row.score ? parseInt(row.score, 10) : undefined,
     errors: [],
@@ -80,6 +81,7 @@ export function parseJSON(content: string): {
     recipientName: (item.recipientName as string) || '',
     courseName: (item.courseName as string) || '',
     completionDate: (item.completionDate as string) || '',
+    expirationDate: (item.expirationDate as string) || undefined,
     grade: item.grade as string | undefined,
     score: item.score as number | undefined,
     errors: [],
@@ -112,7 +114,7 @@ export function validateEntry(entry: BatchEntry): BatchEntry {
   const errors: string[] = [];
 
   // Validate address
-  if (!entry.recipientAddress || !entry.recipientAddress.startsWith('ckt')) {
+  if (!entry.recipientAddress || (!entry.recipientAddress.startsWith('ckt') && !entry.recipientAddress.startsWith('ckb'))) {
     errors.push('Invalid CKB address format');
   }
 
@@ -126,6 +128,14 @@ export function validateEntry(entry: BatchEntry): BatchEntry {
     const date = new Date(entry.completionDate);
     if (isNaN(date.getTime())) {
       errors.push('Invalid date format');
+    }
+  }
+
+  // Validate expiration date if provided
+  if (entry.expirationDate) {
+    const expDate = new Date(entry.expirationDate);
+    if (isNaN(expDate.getTime())) {
+      errors.push('Invalid expiration date format');
     }
   }
 
@@ -211,7 +221,7 @@ export async function issueBatchCertificates(
           score: entry.score,
           skills: entry.skills,
         },
-        expirationDate,
+        expirationDate: entry.expirationDate || expirationDate,
       });
 
       results.push({

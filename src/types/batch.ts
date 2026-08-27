@@ -4,6 +4,7 @@ export interface BatchEntry {
   recipientName?: string;
   courseName: string;
   completionDate: string;
+  expirationDate?: string;
   grade?: string;
   score?: number;
   skills?: string[];

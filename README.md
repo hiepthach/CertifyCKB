@@ -52,8 +52,9 @@ src/
 │   ├── wallet/           # Wallet connection
 │   ├── cluster/          # Cluster components
 │   ├── certificate/      # Certificate components
-│   ├── verification/     # Verification components
-│   └── batch/            # Batch issuance
+│   ├── template/         # Template components
+│   ├── batch/            # Batch issuance
+│   └── verification/     # Verification components
 ├── lib/
 │   ├── ckb/              # CKB config & client
 │   └── credentials/       # Core credential logic
@@ -64,33 +65,38 @@ src/
 
 ## Features
 
-### Week 1: Setup & Cluster Management
+### Core Features
+- [x] Cluster Management (Provider Registration)
+- [x] Certificate Issuance (Single)
+- [x] Certificate Viewing
+- [x] Certificate Verification
+- [x] Share Functionality (Copy ID, Native Share, Explorer Link)
 
-- [x] Project scaffold
-- [x] Wallet integration (JoyID, MetaMask, WalletConnect)
-- [x] Cluster creation/viewing
-- [x] Testnet setup
+### Extended Features (Week 11)
+- [x] Certificate Templates
+  - Visual template configuration (classic, modern, compact, badge, detailed layouts)
+  - Customizable colors, typography, and branding
+  - Pre-defined certificate fields
+- [x] Batch Issuance
+  - CSV/JSON file upload
+  - Batch validation and preview
+  - Progress tracking during issuance
+- [x] Expiration Tracking
+  - Expiration date on certificates
+  - Visual "Expired" status badges
+  - Verification checks expiration
+- [x] Revocation
+  - Issuer can revoke certificates
+  - Soft revocation with reason tracking
+  - Verification shows revoked status
 
-### Week 2: Certificate Issuance & View
-
-- [ ] Certificate issuance
-- [ ] Certificate viewing
-- [ ] Certificate detail page
-- [ ] Share functionality
-
-### Week 3: Verification & Extended Features
-
-- [ ] Certificate verification
-- [ ] Template system
-- [ ] Batch issuance
-- [ ] Expiration/Revocation
-
-### Week 4: Polish & Documentation
-
-- [ ] UI polish
-- [ ] Error handling
-- [ ] Documentation
-- [ ] Testing
+### Quality & Polish (Week 12)
+- [x] Error Handling
+- [x] Loading States (Spinner component)
+- [x] Empty States (EmptyState component)
+- [x] Unit Tests (188 tests passing)
+- [ ] Integration Tests
+- [ ] Demo/Screencast
 
 ## Wallet Support
 
@@ -112,12 +118,31 @@ Switch networks using the network selector in the app UI:
 ## Available Scripts
 
 ```bash
-npm run dev          # Start dev server
+npm run dev          # Start dev server (with Turbopack)
 npm run build        # Build for production
 npm run start        # Start production server
 npm run lint         # Run ESLint
-npm run typecheck   # TypeScript check
+npm run typecheck    # TypeScript check
+npm run test         # Run tests (Vitest)
+npm run test:run     # Run tests once
+npm run test:ui      # Run tests with UI
+npm run test:coverage # Run tests with coverage
 ```
+
+## Testing
+
+Run unit tests:
+
+```bash
+npm test
+```
+
+Test coverage includes:
+- UI Components (Badge, Button, Card, Input)
+- Credentials (Encoder, Decoder, Issuer, Verifier)
+- Services (Template, Cluster)
+- Batch Issuance
+- Share Utility
 
 ## Resources
 
