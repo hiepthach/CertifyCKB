@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, Button, Input, Modal } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
 import type { CredentialSubject } from '@/types';
 import { ArrowRight, Sparkles } from 'lucide-react';
 

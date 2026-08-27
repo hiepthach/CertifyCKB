@@ -1,6 +1,7 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -22,6 +23,12 @@ const sizeStyles = {
 };
 
 export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -38,33 +45,35 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-midnight-plum/80 backdrop-blur-md transition-opacity duration-300"
+        className="fixed inset-0 bg-midnight-plum/80 backdrop-blur-sm transition-opacity duration-300 z-0"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Modal Surface — Doppler elevated panel */}
       <div
         className={twMerge(
           clsx(
-            'relative bg-deep-indigo bg-[#3a3340] border border-fog-line/20 border-dusk/30 rounded-card shadow-screenshot-frame',
-            'w-full mx-auto animate-fade-in-scale z-10 overflow-hidden',
+            'relative bg-shadow-plum border border-fog-line/15 rounded-card shadow-2xl',
+            'w-full mx-auto animate-fade-in-scale z-10 flex flex-col max-h-[90vh] overflow-hidden my-auto',
             sizeStyles[size]
           )
         )}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-fog-line/10 border-dusk/20">
-            <h2 className="text-base font-semibold text-bone-white text-lilac-white tracking-tight">{title}</h2>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-fog-line/10 flex-shrink-0 bg-midnight-plum/40">
+            <h2 className="text-base font-semibold text-bone-white tracking-tight">{title}</h2>
             <button
               onClick={onClose}
-              className="p-1.5 text-ash-veil hover:text-bone-white transition-colors rounded-btn hover:bg-shadow-plum/60"
+              className="p-1.5 text-ash-veil hover:text-bone-white transition-colors rounded-btn hover:bg-white/5"
               aria-label="Close modal"
             >
               <X className="w-4 h-4" />
@@ -73,18 +82,19 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
         )}
 
         {/* Content */}
-        <div className="px-6 py-5 max-h-[75vh] overflow-y-auto">
+        <div className="px-6 py-5 overflow-y-auto flex-1">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-fog-line/10 border-dusk/20 flex justify-end gap-3 bg-shadow-plum/30">
+          <div className="px-6 py-4 border-t border-fog-line/10 flex justify-end gap-3 bg-midnight-plum/40 flex-shrink-0">
             {footer}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

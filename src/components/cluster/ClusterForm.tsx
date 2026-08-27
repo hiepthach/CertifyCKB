@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, Button, Input, Modal } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
 import type { ClusterConfig } from '@/types';
 
 interface ClusterFormProps {
@@ -87,7 +87,7 @@ export function ClusterForm({
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Describe your organization, accredited programs, and certification credentials..."
           rows={3}
-          className="w-full px-3.5 py-2.5 rounded-xl bg-midnight-plum border border-fog-line/15 text-bone-white placeholder-mid-ash text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-lavender-spark/40 focus:border-lavender-spark/50"
+          className="w-full px-3.5 py-2.5 rounded-xl bg-midnight-plum border border-fog-line/15 text-bone-white placeholder-mid-ash text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-lavender-spark/40 focus:border-lavender-spark/50 resize-none"
           maxLength={500}
         />
         <div className="flex justify-between text-xs">

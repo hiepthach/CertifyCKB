@@ -24,7 +24,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-sm font-medium text-ash"
+            className="block text-sm font-medium text-ash-veil"
           >
             {label}
             {props.required && <span className="text-red-400 ml-1">*</span>}
@@ -35,11 +35,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           id={inputId}
           className={twMerge(
             clsx(
-              'w-full px-3.5 py-2.5 rounded-btn text-sm',
-              'bg-midnight border border-dusk',
-              'text-lilac-white placeholder-steel',
+              'w-full px-3.5 py-2.5 rounded-xl text-sm',
+              'bg-midnight-plum border border-fog-line/15',
+              'text-bone-white placeholder-mid-ash',
               'transition-all duration-200 ease-out',
-              'focus:outline-none focus:ring-2 focus:ring-lavender',
+              'focus:outline-none focus:ring-2 focus:ring-lavender-spark/40 focus:border-lavender-spark/50',
               'disabled:opacity-50 disabled:cursor-not-allowed',
               error && 'border-red-500 focus:ring-red-500',
               className
@@ -50,7 +50,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         />
         {error && <p className="text-sm text-red-400 animate-fade-in">{error}</p>}
         {helperText && !error && (
-          <p className="text-sm text-fog">{helperText}</p>
+          <p className="text-sm text-ash-veil">{helperText}</p>
         )}
       </div>
     );
