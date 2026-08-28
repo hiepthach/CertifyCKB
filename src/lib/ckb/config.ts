@@ -1,4 +1,4 @@
-import type { SporeConfig } from '@spore-sdk/core';
+import { predefinedSporeConfigs, type SporeConfig } from '@spore-sdk/core';
 import type { Network, NetworkConfig } from '@/types';
 
 // Network configurations
@@ -17,8 +17,8 @@ export const NETWORK_CONFIGS: Record<Network, NetworkConfig> = {
 
 // Get Spore configuration for current network
 export function getSporeConfig(): SporeConfig {
-  // Both testnet and mainnet use predefined config from Spore SDK
-  return undefined as unknown as SporeConfig;
+  const network = getNetwork();
+  return network === 'mainnet' ? predefinedSporeConfigs.Mainnet : predefinedSporeConfigs.Testnet;
 }
 
 // Get current network from environment
