@@ -1,4 +1,7 @@
 import { ccc, Address, ClientPublicTestnet } from '@ckb-ccc/core';
+import { createCluster as sporeCreateCluster } from '@spore-sdk/core';
+import { helpers } from '@ckb-lumos/lumos';
+import { getSporeConfig } from '@/lib/ckb/config';
 import type { Cluster, ClusterConfig } from '@/types';
 
 // Environment flag to enable mock mode for testing
@@ -66,35 +69,45 @@ export async function createCluster(params: {
     const liveSigner = signer as ccc.Signer;
     const addrObj = await liveSigner.getRecommendedAddressObj();
     const creatorAddress = addrObj.toString();
-    const creatorLock = addrObj.script;
 
-    // Encode cluster metadata
+    // Encode cluster metadata — same JSON structure as before
     const clusterMetadata = {
-      type: 'SporeCluster',
       name: config.name,
       description: config.description,
       websiteUrl: config.websiteUrl || '',
       contactEmail: config.contactEmail || '',
-      createdAt: new Date().toISOString(),
     };
-    const dataBytes = ccc.bytesFrom(new TextEncoder().encode(JSON.stringify(clusterMetadata)));
-
-    // Create Cell Output with creator's lock
-    const cellOutput = ccc.CellOutput.from({
-      capacity: 0,
-      lock: creatorLock,
-    });
-    // Calculate required capacity in shannons: occupiedSize + dataBytes length
-    cellOutput.capacity = ccc.fixedPointFrom(cellOutput.occupiedSize + dataBytes.length);
-
-    const tx = ccc.Transaction.from({
-      outputs: [cellOutput],
-      outputsData: [ccc.hexFrom(dataBytes)],
-    });
 
     try {
-      await tx.completeInputsByCapacity(liveSigner);
-      await tx.completeFeeBy(liveSigner);
+      // Use Spore SDK to create the cluster cell
+      const { txSkeleton } = await sporeCreateCluster({
+        data: clusterMetadata,
+        toLock: helpers.addressToScript(creatorAddress),
+        fromInfos: [creatorAddress],
+        config: getSporeConfig(),
+      });
+
+      const signedTx = await liveSigner.signTransaction(txSkeleton as any);
+      const txHash = await liveSigner.sendTransaction(signedTx);
+      const clusterId = txHash;
+
+      const cluster: Cluster = {
+        id: clusterId,
+        clusterId,
+        name: config.name,
+        description: config.description,
+        websiteUrl: config.websiteUrl,
+        contactEmail: config.contactEmail,
+        creatorAddress,
+        createdAt: new Date().toISOString(),
+      };
+
+      saveClusterToMockStorage(cluster);
+
+      return {
+        clusterId,
+        transactionHash: txHash,
+      };
     } catch (err: any) {
       const msg = err?.message || String(err);
       if (msg.includes('capacity') || msg.includes('balance') || msg.includes('Inputs') || msg.includes('LiveCells')) {
@@ -104,27 +117,6 @@ export async function createCluster(params: {
       }
       throw err;
     }
-
-    const txHash = await liveSigner.sendTransaction(tx);
-    const clusterId = txHash;
-
-    const cluster: Cluster = {
-      id: clusterId,
-      clusterId,
-      name: config.name,
-      description: config.description,
-      websiteUrl: config.websiteUrl,
-      contactEmail: config.contactEmail,
-      creatorAddress,
-      createdAt: new Date().toISOString(),
-    };
-
-    saveClusterToMockStorage(cluster);
-
-    return {
-      clusterId,
-      transactionHash: txHash,
-    };
   }
 
   // Fallback for tests/mock environment
