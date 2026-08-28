@@ -5,7 +5,7 @@
  * Reference: Design_spec/03_Certificate_Service.md
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   issueCertificate,
   getCertificate,
@@ -404,5 +404,50 @@ describe('Certificate Service (Issuer)', () => {
       const cert = await getCertificate(issued.certificateId);
       expect(cert).not.toBeNull();
     });
+
+    // Test: Fail-fast when live signer is used with missing recipient address
+    it('should throw error when live signer is used without recipient address', async () => {
+      const mockLiveSigner = {
+        client: {},
+        sendTransaction: vi.fn(),
+      };
+
+      await expect(
+        issueCertificate({
+          signer: mockLiveSigner,
+          clusterId: testClusterId,
+          issuerName: testIssuerName,
+          subject: {
+            type: 'CourseCertificate',
+            courseName: 'Basic CKB',
+            completionDate: '2024-03-01',
+            id: '',
+          },
+        })
+      ).rejects.toThrow(/Recipient CKB address is required/);
+    });
+
+    // Test: Fail-fast when live signer is used with invalid recipient address
+    it('should throw error when live signer is used with invalid recipient address', async () => {
+      const mockLiveSigner = {
+        client: {},
+        sendTransaction: vi.fn(),
+      };
+
+      await expect(
+        issueCertificate({
+          signer: mockLiveSigner,
+          clusterId: testClusterId,
+          issuerName: testIssuerName,
+          subject: {
+            type: 'CourseCertificate',
+            courseName: 'Basic CKB',
+            completionDate: '2024-03-01',
+            id: 'invalid_ckb_address_12345',
+          },
+        })
+      ).rejects.toThrow(/Invalid recipient CKB address/);
+    });
   });
 });
+

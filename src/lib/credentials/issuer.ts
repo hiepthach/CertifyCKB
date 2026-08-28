@@ -112,23 +112,24 @@ export async function issueCertificate(
     signer &&
     typeof signer === 'object' &&
     'client' in signer &&
-    typeof (signer as any).sendTransaction === 'function' &&
-    typeof (signer as any).getRecommendedAddressObj === 'function'
+    typeof (signer as any).sendTransaction === 'function'
   ) {
     const liveSigner = signer as ccc.Signer;
 
-    // Resolve recipient lock script
+    // Resolve recipient lock script — Fail-Fast if recipient address is invalid
+    const recipientAddr = subject.id || '';
+    if (!recipientAddr) {
+      throw new Error('Recipient CKB address is required');
+    }
+
     let recipientLock: ccc.Script;
     try {
-      const recipientAddr = subject.id || '';
-      if (!recipientAddr) throw new Error('Missing recipient address');
       const AddressClass = Address || ccc?.Address;
       const addrObj = await AddressClass.fromString(recipientAddr, liveSigner.client);
       recipientLock = addrObj.script;
-    } catch {
-      // If parsing fails or invalid format, fallback to sender's own lock script
-      const senderAddrObj = await liveSigner.getRecommendedAddressObj();
-      recipientLock = senderAddrObj.script;
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Invalid recipient CKB address "${recipientAddr}": ${errMsg}`);
     }
 
     const dataBytes = ccc.bytesFrom(new TextEncoder().encode(dnaJson));
