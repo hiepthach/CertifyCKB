@@ -1,6 +1,9 @@
 import { ccc, Address, ClientPublicTestnet } from '@ckb-ccc/core';
+import { createSpore } from '@spore-sdk/core';
+import { helpers } from '@ckb-lumos/lumos';
 import type { CertificateDNA, CredentialSubject, CredentialStatus } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
+import { getSporeConfig } from '@/lib/ckb/config';
 
 // Environment flag to enable mock mode for testing
 // Default to mock for development, set to 'false' for production
@@ -122,32 +125,39 @@ export async function issueCertificate(
       throw new Error('Recipient CKB address is required');
     }
 
-    let recipientLock: ccc.Script;
     try {
       const AddressClass = Address || ccc?.Address;
-      const addrObj = await AddressClass.fromString(recipientAddr, liveSigner.client);
-      recipientLock = addrObj.script;
+      await AddressClass.fromString(recipientAddr, liveSigner.client);
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
       throw new Error(`Invalid recipient CKB address "${recipientAddr}": ${errMsg}`);
     }
 
-    const dataBytes = ccc.bytesFrom(new TextEncoder().encode(dnaJson));
-
-    const cellOutput = ccc.CellOutput.from({
-      capacity: 0,
-      lock: recipientLock,
-    });
-    cellOutput.capacity = ccc.fixedPointFrom(cellOutput.occupiedSize + dataBytes.length);
-
-    const tx = ccc.Transaction.from({
-      outputs: [cellOutput],
-      outputsData: [ccc.hexFrom(dataBytes)],
-    });
-
     try {
-      await tx.completeInputsByCapacity(liveSigner);
-      await tx.completeFeeBy(liveSigner);
+      // Use Spore SDK to create the certificate DOB cell
+      const { txSkeleton } = await createSpore({
+        data: {
+          contentType: 'application/json',
+          content: ccc.bytesFrom(new TextEncoder().encode(dnaJson)),
+        },
+        toLock: helpers.addressToScript(recipientAddr),
+        fromInfos: [recipientAddr],
+        config: getSporeConfig(),
+      });
+
+      // Sign and send the transaction via the live signer
+      const signedTx = await liveSigner.signTransaction(txSkeleton as any);
+      const txHash = await liveSigner.sendTransaction(signedTx);
+
+      // Save to local storage for quick retrieval & caching
+      syncCertificatesFromLocalStorage();
+      mockCertificates.set(certificateId, { certificate: dna, txHash });
+      syncCertificatesToLocalStorage();
+
+      return {
+        certificateId,
+        transactionHash: txHash,
+      };
     } catch (err: any) {
       const msg = err?.message || String(err);
       if (msg.includes('capacity') || msg.includes('balance') || msg.includes('Inputs') || msg.includes('LiveCells')) {
@@ -157,18 +167,6 @@ export async function issueCertificate(
       }
       throw err;
     }
-
-    const txHash = await liveSigner.sendTransaction(tx);
-
-    // Save to local storage for quick retrieval & caching
-    syncCertificatesFromLocalStorage();
-    mockCertificates.set(certificateId, { certificate: dna, txHash });
-    syncCertificatesToLocalStorage();
-
-    return {
-      certificateId,
-      transactionHash: txHash,
-    };
   }
 
   // Fallback for tests/mock environment
