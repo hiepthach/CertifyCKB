@@ -5,6 +5,8 @@ export * from './client';
 // Spore SDK integration - use getClusterByType, getClusterById, etc.
 export {
   createCluster,
+  createSpore,
+  meltSpore,
   getClusterByType,
   getClusterById,
   getClusterProxyByType,

@@ -541,6 +541,42 @@ describe('Certificate Service (Issuer)', () => {
         meltCertificate(mockSigner, '0x' + 'f'.repeat(64))
       ).rejects.toThrow('Certificate not found');
     });
+
+    // Test: throws if signer is not the holder
+    it('should throw if signer is not the holder', async () => {
+      // Issue a certificate first
+      const issued = await issueCertificate({
+        signer: {},
+        clusterId: testClusterId,
+        issuerName: testIssuerName,
+        subject: { id: validRecipientAddress, type: 'CourseCertificate', courseName: 'Test', completionDate: '2024-01-01' },
+      });
+
+      // Mock signer whose lock does NOT match the certificate holder's lock
+      const mockEvilSigner = {
+        client: {
+          getCell: vi.fn().mockResolvedValue({
+            output: {
+              // Cell is owned by holder (matches validRecipientAddress's lock)
+              lock: { args: '0x1234', codeHash: '0xabcd', hashType: 'type' },
+            },
+          }),
+        } as unknown,
+        sendTransaction: vi.fn(),
+        signTransaction: vi.fn().mockReturnValue({}),
+        // But this signer pretends to be someone else (different address)
+        getRecommendedAddressObj: vi.fn().mockResolvedValue({
+          toString: () => 'ckt1qyq...evil',
+          // Different lock args than the cell — ownership check fails
+          script: { args: '0x' + 'ee'.repeat(20), codeHash: '0xabcd', hashType: 'type' },
+        }),
+      };
+
+      const { meltCertificate } = await import('../../../src/lib/credentials/issuer');
+      await expect(
+        meltCertificate(mockEvilSigner as unknown, issued.certificateId)
+      ).rejects.toThrow('Only the certificate holder can melt this certificate');
+    });
   });
 });
 
