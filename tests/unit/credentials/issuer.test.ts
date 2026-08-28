@@ -506,7 +506,7 @@ describe('Certificate Service (Issuer)', () => {
       // Verify meltSpore was called with the correct outPoint
       expect(vi.mocked(meltSpore)).toHaveBeenCalledWith(
         expect.objectContaining({
-          outPoint: { txHash: issued.transactionHash, index: 0 },
+          outPoint: { txHash: issued.transactionHash, index: '0x0' },
           changeAddress: validRecipientAddress,
         })
       );

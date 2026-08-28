@@ -549,10 +549,11 @@ export async function meltCertificate(
   let holderOwnsCell = false;
 
   try {
-    const cell = await ckbClient.getCell({ txHash, index: 0 });
-    if (cell?.output?.lock) {
+    const cell = await ckbClient.getCell({ txHash, index: '0x0' });
+    const cellOutput = (cell as unknown as { output?: { lock: ccc.Script } }).output;
+    if (cellOutput?.lock) {
       // Compare lock scripts: match if both codeHash+hashType+args are equal
-      const cellLock = cell.output.lock;
+      const cellLock = cellOutput.lock;
       holderOwnsCell =
         cellLock.codeHash === holderLock.codeHash &&
         cellLock.hashType === holderLock.hashType &&
@@ -569,7 +570,7 @@ export async function meltCertificate(
 
   // Use Spore SDK to build the melt transaction
   const { txSkeleton } = await meltSpore({
-    outPoint: { txHash, index: 0 },
+    outPoint: { txHash, index: '0x0' },
     changeAddress: holderAddress,
     config: getSporeConfig(),
   });
