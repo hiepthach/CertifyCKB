@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { meltSpore } from '@spore-sdk/core';
 import {
   issueCertificate,
   getCertificate,
@@ -447,6 +448,98 @@ describe('Certificate Service (Issuer)', () => {
           },
         })
       ).rejects.toThrow(/Invalid recipient CKB address/);
+    });
+  });
+
+  describe('meltCertificate', () => {
+    beforeEach(() => {
+      clearMockCertificates();
+    });
+
+    // Test: melts certificate and removes from storage
+    it('should melt certificate and remove from local storage', async () => {
+      // Issue a certificate first (mock signer path)
+      const issued = await issueCertificate({
+        signer: {},
+        clusterId: testClusterId,
+        issuerName: testIssuerName,
+        subject: { id: validRecipientAddress, type: 'CourseCertificate', courseName: 'Test', completionDate: '2024-01-01' },
+      });
+
+      // Verify it exists before melting
+      const before = await getCertificate(issued.certificateId);
+      expect(before).not.toBeNull();
+
+      // Mock getCell to return a cell owned by the holder
+      const mockClient = {
+        getCell: vi.fn().mockResolvedValue({
+          output: {
+            lock: { args: validRecipientAddress, codeHash: '0xabcd', hashType: 'type' },
+          },
+          outPoint: { txHash: issued.transactionHash, index: '0x0' },
+        }),
+      };
+
+      const mockHolderSigner = {
+        client: mockClient,
+        sendTransaction: vi.fn().mockResolvedValue('0x' + 'c'.repeat(64)),
+        signTransaction: vi.fn().mockReturnValue({}),
+        getRecommendedAddressObj: vi.fn().mockResolvedValue({
+          toString: () => validRecipientAddress,
+          script: { args: validRecipientAddress, codeHash: '0xabcd', hashType: 'type' },
+        }),
+      };
+
+      // Mock meltSpore to return a valid txSkeleton
+      const mockTxSkeleton = {};
+      vi.mocked(meltSpore).mockResolvedValue({
+        txSkeleton: mockTxSkeleton as any,
+        inputIndex: 0,
+      });
+
+      const { meltCertificate } = await import('../../../src/lib/credentials/issuer');
+      const result = await meltCertificate(mockHolderSigner, issued.certificateId);
+
+      expect(result.transactionHash).toBeDefined();
+      expect(result.transactionHash).toMatch(/^0x[a-f0-9]+$/);
+
+      // Verify meltSpore was called with the correct outPoint
+      expect(vi.mocked(meltSpore)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outPoint: { txHash: issued.transactionHash, index: 0 },
+          changeAddress: validRecipientAddress,
+        })
+      );
+
+      // Verify removed from storage
+      const after = await getCertificate(issued.certificateId);
+      // In mock mode, meltCertificate deletes from storage
+      expect(after).toBeNull();
+    });
+
+    // Test: throws if no live signer
+    it('should throw if signer is not a live signer', async () => {
+      const { meltCertificate } = await import('../../../src/lib/credentials/issuer');
+      await expect(
+        meltCertificate({}, '0x' + 'a'.repeat(64))
+      ).rejects.toThrow('Live signer is required to melt a certificate');
+    });
+
+    // Test: throws if certificate not found
+    it('should throw if certificate not found', async () => {
+      const mockSigner = {
+        client: {},
+        sendTransaction: vi.fn(),
+        getRecommendedAddressObj: vi.fn().mockResolvedValue({
+          toString: () => validRecipientAddress,
+          script: { args: '0x1234', codeHash: '0xabcd', hashType: 'type' },
+        }),
+      };
+
+      const { meltCertificate } = await import('../../../src/lib/credentials/issuer');
+      await expect(
+        meltCertificate(mockSigner, '0x' + 'f'.repeat(64))
+      ).rejects.toThrow('Certificate not found');
     });
   });
 });

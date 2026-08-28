@@ -59,6 +59,15 @@ vi.mock('@spore-sdk/core', () => ({
   }),
   getSporeCell: vi.fn(),
   setSporeConfig: vi.fn(),
+  meltSpore: vi.fn(),
+  createSpore: vi.fn().mockResolvedValue({
+    txSkeleton: {},
+    outputIndex: 0,
+  }),
+  predefinedSporeConfigs: {
+    Testnet: {},
+    Mainnet: {},
+  },
 }));
 
 // Mock @ckb-ccc/core

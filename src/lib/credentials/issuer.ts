@@ -1,5 +1,5 @@
 import { ccc, Address, ClientPublicTestnet } from '@ckb-ccc/core';
-import { createSpore } from '@spore-sdk/core';
+import { createSpore, meltSpore } from '@spore-sdk/core';
 import { helpers } from '@ckb-lumos/lumos';
 import type { CertificateDNA, CredentialSubject, CredentialStatus } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
@@ -503,4 +503,85 @@ export async function revokeCertificate(
   return {
     transactionHash: '0x' + 'b'.repeat(64),
   };
+}
+
+/**
+ * Melt (destroy) a certificate cell to reclaim CKB capacity.
+ * Only the certificate holder can melt their own certificate.
+ *
+ * @param signer - The holder's wallet signer (must be a live signer)
+ * @param certificateId - The certificate ID to melt
+ */
+export async function meltCertificate(
+  signer: unknown,
+  certificateId: string
+): Promise<{ transactionHash: string }> {
+  // Fail-Fast: require live signer
+  if (
+    !signer ||
+    typeof signer !== 'object' ||
+    !('client' in signer) ||
+    typeof (signer as any).sendTransaction !== 'function'
+  ) {
+    throw new Error('Live signer is required to melt a certificate');
+  }
+
+  const liveSigner = signer as ccc.Signer;
+
+  // Look up the certificate to get the transaction hash
+  const certRecord = await getCertificate(certificateId);
+  if (!certRecord) {
+    throw new Error('Certificate not found');
+  }
+
+  const txHash = certRecord.transactionHash;
+  if (!txHash) {
+    throw new Error('Certificate has no on-chain transaction hash');
+  }
+
+  // Get holder's address and lock script
+  const addrObj = await liveSigner.getRecommendedAddressObj();
+  const holderAddress = addrObj.toString();
+  const holderLock = addrObj.script;
+
+  // Verify the holder owns this certificate cell
+  const ckbClient = liveSigner.client;
+  let holderOwnsCell = false;
+
+  try {
+    const cell = await ckbClient.getCell({ txHash, index: 0 });
+    if (cell?.output?.lock) {
+      // Compare lock scripts: match if both codeHash+hashType+args are equal
+      const cellLock = cell.output.lock;
+      holderOwnsCell =
+        cellLock.codeHash === holderLock.codeHash &&
+        cellLock.hashType === holderLock.hashType &&
+        cellLock.args === holderLock.args;
+    }
+  } catch {
+    // Cell not found on-chain
+    throw new Error('Certificate cell not found on-chain');
+  }
+
+  if (!holderOwnsCell) {
+    throw new Error('Only the certificate holder can melt this certificate');
+  }
+
+  // Use Spore SDK to build the melt transaction
+  const { txSkeleton } = await meltSpore({
+    outPoint: { txHash, index: 0 },
+    changeAddress: holderAddress,
+    config: getSporeConfig(),
+  });
+
+  // Sign and send the transaction via the live signer
+  const signedTx = await liveSigner.signTransaction(txSkeleton as any);
+  const meltTxHash = await liveSigner.sendTransaction(signedTx);
+
+  // Remove from local storage
+  syncCertificatesFromLocalStorage();
+  mockCertificates.delete(certificateId);
+  syncCertificatesToLocalStorage();
+
+  return { transactionHash: meltTxHash };
 }
