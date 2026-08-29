@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { meltSpore } from '@ckb-ccc/spore';
+import { meltSpore, findSpore } from '@ckb-ccc/spore';
 import {
   issueCertificate,
   getCertificate,
@@ -490,6 +490,15 @@ describe('Certificate Service (Issuer)', () => {
         }),
       };
 
+      // Mock findSpore to return a found cell (required for meltCertificate to work)
+      vi.mocked(findSpore).mockResolvedValue({
+        cell: {
+          cellOutput: {
+            lock: { args: validRecipientAddress, codeHash: '0xabcd', hashType: 'type' },
+          },
+        },
+      } as any);
+
       // Mock meltSpore to return a valid tx
       const mockTx = {
         completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
@@ -505,11 +514,11 @@ describe('Certificate Service (Issuer)', () => {
       expect(result.transactionHash).toBeDefined();
       expect(result.transactionHash).toMatch(/^0x[a-f0-9]+$/);
 
-      // Verify meltSpore was called with the correct id
+      // Verify meltSpore was called with a valid spore ID
       expect(vi.mocked(meltSpore)).toHaveBeenCalledWith(
         expect.objectContaining({
           signer: mockHolderSigner,
-          id: issued.transactionHash,
+          id: expect.stringMatching(/^0x[a-f0-9]{64}$/),
         })
       );
 

@@ -10,8 +10,14 @@ const isTestEnv = typeof process !== 'undefined' && (process.env.NODE_ENV === 't
 
 const CERT_STORAGE_KEY = 'ckb_credential_certificates';
 
-// Mock certificate storage for testing
-const mockCertificates = new Map<string, { certificate: CertificateDNA; txHash: string }>();
+interface CertificateStorageItem {
+  certificate: CertificateDNA;
+  txHash: string;
+  sporeId?: string;
+}
+
+// Mock certificate storage for testing & caching
+const mockCertificates = new Map<string, CertificateStorageItem>();
 
 function syncCertificatesFromLocalStorage(): void {
   if (typeof window === 'undefined') return;
@@ -19,7 +25,7 @@ function syncCertificatesFromLocalStorage(): void {
     const raw = localStorage.getItem(CERT_STORAGE_KEY);
     mockCertificates.clear();
     if (raw) {
-      const parsed: [string, { certificate: CertificateDNA; txHash: string }][] = JSON.parse(raw);
+      const parsed: [string, CertificateStorageItem][] = JSON.parse(raw);
       for (const [key, value] of parsed) {
         if (key && value) {
           mockCertificates.set(key, value);
@@ -53,6 +59,7 @@ interface IssueCertificateParams {
 interface IssueCertificateResult {
   certificateId: string;
   transactionHash: string;
+  sporeId?: string;
 }
 
 interface GetCertificateResult {
@@ -60,6 +67,7 @@ interface GetCertificateResult {
   certificateId: string;
   transactionHash?: string;
   clusterId?: string;
+  sporeId?: string;
 }
 
 /**
@@ -165,15 +173,14 @@ export async function issueCertificate(
 
       // Save to local storage for quick retrieval & caching
       syncCertificatesFromLocalStorage();
-      mockCertificates.set(certificateId, { certificate: dna, txHash });
-      if (sporeId && sporeId !== certificateId) {
-        mockCertificates.set(sporeId, { certificate: dna, txHash });
-      }
+      const primaryId = sporeId || certificateId;
+      mockCertificates.set(primaryId, { certificate: dna, txHash, sporeId });
       syncCertificatesToLocalStorage();
 
       return {
         certificateId: sporeId || certificateId,
         transactionHash: txHash,
+        sporeId,
       };
     } catch (err: any) {
       const msg = err?.message || String(err);
@@ -230,6 +237,7 @@ export async function getCertificate(
       certificateId,
       transactionHash: mock.txHash,
       clusterId: mock.certificate.issuer.id,
+      sporeId: mock.sporeId,
     };
   }
 
@@ -241,6 +249,7 @@ export async function getCertificate(
         certificateId: id,
         transactionHash: item.txHash,
         clusterId: item.certificate.issuer.id,
+        sporeId: item.sporeId,
       };
     }
   }
@@ -306,15 +315,31 @@ export async function getHolderCertificates(
       continue;
     }
     const cert = mock.certificate;
+    const certDnaId = cert?.id;
+    const sporeId = mock.sporeId;
+    const txHash = isMockHash ? undefined : mock.txHash;
+
+    if (
+      seenIds.has(certId) ||
+      (certDnaId && seenIds.has(certDnaId)) ||
+      (sporeId && seenIds.has(sporeId)) ||
+      (txHash && seenIds.has(txHash))
+    ) {
+      continue;
+    }
+
     if (!holderAddress || cert.credentialSubject.id === holderAddress || !cert.credentialSubject.id) {
       results.push({
         certificate: cert,
-        certificateId: certId,
+        certificateId: sporeId || certId,
         transactionHash: mock.txHash,
         clusterId: cert.issuer.id,
+        sporeId: mock.sporeId,
       });
       seenIds.add(certId);
-      if (mock.txHash) seenIds.add(mock.txHash);
+      if (certDnaId) seenIds.add(certDnaId);
+      if (sporeId) seenIds.add(sporeId);
+      if (txHash) seenIds.add(txHash);
     }
   }
 
@@ -338,30 +363,38 @@ export async function getHolderCertificates(
             const certDna = JSON.parse(text) as CertificateDNA;
             const sporeId = cell.cellOutput.type?.args ? ccc.hexFrom(cell.cellOutput.type.args) : undefined;
             const certId = sporeId || certDna.id || cell.outPoint.txHash;
+            const certDnaId = certDna.id;
+            const txHash = cell.outPoint.txHash;
 
-            if (!seenIds.has(certId) && !seenIds.has(cell.outPoint.txHash)) {
+            if (
+              !seenIds.has(certId) &&
+              (!txHash || !seenIds.has(txHash)) &&
+              (!sporeId || !seenIds.has(sporeId)) &&
+              (!certDnaId || !seenIds.has(certDnaId))
+            ) {
               seenIds.add(certId);
-              seenIds.add(cell.outPoint.txHash);
+              if (txHash) seenIds.add(txHash);
               if (sporeId) seenIds.add(sporeId);
+              if (certDnaId) seenIds.add(certDnaId);
 
               const item: GetCertificateResult = {
                 certificate: certDna,
                 certificateId: certId,
                 transactionHash: cell.outPoint.txHash,
                 clusterId: certDna.issuer?.id || '',
+                sporeId,
               };
 
               results.push(item);
 
-              // Persist to local storage for fast caching
-              mockCertificates.set(certId, {
-                certificate: certDna,
-                txHash: cell.outPoint.txHash,
-              });
-              if (sporeId && sporeId !== certId) {
-                mockCertificates.set(sporeId, {
+              // Persist to local storage for fast caching (normalize to sporeId as primary key)
+              const storageKey = sporeId || certId;
+              const existing = mockCertificates.get(storageKey);
+              if (!existing) {
+                mockCertificates.set(storageKey, {
                   certificate: certDna,
                   txHash: cell.outPoint.txHash,
+                  sporeId,
                 });
               }
             }
@@ -385,16 +418,36 @@ export async function getHolderCertificates(
 export async function getClusterCertificates(clusterId: string): Promise<GetCertificateResult[]> {
   syncCertificatesFromLocalStorage();
   const results: GetCertificateResult[] = [];
+  const seenIds = new Set<string>();
 
   for (const [certId, mock] of Array.from(mockCertificates.entries())) {
+    const isMockHash = mock.txHash.startsWith('0xaaaa') || mock.txHash === '0x' + '0'.repeat(64);
     const cert = mock.certificate;
+    const certDnaId = cert?.id;
+    const sporeId = mock.sporeId;
+    const txHash = isMockHash ? undefined : mock.txHash;
+
+    if (
+      seenIds.has(certId) ||
+      (certDnaId && seenIds.has(certDnaId)) ||
+      (sporeId && seenIds.has(sporeId)) ||
+      (txHash && seenIds.has(txHash))
+    ) {
+      continue;
+    }
+
     if (cert.issuer.id === clusterId) {
       results.push({
         certificate: cert,
-        certificateId: certId,
+        certificateId: sporeId || certId,
         transactionHash: mock.txHash,
         clusterId: cert.issuer.id,
+        sporeId: mock.sporeId,
       });
+      seenIds.add(certId);
+      if (certDnaId) seenIds.add(certDnaId);
+      if (sporeId) seenIds.add(sporeId);
+      if (txHash) seenIds.add(txHash);
     }
   }
 
@@ -411,6 +464,35 @@ export async function getAllCertificates(
   syncCertificatesFromLocalStorage();
   const results: GetCertificateResult[] = [];
   const seenIds = new Set<string>();
+  const seenByTxHash = new Map<string, GetCertificateResult>();
+
+  // Helper to add certificate with deduplication
+  const addCertificate = (item: GetCertificateResult) => {
+    // Skip if already seen by any ID
+    if (
+      seenIds.has(item.certificateId) ||
+      (item.sporeId && seenIds.has(item.sporeId)) ||
+      (item.transactionHash && seenIds.has(item.transactionHash)) ||
+      (item.certificate?.id && seenIds.has(item.certificate.id))
+    ) {
+      return;
+    }
+
+    // Also deduplicate by txHash - if we already have a cert with this txHash, skip
+    if (item.transactionHash && seenByTxHash.has(item.transactionHash)) {
+      return;
+    }
+
+    // Add to results
+    results.push(item);
+    seenIds.add(item.certificateId);
+    if (item.sporeId) seenIds.add(item.sporeId);
+    if (item.transactionHash) {
+      seenIds.add(item.transactionHash);
+      seenByTxHash.set(item.transactionHash, item);
+    }
+    if (item.certificate?.id) seenIds.add(item.certificate.id);
+  };
 
   // 1. Get all certificates from local storage (both issued by user and received by user)
   for (const [certId, mock] of Array.from(mockCertificates.entries())) {
@@ -418,15 +500,15 @@ export async function getAllCertificates(
     if (address && isMockHash && !isTestEnv) {
       continue;
     }
+
     const cid = mock.certificate.issuer?.id || '';
-    results.push({
+    addCertificate({
       certificate: mock.certificate,
-      certificateId: certId,
+      certificateId: mock.sporeId || certId,
       transactionHash: mock.txHash,
       clusterId: cid,
+      sporeId: mock.sporeId,
     });
-    seenIds.add(certId);
-    if (mock.txHash) seenIds.add(mock.txHash);
   }
 
   // 2. If address is provided, also scan on-chain cells for this address (as holder/recipient)
@@ -434,11 +516,7 @@ export async function getAllCertificates(
     try {
       const holderCerts = await getHolderCertificates(address, client);
       for (const item of holderCerts) {
-        if (!seenIds.has(item.certificateId) && (!item.transactionHash || !seenIds.has(item.transactionHash))) {
-          seenIds.add(item.certificateId);
-          if (item.transactionHash) seenIds.add(item.transactionHash);
-          results.push(item);
-        }
+        addCertificate(item);
       }
 
       // 3. Scan on-chain transactions where address was the sender/issuer (input lock = address)
@@ -461,24 +539,27 @@ export async function getAllCertificates(
                 const text = new TextDecoder().decode(ccc.bytesFrom(hex));
                 if (isCertificateJson(text)) {
                   const certDna = JSON.parse(text) as CertificateDNA;
-                  const certId = certDna.id || txRecord.txHash;
+                  const sporeId = txResponse.transaction?.outputs?.[i]?.type?.args ? ccc.hexFrom(txResponse.transaction.outputs[i].type!.args) : undefined;
+                  const certId = sporeId || certDna.id || txRecord.txHash;
 
-                  if (!seenIds.has(certId) && !seenIds.has(txRecord.txHash)) {
-                    seenIds.add(certId);
-                    seenIds.add(txRecord.txHash);
+                  const item: GetCertificateResult = {
+                    certificate: certDna,
+                    certificateId: certId,
+                    transactionHash: txRecord.txHash,
+                    clusterId: certDna.issuer?.id || '',
+                    sporeId,
+                  };
 
-                    const item: GetCertificateResult = {
-                      certificate: certDna,
-                      certificateId: certId,
-                      transactionHash: txRecord.txHash,
-                      clusterId: certDna.issuer?.id || '',
-                    };
+                  addCertificate(item);
 
-                    results.push(item);
-
-                    mockCertificates.set(certId, {
+                  // Normalize storage key to sporeId as primary key
+                  const storageKey = sporeId || certId;
+                  const existing = mockCertificates.get(storageKey);
+                  if (!existing) {
+                    mockCertificates.set(storageKey, {
                       certificate: certDna,
                       txHash: txRecord.txHash,
+                      sporeId,
                     });
                   }
                 }
@@ -568,32 +649,111 @@ export async function meltCertificate(
 
   const liveSigner = signer as ccc.Signer;
 
-  // Look up the certificate record
-  const certRecord = await getCertificate(certificateId, liveSigner.client);
+  // Look up the certificate record from localStorage first
+  syncCertificatesFromLocalStorage();
+  let certRecord = await getCertificate(certificateId, liveSigner.client);
+
+  // If not found by certificateId, search all local storage entries for a matching sporeId
   if (!certRecord) {
-    throw new Error('Certificate not found');
+    for (const [key, item] of Array.from(mockCertificates.entries())) {
+      if (item.sporeId === certificateId || key === certificateId) {
+        certRecord = {
+          certificate: item.certificate,
+          certificateId: key,
+          transactionHash: item.txHash,
+          clusterId: item.certificate.issuer?.id,
+          sporeId: item.sporeId,
+        };
+        break;
+      }
+    }
   }
 
-  const txHash = certRecord.transactionHash || certificateId;
+  if (!certRecord) {
+    throw new Error('Certificate not found in local storage. Please ensure the certificate was issued to your address.');
+  }
+
   const addrObj = await liveSigner.getRecommendedAddressObj();
   const holderLock = addrObj.script;
 
-  // Verify the holder owns this certificate cell
+  // 1. Resolve on-chain spore ID and verify cell ownership
+  let targetSporeId: `0x${string}` | undefined = (certRecord.sporeId as `0x${string}`) || undefined;
   let cellLock: ccc.Script | undefined = undefined;
+  let foundCell = false;
 
-  try {
-    const found = await findSpore(liveSigner.client, (certificateId.startsWith('0x') && certificateId.length === 66 ? certificateId : txHash) as `0x${string}`);
-    if (found?.cell) {
-      cellLock = found.cell.cellOutput.lock;
+  // Try multiple candidate IDs to find the actual Spore cell
+  const candidateIds: string[] = [];
+
+  // Priority 1: Use sporeId from record if available
+  if (targetSporeId && targetSporeId.startsWith('0x') && targetSporeId.length === 66) {
+    candidateIds.push(targetSporeId);
+  }
+
+  // Priority 2: Try certificateId directly if it looks like a Spore ID
+  if (certificateId.startsWith('0x') && certificateId.length === 66) {
+    candidateIds.push(certificateId);
+  }
+
+  // Priority 3: Search through all local storage entries for a matching certificate
+  for (const [key, item] of Array.from(mockCertificates.entries())) {
+    if (item.sporeId && item.sporeId.startsWith('0x') && item.sporeId.length === 66) {
+      if (!candidateIds.includes(item.sporeId)) candidateIds.push(item.sporeId);
     }
-  } catch {}
+    if (item.txHash && item.txHash.startsWith('0x') && item.txHash.length === 66) {
+      if (!candidateIds.includes(item.txHash)) candidateIds.push(item.txHash);
+    }
+  }
 
-  if (!cellLock && liveSigner.client && typeof (liveSigner.client as any).getCell === 'function') {
+  // Try each candidate to find the actual Spore cell
+  for (const candidateId of candidateIds) {
     try {
-      const cell = await (liveSigner.client as any).getCell({ txHash, index: '0x0' });
+      const found = await findSpore(liveSigner.client, candidateId as `0x${string}`);
+      if (found?.cell) {
+        targetSporeId = candidateId as `0x${string}`;
+        cellLock = found.cell.cellOutput.lock;
+        foundCell = true;
+        break;
+      }
+    } catch {}
+  }
+
+  // If not found yet, query transaction outputs to extract Spore type.args
+  if (!foundCell && certRecord.transactionHash && certRecord.transactionHash.startsWith('0x') && certRecord.transactionHash.length === 66) {
+    try {
+      const txRes = await (liveSigner.client as any).getTransaction(certRecord.transactionHash as `0x${string}`);
+      if (txRes?.transaction?.outputs) {
+        for (const output of txRes.transaction.outputs) {
+          if (output.type?.args && output.type.args.startsWith('0x') && output.type.args.length === 66) {
+            const candidateId = output.type.args as `0x${string}`;
+            try {
+              const found = await findSpore(liveSigner.client, candidateId);
+              if (found?.cell) {
+                targetSporeId = candidateId;
+                cellLock = found.cell.cellOutput.lock;
+                foundCell = true;
+                break;
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // Fallback: check direct cell by txHash from record
+  if (!foundCell && certRecord.transactionHash && liveSigner.client && typeof (liveSigner.client as any).getCell === 'function') {
+    try {
+      const cell = await (liveSigner.client as any).getCell({
+        txHash: certRecord.transactionHash,
+        index: '0x0'
+      });
       const cellOutput = (cell as any)?.cellOutput || (cell as any)?.output;
       if (cellOutput?.lock) {
         cellLock = cellOutput.lock;
+        foundCell = true;
+      }
+      if (!targetSporeId && cellOutput?.type?.args) {
+        targetSporeId = cellOutput.type.args as `0x${string}`;
       }
     } catch {}
   }
@@ -609,11 +769,20 @@ export async function meltCertificate(
     }
   }
 
+  if (!foundCell || !targetSporeId) {
+    throw new Error(
+      `The Spore cell could not be found on CKB. It may have already been melted or transferred. ` +
+      `Certificate ID: ${certificateId.slice(0, 16)}...`
+    );
+  }
+
+  const finalSporeId = targetSporeId;
+
   try {
     // Use CCC Spore to build the melt transaction
     const { tx } = await meltSpore({
       signer: liveSigner,
-      id: txHash as `0x${string}`,
+      id: finalSporeId,
     });
 
     if (tx && typeof tx.completeInputsByCapacity === 'function') {
@@ -628,14 +797,15 @@ export async function meltCertificate(
     syncCertificatesFromLocalStorage();
     mockCertificates.delete(certificateId);
     if (certRecord?.certificate?.id) mockCertificates.delete(certRecord.certificate.id);
+    if (targetSporeId) mockCertificates.delete(targetSporeId);
     syncCertificatesToLocalStorage();
 
     return { transactionHash: meltTxHash };
   } catch (err: any) {
     const msg = err?.message || String(err);
-    if (msg.includes('Spore') && msg.includes('not found')) {
+    if (msg.includes('Spore') && (msg.includes('not found') || msg.includes('notFound'))) {
       throw new Error(
-        `The Spore cell could not be found on CKB. It may have already been melted or transferred.`
+        `The Spore cell could not be found on CKB. It may have already been melted or transferred. Certificate: ${certificateId.slice(0, 16)}...`
       );
     }
     throw err;
