@@ -11,8 +11,8 @@ interface CertificateStorageItem {
   sporeId?: string;
 }
 
-// Mock certificate storage for testing & caching
-const mockCertificates = new Map<string, CertificateStorageItem>();
+// In-memory cache for certificate data (synced with localStorage for UI performance)
+const certificateCache = new Map<string, CertificateStorageItem>();
 
 function syncCertificatesFromLocalStorage(): void {
   if (typeof window === 'undefined') return;
@@ -22,7 +22,7 @@ function syncCertificatesFromLocalStorage(): void {
       const parsed: [string, CertificateStorageItem][] = JSON.parse(raw);
       for (const [key, value] of parsed) {
         if (key && value) {
-          mockCertificates.set(key, value);
+          certificateCache.set(key, value);
         }
       }
     }
@@ -34,7 +34,7 @@ function syncCertificatesFromLocalStorage(): void {
 function syncCertificatesToLocalStorage(): void {
   if (typeof window === 'undefined') return;
   try {
-    const arr = Array.from(mockCertificates.entries());
+    const arr = Array.from(certificateCache.entries());
     localStorage.setItem(CERT_STORAGE_KEY, JSON.stringify(arr));
   } catch (e) {
     console.error('Failed to save certificates to localStorage:', e);
@@ -65,10 +65,10 @@ interface GetCertificateResult {
 }
 
 /**
- * Clear all mock certificates (for testing)
+ * Clear all certificate cache (for testing)
  */
-export function clearMockCertificates(): void {
-  mockCertificates.clear();
+export function clearCertificateCache(): void {
+  certificateCache.clear();
   if (typeof window !== 'undefined') {
     try {
       localStorage.removeItem(CERT_STORAGE_KEY);
@@ -77,11 +77,11 @@ export function clearMockCertificates(): void {
 }
 
 /**
- * Get mock storage (for testing)
+ * Get certificate cache
  */
-export function getMockCertificates(): Map<string, { certificate: CertificateDNA; txHash: string }> {
+export function getCertificateCache(): Map<string, { certificate: CertificateDNA; txHash: string }> {
   syncCertificatesFromLocalStorage();
-  return mockCertificates;
+  return certificateCache;
 }
 
 /**
@@ -168,7 +168,7 @@ export async function issueCertificate(
       // Save to local storage for quick retrieval & caching
       syncCertificatesFromLocalStorage();
       const primaryId = sporeId || certificateId;
-      mockCertificates.set(primaryId, { certificate: dna, txHash, sporeId });
+      certificateCache.set(primaryId, { certificate: dna, txHash, sporeId });
       syncCertificatesToLocalStorage();
 
       return {
@@ -213,7 +213,7 @@ export async function getCertificate(
 ): Promise<GetCertificateResult | null> {
   syncCertificatesFromLocalStorage();
   // 1. Try local storage by ID
-  const mock = mockCertificates.get(certificateId);
+  const mock = certificateCache.get(certificateId);
   if (mock) {
     return {
       certificate: mock.certificate,
@@ -225,7 +225,7 @@ export async function getCertificate(
   }
 
   // 2. Search local storage by transaction hash
-  for (const [id, item] of Array.from(mockCertificates.entries())) {
+  for (const [id, item] of Array.from(certificateCache.entries())) {
     if (item.txHash === certificateId) {
       return {
         certificate: item.certificate,
@@ -257,7 +257,7 @@ export async function getCertificate(
             if (isCertificateJson(text)) {
               const certDna = JSON.parse(text) as CertificateDNA;
               const certId = certDna.id || certificateId;
-              mockCertificates.set(certId, { certificate: certDna, txHash: certificateId });
+              certificateCache.set(certId, { certificate: certDna, txHash: certificateId });
               syncCertificatesToLocalStorage();
               return {
                 certificate: certDna,
@@ -291,7 +291,7 @@ export async function getHolderCertificates(
   const seenIds = new Set<string>();
 
   // 1. Get from local cache
-  for (const [certId, mock] of Array.from(mockCertificates.entries())) {
+  for (const [certId, mock] of Array.from(certificateCache.entries())) {
     const cert = mock.certificate;
     const certDnaId = cert?.id;
     const sporeId = mock.sporeId;
@@ -367,9 +367,9 @@ export async function getHolderCertificates(
 
               // Persist to local storage for fast caching (normalize to sporeId as primary key)
               const storageKey = sporeId || certId;
-              const existing = mockCertificates.get(storageKey);
+              const existing = certificateCache.get(storageKey);
               if (!existing) {
-                mockCertificates.set(storageKey, {
+                certificateCache.set(storageKey, {
                   certificate: certDna,
                   txHash: cell.outPoint.txHash,
                   sporeId,
@@ -398,7 +398,7 @@ export async function getClusterCertificates(clusterId: string): Promise<GetCert
   const results: GetCertificateResult[] = [];
   const seenIds = new Set<string>();
 
-  for (const [certId, mock] of Array.from(mockCertificates.entries())) {
+  for (const [certId, mock] of Array.from(certificateCache.entries())) {
     const cert = mock.certificate;
     const certDnaId = cert?.id;
     const sporeId = mock.sporeId;
@@ -472,7 +472,7 @@ export async function getAllCertificates(
   };
 
   // 1. Get all certificates from local storage (both issued by user and received by user)
-  for (const [certId, mock] of Array.from(mockCertificates.entries())) {
+  for (const [certId, mock] of Array.from(certificateCache.entries())) {
     const cid = mock.certificate.issuer?.id || '';
     addCertificate({
       certificate: mock.certificate,
@@ -526,9 +526,9 @@ export async function getAllCertificates(
 
                   // Normalize storage key to sporeId as primary key
                   const storageKey = sporeId || certId;
-                  const existing = mockCertificates.get(storageKey);
+                  const existing = certificateCache.get(storageKey);
                   if (!existing) {
-                    mockCertificates.set(storageKey, {
+                    certificateCache.set(storageKey, {
                       certificate: certDna,
                       txHash: txRecord.txHash,
                       sporeId,
@@ -566,7 +566,7 @@ export async function revokeCertificate(
   reason?: string
 ): Promise<{ transactionHash: string }> {
   syncCertificatesFromLocalStorage();
-  const mock = mockCertificates.get(certificateId);
+  const mock = certificateCache.get(certificateId);
 
   if (!mock) {
     throw new Error('Certificate not found');
@@ -583,7 +583,7 @@ export async function revokeCertificate(
 
   // Update the certificate in mock storage
   mock.certificate.credentialStatus = revokedStatus;
-  mockCertificates.set(certificateId, mock);
+  certificateCache.set(certificateId, mock);
   syncCertificatesToLocalStorage();
 
   console.log('Certificate revoked (soft):', {
@@ -627,7 +627,7 @@ export async function meltCertificate(
 
   // If not found by certificateId, search all local storage entries for a matching sporeId
   if (!certRecord) {
-    for (const [key, item] of Array.from(mockCertificates.entries())) {
+    for (const [key, item] of Array.from(certificateCache.entries())) {
       if (item.sporeId === certificateId || key === certificateId) {
         certRecord = {
           certificate: item.certificate,
@@ -667,7 +667,7 @@ export async function meltCertificate(
   }
 
   // Priority 3: Search through all local storage entries for a matching certificate
-  for (const [key, item] of Array.from(mockCertificates.entries())) {
+  for (const [key, item] of Array.from(certificateCache.entries())) {
     if (item.sporeId && item.sporeId.startsWith('0x') && item.sporeId.length === 66) {
       if (!candidateIds.includes(item.sporeId)) candidateIds.push(item.sporeId);
     }
@@ -767,9 +767,9 @@ export async function meltCertificate(
 
     // Remove from local storage
     syncCertificatesFromLocalStorage();
-    mockCertificates.delete(certificateId);
-    if (certRecord?.certificate?.id) mockCertificates.delete(certRecord.certificate.id);
-    if (targetSporeId) mockCertificates.delete(targetSporeId);
+    certificateCache.delete(certificateId);
+    if (certRecord?.certificate?.id) certificateCache.delete(certRecord.certificate.id);
+    if (targetSporeId) certificateCache.delete(targetSporeId);
     syncCertificatesToLocalStorage();
 
     return { transactionHash: meltTxHash };

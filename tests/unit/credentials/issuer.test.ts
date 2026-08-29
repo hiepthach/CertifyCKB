@@ -13,14 +13,14 @@ import {
   getCertificate,
   getHolderCertificates,
   revokeCertificate,
-  clearMockCertificates,
+  clearCertificateCache,
 } from '../../../src/lib/credentials/issuer';
 import type { CredentialSubject } from '@/types';
 
 describe('Certificate Service (Issuer)', () => {
   beforeEach(() => {
     // Clear mock storage before each test
-    clearMockCertificates();
+    clearCertificateCache();
     // Reset mock states
     vi.clearAllMocks();
     // Reset Address.fromString mock
@@ -245,7 +245,7 @@ describe('Certificate Service (Issuer)', () => {
 
   describe('getHolderCertificates', () => {
     beforeEach(() => {
-      clearMockCertificates();
+      clearCertificateCache();
     });
 
     // Test: Get all certificates for a holder address
@@ -477,7 +477,7 @@ describe('Certificate Service (Issuer)', () => {
 
   describe('meltCertificate', () => {
     beforeEach(() => {
-      clearMockCertificates();
+      clearCertificateCache();
     });
 
     // Test: melts certificate and removes from storage

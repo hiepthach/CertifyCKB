@@ -7,9 +7,9 @@ export {
   createCluster,
   getCluster,
   getProviderClusters,
-  saveClusterToMockStorage,
-  getClustersFromMockStorage,
-  clearMockClusters,
+  saveClusterToCache,
+  getClustersFromCache,
+  clearClusterCache,
 } from './cluster';
 export {
   issueCertificate,
@@ -19,7 +19,7 @@ export {
   getAllCertificates,
   revokeCertificate,
   meltCertificate,
-  clearMockCertificates,
+  clearCertificateCache,
 } from './issuer';
 export { verifyCertificate, getVerificationHistory } from './verifier';
 export { parseBatchFile, validateBatchEntries, previewBatch, issueBatchCertificates } from './batch';

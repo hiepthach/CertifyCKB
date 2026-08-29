@@ -12,8 +12,8 @@ import {
   createCluster,
   getCluster,
   getProviderClusters,
-  saveClusterToMockStorage,
-  getClustersFromMockStorage,
+  saveClusterToCache,
+  getClustersFromCache,
   getAllCertificates,
 } from '@/lib/credentials';
 
@@ -29,12 +29,12 @@ export default function ClustersPage() {
     queryKey: ['clusters', address],
     queryFn: async () => {
       const onChainClusters = await getProviderClusters(address || undefined, client);
-      const mockClusters = getClustersFromMockStorage();
+      const cachedClusters = getClustersFromCache();
 
       const allClusters = [...onChainClusters];
-      for (const mock of mockClusters) {
-        if (!allClusters.find((c) => c.clusterId === mock.clusterId)) {
-          allClusters.push(mock);
+      for (const cached of cachedClusters) {
+        if (!allClusters.find((c) => c.clusterId === cached.clusterId)) {
+          allClusters.push(cached);
         }
       }
 
@@ -95,7 +95,7 @@ export default function ClustersPage() {
         createdAt: new Date().toISOString(),
       };
 
-      saveClusterToMockStorage(cluster);
+      saveClusterToCache(cluster);
 
       return result;
     },

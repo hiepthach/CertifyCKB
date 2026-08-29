@@ -4,8 +4,8 @@ import type { Cluster, ClusterConfig } from '@/types';
 
 const CLUSTER_STORAGE_KEY = 'ckb_credential_clusters';
 
-// Mock storage for MVP
-const mockClusters = new Map<string, Cluster>();
+// In-memory cache for cluster data (synced with localStorage for UI performance)
+const clusterCache = new Map<string, Cluster>();
 
 function syncClustersFromLocalStorage(): void {
   if (typeof window === 'undefined') return;
@@ -15,7 +15,7 @@ function syncClustersFromLocalStorage(): void {
       const parsed: Cluster[] = JSON.parse(raw);
       for (const item of parsed) {
         if (item && item.clusterId) {
-          mockClusters.set(item.clusterId, item);
+          clusterCache.set(item.clusterId, item);
         }
       }
     }
@@ -27,7 +27,7 @@ function syncClustersFromLocalStorage(): void {
 function syncClustersToLocalStorage(): void {
   if (typeof window === 'undefined') return;
   try {
-    const arr = Array.from(mockClusters.values());
+    const arr = Array.from(clusterCache.values());
     localStorage.setItem(CLUSTER_STORAGE_KEY, JSON.stringify(arr));
   } catch (e) {
     console.error('Failed to save clusters to localStorage:', e);
@@ -96,7 +96,7 @@ export async function createCluster(params: {
         createdAt: new Date().toISOString(),
       };
 
-      saveClusterToMockStorage(cluster);
+      saveClusterToCache(cluster);
 
       return {
         clusterId,
@@ -121,9 +121,9 @@ export async function createCluster(params: {
  */
 export async function getCluster(clusterId: string): Promise<Cluster | null> {
   syncClustersFromLocalStorage();
-  const mockCluster = getClusterFromMockStorage(clusterId);
-  if (mockCluster) {
-    return mockCluster;
+  const cachedCluster = getClusterFromCache(clusterId);
+  if (cachedCluster) {
+    return cachedCluster;
   }
   return null;
 }
@@ -136,7 +136,7 @@ export async function getProviderClusters(
   client?: unknown
 ): Promise<Cluster[]> {
   syncClustersFromLocalStorage();
-  const results = Array.from(mockClusters.values());
+  const results = Array.from(clusterCache.values());
   const seenIds = new Set(results.map((c) => c.clusterId));
 
   if (address && typeof window !== 'undefined') {
@@ -169,7 +169,7 @@ export async function getProviderClusters(
                 createdAt: meta.createdAt || new Date().toISOString(),
               };
               results.push(cluster);
-              mockClusters.set(clusterId, cluster);
+              clusterCache.set(clusterId, cluster);
             }
           } catch {
             // Ignore non-cluster cells
@@ -209,7 +209,7 @@ export async function getProviderClusters(
                       createdAt: meta.createdAt || new Date().toISOString(),
                     };
                     results.push(cluster);
-                    mockClusters.set(clusterId, cluster);
+                    clusterCache.set(clusterId, cluster);
                   }
                 }
 
@@ -235,7 +235,7 @@ export async function getProviderClusters(
                       createdAt: certDna.issuanceDate || new Date().toISOString(),
                     };
                     results.push(cluster);
-                    mockClusters.set(cid, cluster);
+                          clusterCache.set(cid, cluster);
                   }
                 }
               } catch { }
@@ -259,17 +259,17 @@ export async function getProviderClusters(
   });
 }
 
-export function saveClusterToMockStorage(cluster: Cluster): void {
+export function saveClusterToCache(cluster: Cluster): void {
   syncClustersFromLocalStorage();
-  mockClusters.set(cluster.clusterId, cluster);
+  clusterCache.set(cluster.clusterId, cluster);
   syncClustersToLocalStorage();
 }
 
 /**
- * Clear all mock clusters (for testing)
+ * Clear all cluster cache (for testing)
  */
-export function clearMockClusters(): void {
-  mockClusters.clear();
+export function clearClusterCache(): void {
+  clusterCache.clear();
   if (typeof window !== 'undefined') {
     try {
       localStorage.removeItem(CLUSTER_STORAGE_KEY);
@@ -277,13 +277,13 @@ export function clearMockClusters(): void {
   }
 }
 
-function getClusterFromMockStorage(clusterId: string): Cluster | null {
+function getClusterFromCache(clusterId: string): Cluster | null {
   syncClustersFromLocalStorage();
-  return mockClusters.get(clusterId) || null;
+  return clusterCache.get(clusterId) || null;
 }
 
-export function getClustersFromMockStorage(): Cluster[] {
+export function getClustersFromCache(): Cluster[] {
   syncClustersFromLocalStorage();
-  return Array.from(mockClusters.values());
+  return Array.from(clusterCache.values());
 }
 
