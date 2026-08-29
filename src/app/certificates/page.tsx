@@ -12,6 +12,7 @@ import {
   getAllCertificates,
   getProviderClusters,
   revokeCertificate,
+  meltCertificate,
 } from '@/lib/credentials';
 import { ArrowLeft, Wallet, RefreshCw, Sparkles, Filter } from 'lucide-react';
 
@@ -29,6 +30,8 @@ export default function CertificatesPage() {
   const [selectedCert, setSelectedCert] = useState<CertificateWithMeta | null>(null);
   const [filterMode, setFilterMode] = useState<'all' | 'received' | 'issued'>('all');
   const [shareResult, setShareResult] = useState<{ message: string; success: boolean } | null>(null);
+  const [meltingCertId, setMeltingCertId] = useState<string | null>(null);
+  const [meltError, setMeltError] = useState<string | null>(null);
 
   const { data: rawCertificates = [], isLoading, refetch, error } = useQuery({
     queryKey: ['certificates', address],
@@ -155,6 +158,28 @@ export default function CertificatesPage() {
     });
   };
 
+  const handleMelt = async (cert: CertificateWithMeta) => {
+    if (!signer) {
+      setMeltError('Wallet not connected');
+      return;
+    }
+    try {
+      setMeltError(null);
+      setMeltingCertId(cert.certificateId);
+      await meltCertificate(signer, cert.certificateId);
+      await queryClient.invalidateQueries({ queryKey: ['certificates'] });
+      await refetch();
+      // Go back to list after melting
+      setSelectedCert(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to melt certificate';
+      setMeltError(message);
+      throw error; // Re-throw so modal can handle loading state
+    } finally {
+      setMeltingCertId(null);
+    }
+  };
+
   if (isLoadingAddress) {
     return (
       <div className="flex justify-center py-24">
@@ -217,6 +242,11 @@ export default function CertificatesPage() {
             {shareResult.message}
           </div>
         )}
+        {meltError && (
+          <div className="px-4 py-2 rounded-xl text-xs font-medium bg-red-950/40 border border-red-800/40 text-red-400">
+            {meltError}
+          </div>
+        )}
         <CertificateDetail
           certificate={selectedCert.certificate}
           certificateId={selectedCert.certificateId}
@@ -224,6 +254,8 @@ export default function CertificatesPage() {
           isIssuer={isIssuerOfSelected}
           onShare={() => handleShare(selectedCert)}
           onRevoke={(reason) => handleRevoke(selectedCert, reason)}
+          onMelt={() => handleMelt(selectedCert)}
+          melting={meltingCertId === selectedCert.certificateId}
         />
       </div>
     );

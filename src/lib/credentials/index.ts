@@ -18,6 +18,7 @@ export {
   getClusterCertificates,
   getAllCertificates,
   revokeCertificate,
+  meltCertificate,
   clearMockCertificates,
 } from './issuer';
 export { verifyCertificate, getVerificationHistory } from './verifier';

@@ -5,7 +5,7 @@ import type { CertificateDNA } from '@/types';
 import { formatDate, truncateAddress, copyToClipboard } from '@/utils';
 import { formatCertificateDisplay, isExpired, isRevoked } from '@/lib/credentials';
 import { getTransactionUrl } from '@/lib/ckb';
-import { Award, Calendar, User, Building, ExternalLink, Copy, Check, Sparkles, AlertTriangle, Ban } from 'lucide-react';
+import { Award, Calendar, User, Building, ExternalLink, Copy, Check, Sparkles, AlertTriangle, Ban, Flame } from 'lucide-react';
 import { useState } from 'react';
 import { useNetwork } from '@/hooks';
 
@@ -18,7 +18,9 @@ interface CertificateDetailProps {
   onOpenExplorer?: () => void;
   onShare?: () => void;
   onRevoke?: (reason: string) => Promise<void> | void;
+  onMelt?: () => Promise<void> | void;
   revoking?: boolean;
+  melting?: boolean;
 }
 
 export function CertificateDetail({
@@ -29,13 +31,17 @@ export function CertificateDetail({
   onOpenExplorer,
   onShare,
   onRevoke,
+  onMelt,
   revoking = false,
+  melting = false,
 }: CertificateDetailProps) {
   const { explorerUrl } = useNetwork();
   const [copied, setCopied] = useState(false);
   const [showRevokeModal, setShowRevokeModal] = useState(false);
   const [revokeReason, setRevokeReason] = useState('');
   const [isSubmittingRevoke, setIsSubmittingRevoke] = useState(false);
+  const [showMeltModal, setShowMeltModal] = useState(false);
+  const [meltReason, setMeltReason] = useState('');
   const display = formatCertificateDisplay(certificate);
   const expired = isExpired(certificate);
   const revoked = isRevoked(certificate);
@@ -215,6 +221,18 @@ export function CertificateDetail({
             Revoke Credential
           </Button>
         )}
+
+        {!revoked && onMelt && (
+          <Button
+            variant="secondary"
+            className="flex-1 min-w-[140px] text-xs gap-1.5 border border-orange-500/40 text-orange-400 hover:bg-orange-950/30"
+            onClick={() => setShowMeltModal(true)}
+            disabled={melting}
+          >
+            <Flame className="w-3.5 h-3.5" />
+            Melt & Reclaim CKB
+          </Button>
+        )}
       </div>
 
       {/* Revoke Confirmation Modal */}
@@ -268,6 +286,72 @@ export function CertificateDetail({
               }}
             >
               Confirm Revoke
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Melt Certificate Modal */}
+      <Modal
+        isOpen={showMeltModal}
+        onClose={() => setShowMeltModal(false)}
+        title="Melt Certificate & Reclaim CKB"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="p-3 bg-orange-950/40 border border-orange-700/40 rounded-xl flex items-start gap-3">
+            <Flame className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-orange-200 leading-relaxed">
+              This will <strong>permanently destroy</strong> the certificate DOB and return the locked CKB capacity to your wallet. This action cannot be undone.
+            </p>
+          </div>
+
+          <div className="p-3 bg-midnight-plum rounded-xl border border-fog-line/10 text-xs text-ash-veil space-y-2">
+            <div className="flex justify-between">
+              <span>Certificate ID</span>
+              <span className="font-mono text-bone-white">{truncateAddress(certificateId, 12, 6)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Type</span>
+              <span className="text-bone-white">Spore DOB Cell</span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-ash-veil">
+              Reason for Melting (Optional)
+            </label>
+            <Input
+              placeholder="e.g., No longer needed, recipient requested..."
+              value={meltReason}
+              onChange={(v) => setMeltReason(v)}
+            />
+          </div>
+
+          <div className="flex gap-3 pt-3 border-t border-fog-line/10">
+            <Button
+              variant="secondary"
+              onClick={() => setShowMeltModal(false)}
+              className="flex-1 text-xs"
+              disabled={melting}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 text-xs bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white shadow-lg"
+              loading={melting}
+              onClick={async () => {
+                if (!onMelt) return;
+                try {
+                  await onMelt();
+                  setShowMeltModal(false);
+                } catch {
+                  // Error handled by parent
+                }
+              }}
+            >
+              <Flame className="w-3.5 h-3.5" />
+              Melt & Reclaim
             </Button>
           </div>
         </div>
