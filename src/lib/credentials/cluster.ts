@@ -2,11 +2,6 @@ import { ccc, Address, ClientPublicTestnet } from '@ckb-ccc/core';
 import { createSporeCluster } from '@ckb-ccc/spore';
 import type { Cluster, ClusterConfig } from '@/types';
 
-// Environment flag to enable mock mode for testing
-// Default to mock for development, set to 'false' for production
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
-const isTestEnv = typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST));
-
 const CLUSTER_STORAGE_KEY = 'ckb_credential_clusters';
 
 // Mock storage for MVP
@@ -16,7 +11,6 @@ function syncClustersFromLocalStorage(): void {
   if (typeof window === 'undefined') return;
   try {
     const raw = localStorage.getItem(CLUSTER_STORAGE_KEY);
-    mockClusters.clear();
     if (raw) {
       const parsed: Cluster[] = JSON.parse(raw);
       for (const item of parsed) {
@@ -119,28 +113,7 @@ export async function createCluster(params: {
     }
   }
 
-  // Fallback for tests/mock environment
-  let creatorAddress = params.creatorAddress || 'mock_address';
-  const clusterId = generateClusterId(creatorAddress.length > 10 ? creatorAddress : '0x000000000000000000000000000000000000000000');
-  const transactionHash = '0x' + '0'.repeat(64);
-
-  const cluster: Cluster = {
-    id: clusterId,
-    clusterId,
-    name: config.name,
-    description: config.description,
-    websiteUrl: config.websiteUrl,
-    contactEmail: config.contactEmail,
-    creatorAddress,
-    createdAt: new Date().toISOString(),
-  };
-
-  saveClusterToMockStorage(cluster);
-
-  return {
-    clusterId,
-    transactionHash,
-  };
+  throw new Error('Live signer is required to create a cluster');
 }
 
 /**
@@ -152,12 +125,6 @@ export async function getCluster(clusterId: string): Promise<Cluster | null> {
   if (mockCluster) {
     return mockCluster;
   }
-
-  if (USE_MOCK) {
-    return null;
-  }
-
-  // Real Spore SDK implementation would go here
   return null;
 }
 
@@ -172,7 +139,7 @@ export async function getProviderClusters(
   const results = Array.from(mockClusters.values());
   const seenIds = new Set(results.map((c) => c.clusterId));
 
-  if (address && typeof window !== 'undefined' && !isTestEnv) {
+  if (address && typeof window !== 'undefined') {
     try {
       const ckbClient = (client as ccc.Client) || (ClientPublicTestnet ? new ClientPublicTestnet() : new ccc.ClientPublicTestnet());
       const AddressClass = Address || ccc?.Address;
@@ -285,25 +252,11 @@ export async function getProviderClusters(
 
   if (!address) return results;
   return results.filter((c) => {
-    if (!isTestEnv && c.creatorAddress === 'mock_address') return false;
     return (
       !c.creatorAddress ||
-      c.creatorAddress.toLowerCase() === address.toLowerCase() ||
-      (isTestEnv && c.creatorAddress === 'mock_address')
+      c.creatorAddress.toLowerCase() === address.toLowerCase()
     );
   });
-}
-
-/**
- * Generate a cluster ID from address
- */
-function generateClusterId(addressArgs: string): string {
-  // Use first 16 chars of address as base, pad with random
-  const base = addressArgs.slice(0, 16);
-  const random = Array.from({ length: 16 }, () =>
-    Math.floor(Math.random() * 16).toString(16)
-  ).join('');
-  return `0x${base}${random}`;
 }
 
 export function saveClusterToMockStorage(cluster: Cluster): void {

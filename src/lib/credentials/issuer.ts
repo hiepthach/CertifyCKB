@@ -3,11 +3,6 @@ import { createSpore, meltSpore, findSpore } from '@ckb-ccc/spore';
 import type { CertificateDNA, CredentialSubject, CredentialStatus } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
 
-// Environment flag to enable mock mode for testing
-// Default to mock for development, set to 'false' for production
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
-const isTestEnv = typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST));
-
 const CERT_STORAGE_KEY = 'ckb_credential_certificates';
 
 interface CertificateStorageItem {
@@ -23,7 +18,6 @@ function syncCertificatesFromLocalStorage(): void {
   if (typeof window === 'undefined') return;
   try {
     const raw = localStorage.getItem(CERT_STORAGE_KEY);
-    mockCertificates.clear();
     if (raw) {
       const parsed: [string, CertificateStorageItem][] = JSON.parse(raw);
       for (const [key, value] of parsed) {
@@ -198,18 +192,7 @@ export async function issueCertificate(
     }
   }
 
-  // Fallback for tests/mock environment
-  const txHash = '0x' + 'a'.repeat(64);
-
-  // Store in mock storage
-  syncCertificatesFromLocalStorage();
-  mockCertificates.set(certificateId, { certificate: dna, txHash });
-  syncCertificatesToLocalStorage();
-
-  return {
-    certificateId,
-    transactionHash: txHash,
-  };
+  throw new Error('Live signer is required to issue a certificate');
 }
 
 export function isCertificateJson(text: string): boolean {
@@ -257,7 +240,6 @@ export async function getCertificate(
   // 3. Query on-chain CKB Testnet transaction if given a 66-character hex hash
   if (
     typeof window !== 'undefined' &&
-    !isTestEnv &&
     certificateId.startsWith('0x') &&
     certificateId.length === 66
   ) {
@@ -310,14 +292,10 @@ export async function getHolderCertificates(
 
   // 1. Get from local cache
   for (const [certId, mock] of Array.from(mockCertificates.entries())) {
-    const isMockHash = mock.txHash.startsWith('0xaaaa') || mock.txHash === '0x' + '0'.repeat(64);
-    if (holderAddress && isMockHash && !isTestEnv) {
-      continue;
-    }
     const cert = mock.certificate;
     const certDnaId = cert?.id;
     const sporeId = mock.sporeId;
-    const txHash = isMockHash ? undefined : mock.txHash;
+    const txHash = mock.txHash;
 
     if (
       seenIds.has(certId) ||
@@ -344,7 +322,7 @@ export async function getHolderCertificates(
   }
 
   // 2. Query live CKB blockchain cells if holderAddress is available
-  if (holderAddress && typeof window !== 'undefined' && !isTestEnv) {
+  if (holderAddress && typeof window !== 'undefined') {
     try {
       const ckbClient = (client as ccc.Client) || (ClientPublicTestnet ? new ClientPublicTestnet() : new ccc.ClientPublicTestnet());
       const AddressClass = Address || ccc?.Address;
@@ -421,11 +399,10 @@ export async function getClusterCertificates(clusterId: string): Promise<GetCert
   const seenIds = new Set<string>();
 
   for (const [certId, mock] of Array.from(mockCertificates.entries())) {
-    const isMockHash = mock.txHash.startsWith('0xaaaa') || mock.txHash === '0x' + '0'.repeat(64);
     const cert = mock.certificate;
     const certDnaId = cert?.id;
     const sporeId = mock.sporeId;
-    const txHash = isMockHash ? undefined : mock.txHash;
+    const txHash = mock.txHash;
 
     if (
       seenIds.has(certId) ||
@@ -496,11 +473,6 @@ export async function getAllCertificates(
 
   // 1. Get all certificates from local storage (both issued by user and received by user)
   for (const [certId, mock] of Array.from(mockCertificates.entries())) {
-    const isMockHash = mock.txHash.startsWith('0xaaaa') || mock.txHash === '0x' + '0'.repeat(64);
-    if (address && isMockHash && !isTestEnv) {
-      continue;
-    }
-
     const cid = mock.certificate.issuer?.id || '';
     addCertificate({
       certificate: mock.certificate,
@@ -512,7 +484,7 @@ export async function getAllCertificates(
   }
 
   // 2. If address is provided, also scan on-chain cells for this address (as holder/recipient)
-  if (address && typeof window !== 'undefined' && !isTestEnv) {
+  if (address && typeof window !== 'undefined') {
     try {
       const holderCerts = await getHolderCertificates(address, client);
       for (const item of holderCerts) {
@@ -584,7 +556,7 @@ export async function getAllCertificates(
  * This is a soft revocation - the certificate cell remains on-chain
  * but is marked as revoked in its DNA.
  *
- * @param signer - The issuer's wallet signer (unused in mock mode)
+ * @param signer - The issuer's wallet signer
  * @param certificateId - The certificate ID to revoke
  * @param reason - The reason for revocation
  */

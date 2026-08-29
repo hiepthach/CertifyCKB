@@ -48,6 +48,8 @@ if (typeof globalThis.fetch === 'undefined') {
 }
 
 // Mock @ckb-ccc/spore
+let sporeCallCount = 0;
+
 vi.mock('@ckb-ccc/spore', () => ({
   createSporeCluster: vi.fn().mockResolvedValue({
     tx: {
@@ -56,12 +58,19 @@ vi.mock('@ckb-ccc/spore', () => ({
     },
     id: '0x' + '1'.repeat(64),
   }),
-  createSpore: vi.fn().mockResolvedValue({
-    tx: {
-      completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
-      completeFeeBy: vi.fn().mockResolvedValue(undefined),
-    },
-    id: '0x' + '2'.repeat(64),
+  createSpore: vi.fn().mockImplementation(() => {
+    sporeCallCount++;
+    const uniqueId = '0x' + Array.from({ length: 64 }, (_, i) => {
+      if (i < 62) return '2';
+      return (sporeCallCount % 16).toString(16);
+    }).join('');
+    return Promise.resolve({
+      tx: {
+        completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
+        completeFeeBy: vi.fn().mockResolvedValue(undefined),
+      },
+      id: uniqueId,
+    });
   }),
   meltSpore: vi.fn().mockResolvedValue({
     tx: {
@@ -92,11 +101,32 @@ vi.mock('@ckb-ccc/spore', () => ({
 // Mock @ckb-ccc/core
 vi.mock('@ckb-ccc/core', () => ({
   ccc: {
-    ClientPublicTestnet: vi.fn().mockImplementation(() => ({})),
-    ClientPublicMainnet: vi.fn().mockImplementation(() => ({})),
-    ClientPublicRpc: vi.fn().mockImplementation(() => ({})),
     bytesFrom: (val: any) => val,
     hexFrom: (val: any) => String(val),
+  },
+  ClientPublicTestnet: vi.fn().mockImplementation(() => ({
+    getTransaction: vi.fn().mockResolvedValue({ transaction: { outputsData: [] } }),
+    findCellsByLock: vi.fn().mockReturnValue({
+      [Symbol.asyncIterator]: () => ({
+        next: vi.fn().mockResolvedValue({ done: true, value: undefined }),
+      }),
+    }),
+    findTransactionsByLock: vi.fn().mockReturnValue({
+      [Symbol.asyncIterator]: () => ({
+        next: vi.fn().mockResolvedValue({ done: true, value: undefined }),
+      }),
+    }),
+  })),
+  ClientPublicMainnet: vi.fn().mockImplementation(() => ({})),
+  ClientPublicRpc: vi.fn().mockImplementation(() => ({})),
+  Address: {
+    fromString: vi.fn().mockResolvedValue({
+      script: {
+        args: '0x',
+        codeHash: '0x',
+        hashType: 'type',
+      },
+    }),
   },
 }));
 
