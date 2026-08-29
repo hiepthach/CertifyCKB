@@ -1,9 +1,7 @@
 import { ccc, Address, ClientPublicTestnet } from '@ckb-ccc/core';
-import { createSpore, meltSpore } from '@spore-sdk/core';
-import { helpers } from '@ckb-lumos/lumos';
+import { createSpore, meltSpore } from '@ckb-ccc/spore';
 import type { CertificateDNA, CredentialSubject, CredentialStatus } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
-import { getSporeConfig } from '@/lib/ckb/config';
 
 // Environment flag to enable mock mode for testing
 // Default to mock for development, set to 'false' for production
@@ -125,29 +123,45 @@ export async function issueCertificate(
       throw new Error('Recipient CKB address is required');
     }
 
+    let recipientLockScript: ccc.Script | null = null;
+
     try {
       const AddressClass = Address || ccc?.Address;
-      await AddressClass.fromString(recipientAddr, liveSigner.client);
+      if (AddressClass?.fromString) {
+        const addrObj = await AddressClass.fromString(recipientAddr, liveSigner.client);
+        recipientLockScript = addrObj.script;
+      }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
       throw new Error(`Invalid recipient CKB address "${recipientAddr}": ${errMsg}`);
     }
 
+    if (!recipientLockScript) {
+      throw new Error(`Failed to resolve lock script for recipient address "${recipientAddr}"`);
+    }
+
     try {
-      // Use Spore SDK to create the certificate DOB cell
-      const { txSkeleton } = await createSpore({
+      const hasValidCluster = Boolean(
+        clusterId &&
+        clusterId.startsWith('0x') &&
+        clusterId.length === 66
+      );
+
+      // Use CCC Spore SDK to create the certificate DOB cell
+      const { tx, id: sporeId } = await createSpore({
+        signer: liveSigner,
         data: {
           contentType: 'application/json',
           content: ccc.bytesFrom(new TextEncoder().encode(dnaJson)),
+          clusterId: hasValidCluster ? (clusterId as `0x${string}`) : undefined,
         },
-        toLock: helpers.addressToScript(recipientAddr),
-        fromInfos: [recipientAddr],
-        config: getSporeConfig(),
+        to: recipientLockScript,
+        clusterMode: hasValidCluster ? 'clusterCell' : undefined,
       });
 
-      // Sign and send the transaction via the live signer
-      const signedTx = await liveSigner.signTransaction(txSkeleton as any);
-      const txHash = await liveSigner.sendTransaction(signedTx);
+      await tx.completeInputsByCapacity(liveSigner);
+      await tx.completeFeeBy(liveSigner, 1000);
+      const txHash = await liveSigner.sendTransaction(tx);
 
       // Save to local storage for quick retrieval & caching
       syncCertificatesFromLocalStorage();
@@ -163,6 +177,11 @@ export async function issueCertificate(
       if (msg.includes('capacity') || msg.includes('balance') || msg.includes('Inputs') || msg.includes('LiveCells')) {
         throw new Error(
           `Insufficient CKB capacity in wallet. You need at least ~150 CKB to mint an on-chain DOB credential cell. Please claim free testnet CKB from https://faucet.nervos.org.`
+        );
+      }
+      if (msg.includes('Cluster') && (msg.includes('not found') || msg.includes('notFound'))) {
+        throw new Error(
+          `Cluster with ID "${clusterId}" was not found on-chain. Please ensure the Cluster creation transaction has confirmed on the CKB network.`
         );
       }
       throw err;
@@ -568,16 +587,15 @@ export async function meltCertificate(
     throw new Error('Only the certificate holder can melt this certificate');
   }
 
-  // Use Spore SDK to build the melt transaction
-  const { txSkeleton } = await meltSpore({
-    outPoint: { txHash, index: '0x0' },
-    changeAddress: holderAddress,
-    config: getSporeConfig(),
+  // Use CCC Spore SDK to build the melt transaction
+  const { tx } = await meltSpore({
+    signer: liveSigner,
+    id: txHash,
   });
 
-  // Sign and send the transaction via the live signer
-  const signedTx = await liveSigner.signTransaction(txSkeleton as any);
-  const meltTxHash = await liveSigner.sendTransaction(signedTx);
+  await tx.completeInputsByCapacity(liveSigner);
+  await tx.completeFeeBy(liveSigner, 1000);
+  const meltTxHash = await liveSigner.sendTransaction(tx);
 
   // Remove from local storage
   syncCertificatesFromLocalStorage();

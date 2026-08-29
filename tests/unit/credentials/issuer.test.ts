@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { meltSpore } from '@spore-sdk/core';
+import { meltSpore } from '@ckb-ccc/spore';
 import {
   issueCertificate,
   getCertificate,
@@ -490,11 +490,13 @@ describe('Certificate Service (Issuer)', () => {
         }),
       };
 
-      // Mock meltSpore to return a valid txSkeleton
-      const mockTxSkeleton = {};
+      // Mock meltSpore to return a valid tx
+      const mockTx = {
+        completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
+        completeFeeBy: vi.fn().mockResolvedValue(undefined),
+      };
       vi.mocked(meltSpore).mockResolvedValue({
-        txSkeleton: mockTxSkeleton as any,
-        inputIndex: 0,
+        tx: mockTx as any,
       });
 
       const { meltCertificate } = await import('../../../src/lib/credentials/issuer');
@@ -503,11 +505,11 @@ describe('Certificate Service (Issuer)', () => {
       expect(result.transactionHash).toBeDefined();
       expect(result.transactionHash).toMatch(/^0x[a-f0-9]+$/);
 
-      // Verify meltSpore was called with the correct outPoint
+      // Verify meltSpore was called with the correct id
       expect(vi.mocked(meltSpore)).toHaveBeenCalledWith(
         expect.objectContaining({
-          outPoint: { txHash: issued.transactionHash, index: '0x0' },
-          changeAddress: validRecipientAddress,
+          signer: mockHolderSigner,
+          id: issued.transactionHash,
         })
       );
 

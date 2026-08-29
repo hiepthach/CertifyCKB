@@ -1,4 +1,3 @@
-import { predefinedSporeConfigs, type SporeConfig } from '@spore-sdk/core';
 import type { Network, NetworkConfig } from '@/types';
 
 // Network configurations
@@ -14,12 +13,6 @@ export const NETWORK_CONFIGS: Record<Network, NetworkConfig> = {
     explorerUrl: 'https://explorer.nervos.org',
   },
 };
-
-// Get Spore configuration for current network
-export function getSporeConfig(): SporeConfig {
-  const network = getNetwork();
-  return network === 'mainnet' ? predefinedSporeConfigs.Mainnet : predefinedSporeConfigs.Testnet;
-}
 
 // Get current network from environment
 export function getNetwork(): Network {

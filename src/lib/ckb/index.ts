@@ -2,13 +2,17 @@
 export * from './config';
 export * from './client';
 
-// Spore SDK integration - use getClusterByType, getClusterById, etc.
+// CCC Spore SDK integration
 export {
-  createCluster,
+  createSporeCluster,
   createSpore,
   meltSpore,
-  getClusterByType,
-  getClusterById,
-  getClusterProxyByType,
-  getSporeConfig,
-} from '@spore-sdk/core';
+  transferSpore,
+  transferSporeCluster,
+  findSpore,
+  findCluster,
+  findSpores,
+  findSporeClusters,
+  findSporesBySigner,
+  findSporeClustersBySigner,
+} from '@ckb-ccc/spore';

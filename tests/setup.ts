@@ -47,27 +47,46 @@ if (typeof globalThis.fetch === 'undefined') {
   };
 }
 
-// Mock @spore-sdk/core
-vi.mock('@spore-sdk/core', () => ({
-  createCluster: vi.fn().mockResolvedValue({
-    txHash: '0x' + '0'.repeat(64),
-    clusterId: '0x' + '1'.repeat(64),
+// Mock @ckb-ccc/spore
+vi.mock('@ckb-ccc/spore', () => ({
+  createSporeCluster: vi.fn().mockResolvedValue({
+    tx: {
+      completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
+      completeFeeBy: vi.fn().mockResolvedValue(undefined),
+    },
+    id: '0x' + '1'.repeat(64),
   }),
-  getCluster: vi.fn(),
-  createSporeCell: vi.fn().mockResolvedValue({
-    txHash: '0x' + '0'.repeat(64),
-  }),
-  getSporeCell: vi.fn(),
-  setSporeConfig: vi.fn(),
-  meltSpore: vi.fn(),
   createSpore: vi.fn().mockResolvedValue({
-    txSkeleton: {},
-    outputIndex: 0,
+    tx: {
+      completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
+      completeFeeBy: vi.fn().mockResolvedValue(undefined),
+    },
+    id: '0x' + '2'.repeat(64),
   }),
-  predefinedSporeConfigs: {
-    Testnet: {},
-    Mainnet: {},
-  },
+  meltSpore: vi.fn().mockResolvedValue({
+    tx: {
+      completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
+      completeFeeBy: vi.fn().mockResolvedValue(undefined),
+    },
+  }),
+  transferSpore: vi.fn().mockResolvedValue({
+    tx: {
+      completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
+      completeFeeBy: vi.fn().mockResolvedValue(undefined),
+    },
+  }),
+  transferSporeCluster: vi.fn().mockResolvedValue({
+    tx: {
+      completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
+      completeFeeBy: vi.fn().mockResolvedValue(undefined),
+    },
+  }),
+  findCluster: vi.fn(),
+  findSpore: vi.fn(),
+  findSpores: vi.fn(),
+  findSporeClusters: vi.fn(),
+  findSporesBySigner: vi.fn(),
+  findSporeClustersBySigner: vi.fn(),
 }));
 
 // Mock @ckb-ccc/core
@@ -76,5 +95,8 @@ vi.mock('@ckb-ccc/core', () => ({
     ClientPublicTestnet: vi.fn().mockImplementation(() => ({})),
     ClientPublicMainnet: vi.fn().mockImplementation(() => ({})),
     ClientPublicRpc: vi.fn().mockImplementation(() => ({})),
+    bytesFrom: (val: any) => val,
+    hexFrom: (val: any) => String(val),
   },
 }));
+

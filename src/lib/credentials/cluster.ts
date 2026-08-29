@@ -1,7 +1,5 @@
 import { ccc, Address, ClientPublicTestnet } from '@ckb-ccc/core';
-import { createCluster as sporeCreateCluster } from '@spore-sdk/core';
-import { helpers } from '@ckb-lumos/lumos';
-import { getSporeConfig } from '@/lib/ckb/config';
+import { createSporeCluster } from '@ckb-ccc/spore';
 import type { Cluster, ClusterConfig } from '@/types';
 
 // Environment flag to enable mock mode for testing
@@ -79,17 +77,19 @@ export async function createCluster(params: {
     };
 
     try {
-      // Use Spore SDK to create the cluster cell
-      const { txSkeleton } = await sporeCreateCluster({
-        data: clusterMetadata,
-        toLock: helpers.addressToScript(creatorAddress),
-        fromInfos: [creatorAddress],
-        config: getSporeConfig(),
+      // Use CCC Spore SDK to create the cluster cell
+      const { tx, id: clusterId } = await createSporeCluster({
+        signer: liveSigner,
+        data: {
+          name: config.name,
+          description: JSON.stringify(clusterMetadata),
+        },
+        to: addrObj.script,
       });
 
-      const signedTx = await liveSigner.signTransaction(txSkeleton as any);
-      const txHash = await liveSigner.sendTransaction(signedTx);
-      const clusterId = txHash;
+      await tx.completeInputsByCapacity(liveSigner);
+      await tx.completeFeeBy(liveSigner, 1000);
+      const txHash = await liveSigner.sendTransaction(tx);
 
       const cluster: Cluster = {
         id: clusterId,
@@ -224,7 +224,7 @@ export async function getProviderClusters(
               if (!hex || hex === '0x' || hex.length < 10) continue;
               try {
                 const text = new TextDecoder().decode(ccc.bytesFrom(hex));
-                
+
                 // If it's a Cluster Cell created by this sender
                 if (text.includes('SporeCluster')) {
                   const meta = JSON.parse(text);
@@ -266,9 +266,9 @@ export async function getProviderClusters(
                     mockClusters.set(cid, cluster);
                   }
                 }
-              } catch {}
+              } catch { }
             }
-          } catch {}
+          } catch { }
         }
 
         syncClustersToLocalStorage();
@@ -315,7 +315,7 @@ export function clearMockClusters(): void {
   if (typeof window !== 'undefined') {
     try {
       localStorage.removeItem(CLUSTER_STORAGE_KEY);
-    } catch {}
+    } catch { }
   }
 }
 
