@@ -44,9 +44,9 @@
 
 - [ ] Install dependencies
   ```bash
-  npm install @ckb-ccc/connector-react @ckb-ccc/core @ckb-ccc/spore @spore-sdk/core
+  npm install @ckb-ccc/connector-react @ckb-ccc/core @ckb-ccc/spore
   ```
-  - Reference: [CCC SDK](https://docs.ckbccc.com), [Spore SDK](https://docs.spore.pro/)
+  - Reference: [CCC SDK](https://docs.ckbccc.com), [CCC Spore](https://github.com/ckb-ecofund/ccc)
 
 - [ ] Configure Tailwind CSS and project folder structure
 

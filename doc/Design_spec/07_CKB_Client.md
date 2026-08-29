@@ -5,15 +5,15 @@
 | Item | Details |
 |------|---------|
 | **Module** | CKB Client Configuration |
-| **Files** | `src/lib/ckb/config.ts`, `src/lib/ckb/client.ts` |
-| **Purpose** | Configure CCC SDK and Spore SDK for different networks |
-| **Dependencies** | `@ckb-ccc/core`, `@spore-sdk/core` |
+| **Files** | `src/lib/ckb/config.ts`, `src/lib/ckb/client.ts`, `src/lib/ckb/index.ts` |
+| **Purpose** | Configure CCC SDK and @ckb-ccc/spore for different networks |
+| **Dependencies** | `@ckb-ccc/core`, `@ckb-ccc/spore` |
 
 ---
 
 ## 2. Purpose
 
-The CKB Client Configuration module provides centralized setup for connecting to CKB networks (testnet, mainnet) and configures the Spore SDK with the correct script addresses.
+The CKB Client Configuration module provides centralized setup for connecting to CKB networks (testnet, mainnet) and exports the `@ckb-ccc/spore` utilities for creating and managing Spore and Cluster cells.
 
 ---
 
@@ -22,15 +22,34 @@ The CKB Client Configuration module provides centralized setup for connecting to
 ### 3.1 Files
 
 ```typescript
-// config.ts - Network and script configurations
-export const lumosConfig: LumosConfig;
-export const sporeConfig: SporeConfig;
-export function getSporeConfig(): SporeConfig;
+// config.ts - Network and explorer configurations
 export function getNetwork(): Network;
+export function getNetworkConfig(): NetworkConfig;
+export function getExplorerUrl(): string;
+export function getTransactionUrl(txHash: string): string;
+export function getCellUrl(typeHash: string): string;
+export function getAddressUrl(address: string): string;
 
 // client.ts - Client creation
 export function createClient(): ccc.Client;
 export function getDefaultClient(): ccc.Client;
+
+// index.ts - Re-export all CKB and Spore utilities
+export * from './config';
+export * from './client';
+export {
+  createSporeCluster,
+  createSpore,
+  meltSpore,
+  transferSpore,
+  transferSporeCluster,
+  findSpore,
+  findCluster,
+  findSpores,
+  findSporeClusters,
+  findSporesBySigner,
+  findSporeClustersBySigner,
+} from '@ckb-ccc/spore';
 ```
 
 ### 3.2 Types
@@ -43,14 +62,6 @@ interface NetworkConfig {
   ckbIndexerUrl: string;
   explorerUrl: string;
 }
-
-interface ScriptConfig {
-  CODE_HASH: string;
-  HASH_TYPE: 'type' | 'data' | 'data1' | 'data2';
-  TX_HASH: string;
-  INDEX: string;
-  DEP_TYPE: 'code' | 'depGroup';
-}
 ```
 
 ---
@@ -61,47 +72,39 @@ interface ScriptConfig {
 
 | Network | Node URL | Indexer URL | Explorer |
 |---------|----------|------------|----------|
-| **Testnet** | https://testnet.ckb.dev | https://testnet.ckb.dev | https://explorer.nervos.org/aggron2 |
+| **Testnet** | https://testnet.ckb.dev | https://testnet.ckb.dev | https://testnet.explorer.nervos.org |
 | **Mainnet** | https://mainnet.ckb.com | https://mainnet.ckb.com | https://explorer.nervos.org |
 
 ---
 
-## 5. Spore Configuration
+## 5. Spore & CCC Integration
 
-### 5.1 Config Selection
-
-Both testnet and mainnet use predefined configurations from the Spore SDK.
+`@ckb-ccc/spore` natively integrates with `@ckb-ccc/core` clients and signers without requiring Lumos RPC or external fetch polyfills.
 
 ```typescript
-export function getSporeConfig(): SporeConfig {
-  // Both testnet and mainnet use predefined config from Spore SDK
-  return undefined as unknown as SporeConfig;
-}
-
 export function getNetwork(): Network {
   return (process.env.NEXT_PUBLIC_NETWORK || 'testnet') as Network;
 }
 
-export function getExplorerUrl(): string {
+export function getNetworkConfig(): NetworkConfig {
   const network = getNetwork();
-  return EXPLORER_URLS[network];
+  return NETWORK_CONFIGS[network];
+}
+
+export function getExplorerUrl(): string {
+  return getNetworkConfig().explorerUrl;
 }
 ```
 
 ---
 
-## 6. Network Selection
+## 6. Client Creation
 
-Network selection is done via the UI network selector, which stores the user's preference in localStorage. The default network is testnet.
-
----
-
-## 7. Client Creation
-
-### 7.1 Client Factory
+### 6.1 Client Factory
 
 ```typescript
 import { ccc } from '@ckb-ccc/core';
+import { getNetwork } from './config';
 
 let clientInstance: ccc.Client | null = null;
 
@@ -124,104 +127,9 @@ export function getDefaultClient(): ccc.Client {
 }
 ```
 
-### 7.2 Initialization
-
-```typescript
-// src/lib/ckb/index.ts
-
-import { setSporeConfig } from '@spore-sdk/core';
-import { getSporeConfig } from './config';
-
-// Initialize Spore config
-setSporeConfig(getSporeConfig());
-
-export { getSporeConfig, getNetwork, getExplorerUrl } from './config';
-export { createClient, getDefaultClient } from './client';
-```
-
 ---
 
-## 8. Usage Examples
-
-### 8.1 Component Usage
-
-```typescript
-import { useCcc } from '@ckb-ccc/connector-react';
-import { getExplorerUrl } from '@/lib/ckb';
-
-function CertificateCard({ certificate }) {
-  const explorerUrl = getExplorerUrl();
-
-  return (
-    <div>
-      <a
-        href={`${explorerUrl}/transaction/${certificate.txHash}`}
-        target="_blank"
-      >
-        View on Explorer
-      </a>
-    </div>
-  );
-}
-```
-
-### 8.2 Service Usage
-
-```typescript
-import { getDefaultClient } from '@/lib/ckb';
-
-async function getCertificate(certificateId: string) {
-  const client = getDefaultClient();
-  const cells = await client.findCellsByType({
-    script: {
-      codeHash: SPORE_CODE_HASH,
-      hashType: 'data2',
-      args: certificateId,
-    },
-  });
-  return cells[0];
-}
-```
-
----
-
-## 9. Network Constants
-
-```typescript
-export const EXPLORER_URLS: Record<Network, string> = {
-  testnet: 'https://explorer.nervos.org/aggron2',
-  mainnet: 'https://explorer.nervos.org',
-};
-
-export const NETWORK_DISPLAY_NAMES: Record<Network, string> = {
-  testnet: 'Testnet (Aggron)',
-  mainnet: 'Mainnet',
-};
-```
-
----
-
-## 10. Testing
-
-### 10.1 Configuration Tests
-
-| Test Case | Expected Result |
-|-----------|-----------------|
-| getNetwork returns correct network | Matches env variable or localStorage |
-| getSporeConfig returns correct config | Matches network |
-| createClient creates correct client type | Correct class for network |
-
-### 10.2 Connection Tests
-
-| Test Case | Expected Result |
-|-----------|-----------------|
-| Testnet connection | Connects to testnet.ckb.dev |
-| Mainnet connection | Connects to mainnet.ckb.com |
-| Client query works | Returns cells |
-
----
-
-## 11. Related Documents
+## 7. Related Documents
 
 | Document | Path |
 |----------|------|
@@ -231,15 +139,15 @@ export const NETWORK_DISPLAY_NAMES: Record<Network, string> = {
 
 ---
 
-## 12. References
+## 8. References
 
 | Resource | Link |
 |----------|------|
 | CCC SDK | https://docs.ckbccc.com |
-| Spore SDK | https://docs.spore.pro/ |
+| CCC Spore SDK | https://github.com/ckb-ecofund/ccc |
 | OffCKB | https://github.com/nervosnetwork/offckb |
 
 ---
 
-*Version: 1.0*
-*Last Updated: 2026-08-11*
+*Version: 2.0*
+*Last Updated: 2026-08-29*

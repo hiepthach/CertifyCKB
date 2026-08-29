@@ -1,5 +1,5 @@
 import { ccc, Address, ClientPublicTestnet } from '@ckb-ccc/core';
-import { createSpore, meltSpore } from '@ckb-ccc/spore';
+import { createSpore, meltSpore, findSpore } from '@ckb-ccc/spore';
 import type { CertificateDNA, CredentialSubject, CredentialStatus } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
 
@@ -166,10 +166,13 @@ export async function issueCertificate(
       // Save to local storage for quick retrieval & caching
       syncCertificatesFromLocalStorage();
       mockCertificates.set(certificateId, { certificate: dna, txHash });
+      if (sporeId && sporeId !== certificateId) {
+        mockCertificates.set(sporeId, { certificate: dna, txHash });
+      }
       syncCertificatesToLocalStorage();
 
       return {
-        certificateId,
+        certificateId: sporeId || certificateId,
         transactionHash: txHash,
       };
     } catch (err: any) {
@@ -200,6 +203,15 @@ export async function issueCertificate(
     certificateId,
     transactionHash: txHash,
   };
+}
+
+export function isCertificateJson(text: string): boolean {
+  return (
+    text.includes('@context') &&
+    (text.includes('VerifiableCredential') ||
+     text.includes('credentialSubject') ||
+     text.includes('CourseCertificate'))
+  );
 }
 
 /**
@@ -251,7 +263,7 @@ export async function getCertificate(
           if (!hex || hex === '0x' || hex.length < 10) continue;
           try {
             const text = new TextDecoder().decode(ccc.bytesFrom(hex));
-            if (text.includes('@context') && text.includes('CourseCertificate')) {
+            if (isCertificateJson(text)) {
               const certDna = JSON.parse(text) as CertificateDNA;
               const certId = certDna.id || certificateId;
               mockCertificates.set(certId, { certificate: certDna, txHash: certificateId });
@@ -321,14 +333,16 @@ export async function getHolderCertificates(
 
             // Decode hex outputData to UTF-8 string
             const text = new TextDecoder().decode(ccc.bytesFrom(cell.outputData));
-            if (!text.includes('@context') || !text.includes('CourseCertificate')) continue;
+            if (!isCertificateJson(text)) continue;
 
             const certDna = JSON.parse(text) as CertificateDNA;
-            const certId = certDna.id || cell.outPoint.txHash;
+            const sporeId = cell.cellOutput.type?.args ? ccc.hexFrom(cell.cellOutput.type.args) : undefined;
+            const certId = sporeId || certDna.id || cell.outPoint.txHash;
 
             if (!seenIds.has(certId) && !seenIds.has(cell.outPoint.txHash)) {
               seenIds.add(certId);
               seenIds.add(cell.outPoint.txHash);
+              if (sporeId) seenIds.add(sporeId);
 
               const item: GetCertificateResult = {
                 certificate: certDna,
@@ -344,6 +358,12 @@ export async function getHolderCertificates(
                 certificate: certDna,
                 txHash: cell.outPoint.txHash,
               });
+              if (sporeId && sporeId !== certId) {
+                mockCertificates.set(sporeId, {
+                  certificate: certDna,
+                  txHash: cell.outPoint.txHash,
+                });
+              }
             }
           } catch {
             // Ignore cells that are not valid JSON certificates
@@ -439,7 +459,7 @@ export async function getAllCertificates(
               if (!hex || hex === '0x' || hex.length < 10) continue;
               try {
                 const text = new TextDecoder().decode(ccc.bytesFrom(hex));
-                if (text.includes('@context') && text.includes('CourseCertificate')) {
+                if (isCertificateJson(text)) {
                   const certDna = JSON.parse(text) as CertificateDNA;
                   const certId = certDna.id || txRecord.txHash;
 
@@ -529,7 +549,7 @@ export async function revokeCertificate(
  * Only the certificate holder can melt their own certificate.
  *
  * @param signer - The holder's wallet signer (must be a live signer)
- * @param certificateId - The certificate ID to melt
+ * @param certificateId - The certificate ID or Spore ID to melt
  */
 export async function meltCertificate(
   signer: unknown,
@@ -540,67 +560,85 @@ export async function meltCertificate(
     !signer ||
     typeof signer !== 'object' ||
     !('client' in signer) ||
-    typeof (signer as any).sendTransaction !== 'function'
+    typeof (signer as any).sendTransaction !== 'function' ||
+    typeof (signer as any).getRecommendedAddressObj !== 'function'
   ) {
     throw new Error('Live signer is required to melt a certificate');
   }
 
   const liveSigner = signer as ccc.Signer;
 
-  // Look up the certificate to get the transaction hash
-  const certRecord = await getCertificate(certificateId);
+  // Look up the certificate record
+  const certRecord = await getCertificate(certificateId, liveSigner.client);
   if (!certRecord) {
     throw new Error('Certificate not found');
   }
 
-  const txHash = certRecord.transactionHash;
-  if (!txHash) {
-    throw new Error('Certificate has no on-chain transaction hash');
-  }
-
-  // Get holder's address and lock script
+  const txHash = certRecord.transactionHash || certificateId;
   const addrObj = await liveSigner.getRecommendedAddressObj();
-  const holderAddress = addrObj.toString();
   const holderLock = addrObj.script;
 
   // Verify the holder owns this certificate cell
-  const ckbClient = liveSigner.client;
-  let holderOwnsCell = false;
+  let cellLock: ccc.Script | undefined = undefined;
 
   try {
-    const cell = await ckbClient.getCell({ txHash, index: '0x0' });
-    const cellOutput = (cell as unknown as { output?: { lock: ccc.Script } }).output;
-    if (cellOutput?.lock) {
-      // Compare lock scripts: match if both codeHash+hashType+args are equal
-      const cellLock = cellOutput.lock;
-      holderOwnsCell =
-        cellLock.codeHash === holderLock.codeHash &&
-        cellLock.hashType === holderLock.hashType &&
-        cellLock.args === holderLock.args;
+    const found = await findSpore(liveSigner.client, (certificateId.startsWith('0x') && certificateId.length === 66 ? certificateId : txHash) as `0x${string}`);
+    if (found?.cell) {
+      cellLock = found.cell.cellOutput.lock;
     }
-  } catch {
-    // Cell not found on-chain
-    throw new Error('Certificate cell not found on-chain');
+  } catch {}
+
+  if (!cellLock && liveSigner.client && typeof (liveSigner.client as any).getCell === 'function') {
+    try {
+      const cell = await (liveSigner.client as any).getCell({ txHash, index: '0x0' });
+      const cellOutput = (cell as any)?.cellOutput || (cell as any)?.output;
+      if (cellOutput?.lock) {
+        cellLock = cellOutput.lock;
+      }
+    } catch {}
   }
 
-  if (!holderOwnsCell) {
-    throw new Error('Only the certificate holder can melt this certificate');
+  if (cellLock) {
+    const isOwner =
+      cellLock.codeHash === holderLock.codeHash &&
+      cellLock.hashType === holderLock.hashType &&
+      cellLock.args === holderLock.args;
+
+    if (!isOwner) {
+      throw new Error('Only the certificate holder can melt this certificate');
+    }
   }
 
-  // Use CCC Spore SDK to build the melt transaction
-  const { tx } = await meltSpore({
-    signer: liveSigner,
-    id: txHash,
-  });
+  try {
+    // Use CCC Spore to build the melt transaction
+    const { tx } = await meltSpore({
+      signer: liveSigner,
+      id: txHash as `0x${string}`,
+    });
 
-  await tx.completeInputsByCapacity(liveSigner);
-  await tx.completeFeeBy(liveSigner, 1000);
-  const meltTxHash = await liveSigner.sendTransaction(tx);
+    if (tx && typeof tx.completeInputsByCapacity === 'function') {
+      await tx.completeInputsByCapacity(liveSigner);
+    }
+    if (tx && typeof tx.completeFeeBy === 'function') {
+      await tx.completeFeeBy(liveSigner, 1000);
+    }
+    const meltTxHash = await liveSigner.sendTransaction(tx);
 
-  // Remove from local storage
-  syncCertificatesFromLocalStorage();
-  mockCertificates.delete(certificateId);
-  syncCertificatesToLocalStorage();
+    // Remove from local storage
+    syncCertificatesFromLocalStorage();
+    mockCertificates.delete(certificateId);
+    if (certRecord?.certificate?.id) mockCertificates.delete(certRecord.certificate.id);
+    syncCertificatesToLocalStorage();
 
-  return { transactionHash: meltTxHash };
+    return { transactionHash: meltTxHash };
+  } catch (err: any) {
+    const msg = err?.message || String(err);
+    if (msg.includes('Spore') && msg.includes('not found')) {
+      throw new Error(
+        `The Spore cell could not be found on CKB. It may have already been melted or transferred.`
+      );
+    }
+    throw err;
+  }
 }
+

@@ -247,7 +247,12 @@ export async function getProviderClusters(
                 }
 
                 // If it's a Certificate Cell issued by this sender
-                if (text.includes('@context') && text.includes('CourseCertificate')) {
+                if (
+                  text.includes('@context') &&
+                  (text.includes('VerifiableCredential') ||
+                   text.includes('credentialSubject') ||
+                   text.includes('CourseCertificate'))
+                ) {
                   const certDna = JSON.parse(text);
                   const cid = certDna.issuer?.id;
                   if (cid && !seenIds.has(cid)) {

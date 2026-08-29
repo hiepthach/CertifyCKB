@@ -7,7 +7,7 @@
 | **Module** | Cluster Service |
 | **File** | `src/lib/ckb/cluster.ts` |
 | **Purpose** | Manage Course Provider registration via Spore Clusters |
-| **Dependencies** | `@spore-sdk/core`, `@ckb-ccc/core` |
+| **Dependencies** | `@ckb-ccc/spore`, `@ckb-ccc/core` |
 
 ---
 
@@ -206,20 +206,23 @@ Cluster ID = Type script args của Cluster Cell
 - Format: 32-byte hex string
 - Derived from transaction during creation
 
-### 6.3 Spore SDK Reference
+### 6.3 CCC Spore SDK Reference
 
 ```typescript
-import { createCluster } from '@spore-sdk/core';
+import { createSporeCluster } from '@ckb-ccc/spore';
 
-const { txSkeleton, outputIndex } = await createCluster({
+const { tx, id: clusterId } = await createSporeCluster({
+  signer: liveSigner,
   data: {
     name: config.name,
     description: JSON.stringify(descriptionObj),
   },
-  toLock: ownerLockScript,
-  fromInfos: [providerAddress],
-  config: sporeConfig,
+  to: ownerLockScript,
 });
+
+await tx.completeInputsByCapacity(liveSigner);
+await tx.completeFeeBy(liveSigner, 1000);
+const txHash = await liveSigner.sendTransaction(tx);
 ```
 
 ---

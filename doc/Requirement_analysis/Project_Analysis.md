@@ -566,4 +566,4 @@ interface CertificateDNA {
 | Spore Protocol | https://docs.spore.pro/ |
 | DOB/0 Protocol | https://docs.spore.pro/dob/dob0-protocol |
 | CCC SDK | https://docs.ckbccc.com |
-| Spore SDK | https://github.com/sporeprotocol/spore-sdk |
+| CCC Spore SDK | https://github.com/ckb-ecofund/ccc |

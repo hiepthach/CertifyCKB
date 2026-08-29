@@ -7,7 +7,7 @@
 | **Module** | Certificate Service |
 | **File** | `src/lib/credentials/issuer.ts` |
 | **Purpose** | Issue and manage course completion certificates |
-| **Dependencies** | `@spore-sdk/core`, `@ckb-ccc/core`, Encoder/Decoder |
+| **Dependencies** | `@ckb-ccc/spore`, `@ckb-ccc/core`, Encoder/Decoder |
 
 ---
 
@@ -282,20 +282,24 @@ flowchart TD
 ### 6.1 Spore DOB Creation
 
 ```typescript
-import { createSpore } from '@spore-sdk/core';
+import { createSpore } from '@ckb-ccc/spore';
 
-const dnaBytes = encodeCertificateDNA(certificateData);
+const dnaJson = serializeDNA(certificateData);
 
-const { txSkeleton, outputIndex } = await createSpore({
+const { tx, id: sporeId } = await createSpore({
+  signer: liveSigner,
   data: {
     contentType: 'application/json',
-    content: dnaBytes,
+    content: ccc.bytesFrom(new TextEncoder().encode(dnaJson)),
     clusterId: params.clusterId,
   },
-  toLock: recipientLockScript,
-  fromInfos: [providerAddress],
-  config: sporeConfig,
+  to: recipientLockScript,
+  clusterMode: params.clusterId ? 'clusterCell' : undefined,
 });
+
+await tx.completeInputsByCapacity(liveSigner);
+await tx.completeFeeBy(liveSigner, 1000);
+const txHash = await liveSigner.sendTransaction(tx);
 ```
 
 ### 6.2 Certificate ID

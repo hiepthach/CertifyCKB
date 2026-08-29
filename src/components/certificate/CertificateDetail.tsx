@@ -42,6 +42,7 @@ export function CertificateDetail({
   const [isSubmittingRevoke, setIsSubmittingRevoke] = useState(false);
   const [showMeltModal, setShowMeltModal] = useState(false);
   const [meltReason, setMeltReason] = useState('');
+  const [meltModalError, setMeltModalError] = useState<string | null>(null);
   const display = formatCertificateDisplay(certificate);
   const expired = isExpired(certificate);
   const revoked = isRevoked(certificate);
@@ -226,7 +227,10 @@ export function CertificateDetail({
           <Button
             variant="secondary"
             className="flex-1 min-w-[140px] text-xs gap-1.5 border border-orange-500/40 text-orange-400 hover:bg-orange-950/30"
-            onClick={() => setShowMeltModal(true)}
+            onClick={() => {
+              setMeltModalError(null);
+              setShowMeltModal(true);
+            }}
             disabled={melting}
           >
             <Flame className="w-3.5 h-3.5" />
@@ -294,7 +298,10 @@ export function CertificateDetail({
       {/* Melt Certificate Modal */}
       <Modal
         isOpen={showMeltModal}
-        onClose={() => setShowMeltModal(false)}
+        onClose={() => {
+          setShowMeltModal(false);
+          setMeltModalError(null);
+        }}
         title="Melt Certificate & Reclaim CKB"
         size="md"
       >
@@ -305,6 +312,13 @@ export function CertificateDetail({
               This will <strong>permanently destroy</strong> the certificate DOB and return the locked CKB capacity to your wallet. This action cannot be undone.
             </p>
           </div>
+
+          {meltModalError && (
+            <div className="p-3 bg-red-950/60 border border-red-800/60 rounded-xl flex items-start gap-2.5 text-xs text-red-300">
+              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <span className="leading-relaxed">{meltModalError}</span>
+            </div>
+          )}
 
           <div className="p-3 bg-midnight-plum rounded-xl border border-fog-line/10 text-xs text-ash-veil space-y-2">
             <div className="flex justify-between">
@@ -331,7 +345,10 @@ export function CertificateDetail({
           <div className="flex gap-3 pt-3 border-t border-fog-line/10">
             <Button
               variant="secondary"
-              onClick={() => setShowMeltModal(false)}
+              onClick={() => {
+                setShowMeltModal(false);
+                setMeltModalError(null);
+              }}
               className="flex-1 text-xs"
               disabled={melting}
             >
@@ -343,10 +360,11 @@ export function CertificateDetail({
               onClick={async () => {
                 if (!onMelt) return;
                 try {
+                  setMeltModalError(null);
                   await onMelt();
                   setShowMeltModal(false);
-                } catch {
-                  // Error handled by parent
+                } catch (err: any) {
+                  setMeltModalError(err?.message || 'Failed to melt certificate');
                 }
               }}
             >

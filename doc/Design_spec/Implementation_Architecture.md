@@ -95,8 +95,8 @@ graph TB
     end
 
     subgraph SDK["SDK Layer"]
-        CCC["@ckb-ccc/connector-react"]
-        SPORE["@spore-sdk/core"]
+        CCC["@ckb-ccc/connector-react / @ckb-ccc/core"]
+        SPORE["@ckb-ccc/spore"]
     end
 
     subgraph Blockchain["CKB Blockchain (L1)"]
@@ -673,5 +673,5 @@ gantt
 | Spore Protocol | https://docs.spore.pro/ |
 | DOB/0 Protocol | https://docs.spore.pro/dob/dob0-protocol |
 | CCC SDK | https://docs.ckbccc.com |
-| Spore SDK | https://github.com/sporeprotocol/spore-sdk |
+| CCC Spore SDK | https://github.com/ckb-ecofund/ccc |
 
