@@ -1,12 +1,12 @@
 import type { Template, TemplateField, VisualConfig } from '@/types';
 
-// In-memory storage for MVP (would be stored on-chain or in a database)
+// In-memory storage for templates
 const templates: Map<string, Template> = new Map();
 
 /**
- * Clear all mock templates (for testing)
+ * Clear all templates (for testing)
  */
-export function clearMockTemplates(): void {
+export function clearTemplateCache(): void {
   templates.clear();
 }
 

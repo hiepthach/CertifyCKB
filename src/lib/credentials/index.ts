@@ -32,5 +32,5 @@ export {
   applyTemplate,
   createDefaultVisualConfig,
   getDefaultCertificateFields,
-  clearMockTemplates,
+  clearTemplateCache,
 } from './services';

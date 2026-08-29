@@ -16,13 +16,13 @@ import {
   applyTemplate,
   createDefaultVisualConfig,
   getDefaultCertificateFields,
-  clearMockTemplates,
+  clearTemplateCache,
 } from '../../../src/lib/credentials/services';
 
 describe('Template Service', () => {
   beforeEach(() => {
     // Clear mock storage before each test
-    clearMockTemplates();
+    clearTemplateCache();
   });
 
   // Test fixtures

@@ -212,15 +212,15 @@ export async function getCertificate(
   client?: unknown
 ): Promise<GetCertificateResult | null> {
   syncCertificatesFromLocalStorage();
-  // 1. Try local storage by ID
-  const mock = certificateCache.get(certificateId);
-  if (mock) {
+  // 1. Try local cache by ID
+  const cached = certificateCache.get(certificateId);
+  if (cached) {
     return {
-      certificate: mock.certificate,
+      certificate: cached.certificate,
       certificateId,
-      transactionHash: mock.txHash,
-      clusterId: mock.certificate.issuer.id,
-      sporeId: mock.sporeId,
+      transactionHash: cached.txHash,
+      clusterId: cached.certificate.issuer.id,
+      sporeId: cached.sporeId,
     };
   }
 
@@ -291,11 +291,11 @@ export async function getHolderCertificates(
   const seenIds = new Set<string>();
 
   // 1. Get from local cache
-  for (const [certId, mock] of Array.from(certificateCache.entries())) {
-    const cert = mock.certificate;
+  for (const [certId, cached] of Array.from(certificateCache.entries())) {
+    const cert = cached.certificate;
     const certDnaId = cert?.id;
-    const sporeId = mock.sporeId;
-    const txHash = mock.txHash;
+    const sporeId = cached.sporeId;
+    const txHash = cached.txHash;
 
     if (
       seenIds.has(certId) ||
@@ -310,9 +310,9 @@ export async function getHolderCertificates(
       results.push({
         certificate: cert,
         certificateId: sporeId || certId,
-        transactionHash: mock.txHash,
+        transactionHash: cached.txHash,
         clusterId: cert.issuer.id,
-        sporeId: mock.sporeId,
+        sporeId: cached.sporeId,
       });
       seenIds.add(certId);
       if (certDnaId) seenIds.add(certDnaId);
@@ -398,11 +398,11 @@ export async function getClusterCertificates(clusterId: string): Promise<GetCert
   const results: GetCertificateResult[] = [];
   const seenIds = new Set<string>();
 
-  for (const [certId, mock] of Array.from(certificateCache.entries())) {
-    const cert = mock.certificate;
+  for (const [certId, cached] of Array.from(certificateCache.entries())) {
+    const cert = cached.certificate;
     const certDnaId = cert?.id;
-    const sporeId = mock.sporeId;
-    const txHash = mock.txHash;
+    const sporeId = cached.sporeId;
+    const txHash = cached.txHash;
 
     if (
       seenIds.has(certId) ||
@@ -417,9 +417,9 @@ export async function getClusterCertificates(clusterId: string): Promise<GetCert
       results.push({
         certificate: cert,
         certificateId: sporeId || certId,
-        transactionHash: mock.txHash,
+        transactionHash: cached.txHash,
         clusterId: cert.issuer.id,
-        sporeId: mock.sporeId,
+        sporeId: cached.sporeId,
       });
       seenIds.add(certId);
       if (certDnaId) seenIds.add(certDnaId);
@@ -471,15 +471,15 @@ export async function getAllCertificates(
     if (item.certificate?.id) seenIds.add(item.certificate.id);
   };
 
-  // 1. Get all certificates from local storage (both issued by user and received by user)
-  for (const [certId, mock] of Array.from(certificateCache.entries())) {
-    const cid = mock.certificate.issuer?.id || '';
+  // 1. Get all certificates from local cache (both issued by user and received by user)
+  for (const [certId, cached] of Array.from(certificateCache.entries())) {
+    const cid = cached.certificate.issuer?.id || '';
     addCertificate({
-      certificate: mock.certificate,
-      certificateId: mock.sporeId || certId,
-      transactionHash: mock.txHash,
+      certificate: cached.certificate,
+      certificateId: cached.sporeId || certId,
+      transactionHash: cached.txHash,
       clusterId: cid,
-      sporeId: mock.sporeId,
+      sporeId: cached.sporeId,
     });
   }
 
@@ -566,9 +566,9 @@ export async function revokeCertificate(
   reason?: string
 ): Promise<{ transactionHash: string }> {
   syncCertificatesFromLocalStorage();
-  const mock = certificateCache.get(certificateId);
+  const cached = certificateCache.get(certificateId);
 
-  if (!mock) {
+  if (!cached) {
     throw new Error('Certificate not found');
   }
 
@@ -581,9 +581,9 @@ export async function revokeCertificate(
     revokedAt: new Date().toISOString(),
   };
 
-  // Update the certificate in mock storage
-  mock.certificate.credentialStatus = revokedStatus;
-  certificateCache.set(certificateId, mock);
+  // Update the certificate in cache
+  cached.certificate.credentialStatus = revokedStatus;
+  certificateCache.set(certificateId, cached);
   syncCertificatesToLocalStorage();
 
   console.log('Certificate revoked (soft):', {
