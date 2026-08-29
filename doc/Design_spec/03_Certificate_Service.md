@@ -23,65 +23,58 @@ The Certificate Service handles the issuance and management of course completion
 
 ```typescript
 // Issue a single certificate
-async function issueCertificate(
-  signer: ccc.Signer,
-  params: IssueCertificateParams
-): Promise<IssueCertificateResult>
+async function issueCertificate(params: {
+  signer: unknown;
+  clusterId?: string;
+  recipientAddress: string;
+  issuerName: string;
+  issuerDescription?: string;
+  course: CourseInfo;
+  expirationDate?: string;
+}): Promise<{ certificateId: string; transactionHash: string }>
 
 // Get all certificates owned by a holder
 async function getHolderCertificates(
-  client: ccc.Client,
-  holderLock: Script
+  client?: ccc.Client,
+  holderAddress?: string
 ): Promise<CertificateWithId[]>
 
-// Get certificates issued by a provider
-async function getProviderCertificates(
-  client: ccc.Client,
-  clusterId: string
-): Promise<CertificateWithId[]>
+// Get certificates under a specific cluster
+async function getClusterCertificates(clusterId: string): Promise<GetCertificateResult[]>
 
-// Revoke a certificate
+// Get all certificates in the system
+async function getAllCertificates(client?: ccc.Client, address?: string): Promise<GetCertificateResult[]>
+
+// Revoke a certificate (soft revocation)
 async function revokeCertificate(
-  signer: ccc.Signer,
+  signer: unknown,
   certificateId: string,
-  reason: string
-): Promise<RevokeCertificateResult>
+  reason?: string
+): Promise<{ transactionHash: string }>
 
 // Get a specific certificate by ID
 async function getCertificate(
-  client: ccc.Client,
-  certificateId: string
+  certificateId: string,
+  client?: ccc.Client
 ): Promise<CertificateWithId | null>
+
+// Melt (destroy) a certificate to reclaim CKB
+async function meltCertificate(
+  signer: unknown,
+  certificateId: string
+): Promise<{ transactionHash: string }>
 ```
 
 ### 3.2 Types
 
 ```typescript
 interface IssueCertificateParams {
+  signer: unknown;  // ccc.Signer in production
   clusterId: string;
-  recipientAddress: string;
   issuerName: string;
   issuerDescription?: string;
-  course: CourseInfo;
+  subject: CredentialSubject;
   expirationDate?: string;
-  policy?: CertificatePolicy;
-  templateId?: string;
-}
-
-interface CourseInfo {
-  name: string;
-  description?: string;
-  duration?: string;
-  institution?: string;
-  completionDate: string;
-  grade?: string;
-  score?: number;
-  skills?: string[];
-}
-
-interface CertificatePolicy {
-  transferable: boolean;
-  allowRenewal: boolean;
 }
 
 interface IssueCertificateResult {
@@ -89,15 +82,20 @@ interface IssueCertificateResult {
   transactionHash: string;
 }
 
-interface CertificateWithId {
-  id: string;
+interface GetCertificateResult {
   certificate: CertificateDNA;
-  transactionHash: string;
-  createdAt: string;
+  certificateId: string;
+  transactionHash?: string;
+  clusterId?: string;
 }
 
-interface RevokeCertificateResult {
-  transactionHash: string;
+interface CertificateDisplay {
+  title: string;
+  recipient: string;
+  course: string;
+  issuer: string;
+  date?: string;
+  status: 'active' | 'expired' | 'revoked';
 }
 ```
 
@@ -231,15 +229,76 @@ Fee:    ~0.001 CKB
 **Parameters**:
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `client` | `ccc.Client` | Yes | CKB client |
-| `certificateId` | `string` | Yes | Certificate ID |
+| `certificateId` | `string` | Yes | Certificate ID or transaction hash |
+| `client` | `ccc.Client` | No | CKB client |
 
 **Returns**: `CertificateWithId | null`
 
 **Process**:
-1. Query cell by type script args
-2. Decode DNA
+1. Query cell by spore ID or transaction hash
+2. Decode W3C VC JSON from cell data
 3. Return CertificateWithId or null
+
+### 4.6 meltCertificate
+
+**Purpose**: Destroy a certificate Spore DOB and reclaim the locked CKB capacity. Only the certificate holder can melt their own certificates.
+
+**Parameters**:
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `signer` | `ccc.Signer` | Yes | Holder's wallet signer (must be live signer) |
+| `certificateId` | `string` | Yes | Certificate ID or Spore ID to melt |
+
+**Returns**: `{ transactionHash: string }`
+
+**Process**:
+```mermaid
+sequenceDiagram
+    participant HOLDER as Certificate Holder
+    participant SVC as Certificate Service
+    participant SPORE as @ckb-ccc/spore
+    participant CCC as CCC SDK
+    participant CKB
+
+    HOLDER->>SVC: meltCertificate(signer, certId)
+    SVC->>SVC: Verify live signer
+    SVC->>SVC: Lookup certificate record
+    SVC->>SPORE: findSpore(client, sporeId)
+    SPORE-->>SVC: cell
+    SVC->>SVC: Verify holder owns the cell
+    alt Not owner
+        SVC-->>HOLDER: Error: Only holder can melt
+    else Owner verified
+        SVC->>SPORE: meltSpore({ signer, id })
+        SPORE->>CCC: Build burn transaction
+        CCC->>CKB: Destroy cell
+        CKB-->>CCC: txHash
+        CCC-->>SPORE: txHash
+        SPORE-->>SVC: txHash
+        SVC->>SVC: Remove from local storage
+        SVC-->>HOLDER: { transactionHash }
+    end
+```
+
+**Transaction Details**:
+```
+Input:  Certificate DOB Cell (owned by holder)
+Output: None (cell destroyed)
+Fee:    ~0.001 CKB
+Capacity: Reclaimed to holder's wallet
+```
+
+**Errors**:
+| Error | Condition |
+|-------|-----------|
+| `LIVE_SIGNER_REQUIRED` | Must use live signer, not mock |
+| `CERTIFICATE_NOT_FOUND` | Certificate not found |
+| `NOT_HOLDER` | Signer is not the certificate owner |
+
+**Security**:
+- Requires live signer (mock signer not accepted)
+- Ownership verified by comparing cell lock script with holder's wallet lock script
+- Only the certificate holder can destroy their own certificates
 
 ---
 
@@ -291,10 +350,10 @@ const { tx, id: sporeId } = await createSpore({
   data: {
     contentType: 'application/json',
     content: ccc.bytesFrom(new TextEncoder().encode(dnaJson)),
-    clusterId: params.clusterId,
+    clusterId: hasValidCluster ? (clusterId as `0x${string}`) : undefined,
   },
   to: recipientLockScript,
-  clusterMode: params.clusterId ? 'clusterCell' : undefined,
+  clusterMode: hasValidCluster ? 'clusterCell' : undefined,
 });
 
 await tx.completeInputsByCapacity(liveSigner);
@@ -304,22 +363,56 @@ const txHash = await liveSigner.sendTransaction(tx);
 
 ### 6.2 Certificate ID
 
-Certificate ID = Type script args của Spore DOB Cell
-- Format: 32-byte hex string
+Certificate ID = Type script args of Spore DOB Cell
+- Format: 32-byte hex string (0x...)
 - Derived from transaction during creation
 
 ### 6.3 Cell Query
 
 ```typescript
+import { findSpore } from '@ckb-ccc/spore';
+
 // Find certificate by ID
-const cells = await client.findCellsByType({
-  script: {
-    codeHash: SPORE_CODE_HASH,
-    hashType: 'data2',
-    args: certificateId,
-  },
-});
+const found = await findSpore(client, sporeId as `0x${string}`);
+if (found?.cell) {
+  const cellData = new TextDecoder().decode(ccc.bytesFrom(found.cell.outputData));
+  const certificate = JSON.parse(cellData);
+}
 ```
+
+### 6.4 Certificate Melting
+
+```typescript
+import { meltSpore, findSpore } from '@ckb-ccc/spore';
+
+// Find and verify ownership
+const found = await findSpore(client, sporeId);
+if (found?.cell) {
+  const cellLock = found.cell.cellOutput.lock;
+  // Compare with holder's lock script
+  const isOwner = cellLock.codeHash === holderLock.codeHash &&
+                  cellLock.hashType === holderLock.hashType &&
+                  cellLock.args === holderLock.args;
+}
+
+// Melt (destroy) the certificate cell
+const { tx } = await meltSpore({
+  signer: liveSigner,
+  id: sporeId as `0x${string}`,
+});
+
+await tx.completeInputsByCapacity(liveSigner);
+await tx.completeFeeBy(liveSigner, 1000);
+const meltTxHash = await liveSigner.sendTransaction(tx);
+```
+
+### 6.5 Benefits of @ckb-ccc/spore
+
+- Native integration with `@ckb-ccc/core` (no separate Lumos dependencies)
+- Uses CCC's unified `Transaction` and `Signer` APIs
+- No browser `Illegal invocation` errors from `cross-fetch`
+- Consistent TypeScript types across the SDK
+- Support for `createSpore`, `createSporeCluster`, `meltSpore`, `findSpore`, `findCluster`
 
 ---
 
@@ -332,6 +425,9 @@ const cells = await client.findCellsByType({
 | `INSUFFICIENT_BALANCE` | Not enough CKB | "Insufficient CKB balance" |
 | `NOT_ISSUER` | Signer not Cluster owner | "You are not the issuer" |
 | `ALREADY_REVOKED` | Certificate already revoked | "Certificate is already revoked" |
+| `LIVE_SIGNER_REQUIRED` | Mock signer used for melt | "Live signer is required to melt a certificate" |
+| `CERTIFICATE_NOT_FOUND` | Certificate doesn't exist | "Certificate not found" |
+| `NOT_HOLDER` | Signer not certificate owner | "Only the certificate holder can melt this certificate" |
 
 ### 7.1 Soft Revocation Limitations
 
@@ -354,6 +450,9 @@ const cells = await client.findCellsByType({
 | Get holder certificates | Returns array of certificates |
 | Get holder with no certs | Returns empty array |
 | Get non-existent cert | Returns null |
+| Melt with live signer | Returns transactionHash |
+| Melt with mock signer | Throws LIVE_SIGNER_REQUIRED |
+| Melt not holder's cert | Throws NOT_HOLDER |
 
 ### 8.2 Integration Tests
 
@@ -362,6 +461,7 @@ const cells = await client.findCellsByType({
 | Issue → Query by holder | Certificate in results |
 | Issue → Get by ID | Correct certificate data |
 | Issue → Verify on explorer | Cell exists on chain |
+| Melt certificate → Query | Certificate no longer exists |
 
 ---
 
@@ -376,5 +476,5 @@ const cells = await client.findCellsByType({
 
 ---
 
-*Version: 1.0*
-*Last Updated: 2026-08-11*
+*Version: 2.0*
+*Last Updated: 2026-08-29*

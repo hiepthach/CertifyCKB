@@ -65,15 +65,26 @@ graph LR
 
 ```typescript
 // Template CRUD
-function createTemplate(clusterId: string, template: TemplateInput): Template
-function getTemplates(clusterId: string): Template[]
-function getTemplate(clusterId: string, templateId: string): Template | null
-function updateTemplate(clusterId: string, templateId: string, updates: Partial<TemplateInput>): Template
-function deleteTemplate(clusterId: string, templateId: string): void
+async function createTemplate(params: {
+  clusterId: string;
+  name: string;
+  description?: string;
+  fields: TemplateField[];
+  visual?: VisualConfig;
+}): Promise<Template>
+
+async function getTemplate(templateId: string): Promise<Template | null>
+async function getTemplates(clusterId: string): Promise<Template[]>
+async function updateTemplate(
+  templateId: string,
+  updates: Partial<Omit<Template, 'id' | 'clusterId' | 'createdAt'>>
+): Promise<Template | null>
+async function deleteTemplate(templateId: string): Promise<boolean>
 
 // Template Application
-function applyTemplate(template: Template, data: Record<string, any>): CertificateData
-function validateTemplateFields(template: Template, data: Record<string, any>): ValidationResult
+function applyTemplate(template: Template, data: Record<string, unknown>): Record<string, unknown>
+function createDefaultVisualConfig(): VisualConfig
+function getDefaultCertificateFields(): TemplateField[]
 ```
 
 ### 4.2 Types
@@ -85,33 +96,17 @@ interface Template {
   id: string;
   clusterId: string;
   name: string;
-  description: string;
-  version: string;
+  description?: string;
   fields: TemplateField[];
-  requiredFields: string[];
-  defaultValues?: Record<string, any>;
-  metadata: TemplateMetadata;
+  visual?: VisualConfig;
   createdAt: string;
-  updatedAt: string;
-}
-
-interface TemplateInput {
-  name: string;
-  description: string;
-  fields: TemplateField[];
-  requiredFields: string[];
-  defaultValues?: Record<string, any>;
-}
-
-interface TemplateMetadata {
-  createdBy: string;
-  lastModifiedBy: string;
-  usageCount: number;
+  updatedAt?: string;
 }
 
 // ===== FORM FIELD TYPES (MVP) =====
 
 interface TemplateField {
+  id: string;
   name: string;
   type: FieldType;
   label: string;
@@ -120,6 +115,7 @@ interface TemplateField {
   helpText?: string;
   options?: FieldOption[];
   validation?: FieldValidation;
+  defaultValue?: unknown;
 }
 
 type FieldType =
@@ -154,16 +150,39 @@ interface FieldValidation {
   patternMessage?: string;
 }
 
-// ===== VALIDATION =====
+// ===== VISUAL CONFIG (Phase 2) =====
 
-interface ValidationResult {
-  valid: boolean;
-  errors: ValidationError[];
-}
-
-interface ValidationError {
-  field: string;
-  message: string;
+interface VisualConfig {
+  layout: 'classic' | 'modern' | 'minimal';
+  branding?: {
+    logoPosition?: 'left' | 'center' | 'right';
+    sealPosition?: 'left' | 'center' | 'right';
+    showProviderName?: boolean;
+  };
+  typography?: {
+    fontFamily?: string;
+    fontSize?: 'sm' | 'md' | 'lg';
+    headingWeight?: 'normal' | 'bold';
+  };
+  colors?: {
+    theme?: 'blue' | 'green' | 'purple' | 'custom';
+    customPrimary?: string;
+    customSecondary?: string;
+  };
+  background?: {
+    type: 'solid' | 'gradient' | 'image';
+    value?: string;
+  };
+  effects?: {
+    shadow?: boolean;
+    border?: boolean;
+    borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'full';
+    animation?: boolean;
+  };
+  sections?: Record<string, {
+    visible: boolean;
+    order: number;
+  }>;
 }
 ```
 
@@ -350,5 +369,5 @@ The following features are deferred to Phase 2:
 
 ---
 
-*Version: 3.0 (MVP Simplified)*
-*Last Updated: 2026-08-20*
+*Version: 4.0 (Updated to match implementation)*
+*Last Updated: 2026-08-29*

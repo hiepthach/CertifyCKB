@@ -24,47 +24,34 @@ The Verification Service provides functionality to verify certificates by queryi
 ```typescript
 // Verify a certificate by ID
 async function verifyCertificate(
-  client: ccc.Client,
-  certificateId: string,
-  options?: VerifyOptions
+  certificateId: string
 ): Promise<VerificationResult>
 
 // Get verification history (optional)
 async function getVerificationHistory(
   certificateId: string
-): Promise<VerificationRecord[]>
+): Promise<VerificationHistory[]>
 ```
 
 ### 3.2 Types
 
 ```typescript
-interface VerifyOptions {
-  expectedIssuerId?: string;
-  expectedHolderId?: string;
-  checkExpiration?: boolean;
-}
-
 interface VerificationResult {
   valid: boolean;
   certificateId: string;
   issuer: {
     id: string;
     name: string;
-    clusterVerified: boolean;
-  };
-  holder: {
-    address: string;
-    ownershipVerified: boolean;
   };
   certificate: {
-    type: string[];
-    issuanceDate: string;
-    expirationDate?: string;
     isExpired: boolean;
     isRevoked: boolean;
+    issuanceDate: string;
+    expirationDate?: string;
   };
   checks: VerificationChecks;
-  timestamp: string;
+  errors?: string[];
+  timestamp?: string;
   transactionHash?: string;
 }
 
@@ -76,10 +63,10 @@ interface VerificationChecks {
   revocationVerified: boolean;
 }
 
-interface VerificationRecord {
+interface VerificationHistory {
+  certificateId: string;
   verifiedAt: string;
-  verifier?: string;
-  result: boolean;
+  result: VerificationResult;
 }
 ```
 
@@ -94,9 +81,7 @@ interface VerificationRecord {
 **Parameters**:
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `client` | `ccc.Client` | Yes | CKB client |
 | `certificateId` | `string` | Yes | Certificate ID to verify |
-| `options` | `VerifyOptions` | No | Verification options |
 
 **Returns**: `VerificationResult`
 
@@ -105,29 +90,28 @@ interface VerificationRecord {
 ```mermaid
 sequenceDiagram
     participant SVC as Verification Service
-    participant CCC as CCC SDK
+    participant ISSUER as Certificate Service
+    participant CLUSTER as Cluster Service
     participant CKB
     participant DECODER as Decoder
 
-    SVC->>CCC: findCellsByType(certificateId)
-    CCC->>CKB: Query cell
-    CKB-->>CCC: Cell data
-    CCC-->>SVC: Cell
+    SVC->>ISSUER: getCertificate(certificateId)
+    ISSUER-->>SVC: CertificateDNA
 
-    alt Cell exists
-        SVC->>SVC: Check cell is Spore
-        SVC->>DECODER: decodeCertificateDNA()
-        DECODER-->>SVC: CertificateDNA
-
-        alt DNA valid
-            SVC->>SVC: Check expiration
-            SVC->>SVC: Check revocation
-            SVC->>SVC: Verify issuer (if expected)
-            SVC->>SVC: Build VerificationResult
-        else DNA invalid
-            SVC->>SVC: Build invalid result
+    alt Certificate found
+        SVC->>SVC: Mark cellExists = true
+        SVC->>SVC: Mark dnaValid = true
+        SVC->>CLUSTER: getCluster(issuerId)
+        CLUSTER-->>SVC: Cluster (if exists)
+        alt Cluster found
+            SVC->>SVC: Mark issuerVerified = true
         end
-    else Cell not found
+        SVC->>DECODER: isExpired()
+        DECODER-->>SVC: isExpired
+        SVC->>DECODER: isRevoked()
+        DECODER-->>SVC: isRevoked
+        SVC->>SVC: Build VerificationResult
+    else Certificate not found
         SVC->>SVC: Build not found result
     end
 
@@ -138,20 +122,19 @@ sequenceDiagram
 
 | Check | Description | Pass Condition |
 |-------|-------------|----------------|
-| `cellExists` | Certificate cell exists on chain | Cell found |
+| `cellExists` | Certificate record found | Record exists |
 | `dnaValid` | DNA decodes to valid W3C VC | Decode succeeds |
-| `issuerVerified` | Issuer matches expected (if provided) | Issuer ID matches |
+| `issuerVerified` | Issuer cluster exists | Cluster found |
 | `expirationVerified` | Certificate not expired | Not past expirationDate |
 | `revocationVerified` | Certificate not revoked | revoked !== true |
 
 **Validity Logic**:
 ```typescript
-const valid = 
+const valid =
   checks.cellExists &&
   checks.dnaValid &&
-  (!options?.expectedIssuerId || checks.issuerVerified) &&
-  (!options?.checkExpiration || !checks.expirationVerified || !certificate.isExpired) &&
-  !certificate.isRevoked;
+  checks.expirationVerified &&
+  checks.revocationVerified;
 ```
 
 ### 4.2 getVerificationHistory
@@ -570,5 +553,5 @@ describe('Verification Service - OffCKB Devnet', () => {
 
 ---
 
-*Version: 1.0*
-*Last Updated: 2026-08-11*
+*Version: 2.0*
+*Last Updated: 2026-08-29*

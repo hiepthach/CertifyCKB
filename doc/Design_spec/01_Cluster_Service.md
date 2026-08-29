@@ -5,7 +5,7 @@
 | Item | Details |
 |------|---------|
 | **Module** | Cluster Service |
-| **File** | `src/lib/ckb/cluster.ts` |
+| **File** | `src/lib/credentials/cluster.ts` |
 | **Purpose** | Manage Course Provider registration via Spore Clusters |
 | **Dependencies** | `@ckb-ccc/spore`, `@ckb-ccc/core` |
 
@@ -23,22 +23,20 @@ The Cluster Service handles the creation and management of Spore Clusters, which
 
 ```typescript
 // Create a new Cluster for a Course Provider
-async function createCluster(
-  signer: ccc.Signer,
-  config: ClusterConfig
-): Promise<CreateClusterResult>
+async function createCluster(params: {
+  signer: ccc.Signer;
+  config: ClusterConfig;
+  creatorAddress?: string;
+}): Promise<{ clusterId: string; transactionHash: string }>
 
 // Get all Clusters owned by a provider
 async function getProviderClusters(
-  client: ccc.Client,
-  ownerLock: Script
+  address?: string,
+  client?: ccc.Client
 ): Promise<Cluster[]>
 
 // Get a specific Cluster by ID
-async function getCluster(
-  client: ccc.Client,
-  clusterId: string
-): Promise<Cluster | null>
+async function getCluster(clusterId: string): Promise<Cluster | null>
 ```
 
 ### 3.2 Types
@@ -47,35 +45,22 @@ async function getCluster(
 interface ClusterConfig {
   name: string;
   description: string;
-  providerInfo?: ProviderInfo;
-  certificatePolicy?: CertificatePolicy;
+  websiteUrl?: string;
+  contactEmail?: string;
+  avatarUrl?: string;
+  bannerUrl?: string;
 }
 
-interface ProviderInfo {
-  url?: string;
-  logo?: string;
-  contact?: string;
-}
-
-interface CertificatePolicy {
-  transferable: boolean;
-  expirationDefault?: string;  // ISO 8601 duration e.g., "P1Y"
-  allowRenewal: boolean;
-  revocationEnabled: boolean;
-}
-
-interface CreateClusterResult {
-  clusterId: string;      // Type script args
-  transactionHash: string;
-}
-
-interface Cluster {
+interface Cluster extends ClusterConfig {
   id: string;
-  name: string;
-  description: string;     // JSON string with providerInfo + policy
-  owner: string;          // Owner lock script args
+  clusterId: string;
+  creatorAddress: string;
   createdAt: string;
-  cell?: Cell;
+  updatedAt?: string;
+}
+
+interface ClusterWithCount extends Cluster {
+  certificateCount?: number;
 }
 ```
 
@@ -92,28 +77,47 @@ interface Cluster {
 |-------|------|----------|-------------|
 | `signer` | `ccc.Signer` | Yes | Wallet signer for signing transaction |
 | `config` | `ClusterConfig` | Yes | Cluster configuration |
+| `creatorAddress` | `string` | No | Creator address (derived from signer if not provided) |
 
 **Process**:
-1. Build description JSON from config
-2. Call Spore SDK `createCluster()`
-3. Complete inputs and fee
-4. Sign and send transaction
-5. Extract clusterId from output
+1. Get creator address from signer
+2. Build cluster metadata JSON from config
+3. Call `@ckb-ccc/spore` `createSporeCluster()` to build transaction
+4. Complete inputs and fee using `tx.completeInputsByCapacity()` and `tx.completeFeeBy()`
+5. Sign and send transaction with `liveSigner.sendTransaction()`
+6. Extract clusterId from output
 
-**Returns**: `CreateClusterResult`
+**Returns**: `{ clusterId: string; transactionHash: string }`
 
 **Errors**:
 | Error | Condition |
 |-------|-----------|
-| `INSUFFICIENT_BALANCE` | Not enough CKB for cluster creation |
+| `INSUFFICIENT_BALANCE` | Not enough CKB (need ~100 CKB for cluster cell). User-friendly message with faucet link. |
 | `INVALID_CONFIG` | Invalid cluster configuration |
-| `WALLET_NOT_CONNECTED` | Signer not available |
 
 **Transaction Details**:
 ```
 Input:  Provider's CKB cells
-Output: Cluster Cell (Type: SPORE_CLUSTER, Lock: Provider)
+Output: Cluster Cell (Type: Type ID for SporeCluster, Lock: Provider)
 Fee:    ~0.001 CKB
+```
+
+**Implementation with @ckb-ccc/spore**:
+```typescript
+import { createSporeCluster } from '@ckb-ccc/spore';
+
+const { tx, id: clusterId } = await createSporeCluster({
+  signer: liveSigner,
+  data: {
+    name: config.name,
+    description: JSON.stringify(clusterMetadata),
+  },
+  to: addrObj.script,
+});
+
+await tx.completeInputsByCapacity(liveSigner);
+await tx.completeFeeBy(liveSigner, 1000);
+const txHash = await liveSigner.sendTransaction(tx);
 ```
 
 ### 4.2 getProviderClusters
@@ -123,16 +127,18 @@ Fee:    ~0.001 CKB
 **Parameters**:
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `client` | `ccc.Client` | Yes | CKB client |
-| `ownerLock` | `Script` | Yes | Provider's lock script |
+| `address` | `string` | No | Provider's address |
+| `client` | `ccc.Client` | No | CKB client (uses ClientPublicTestnet if not provided) |
 
 **Returns**: `Cluster[]`
 
 **Process**:
-1. Query indexer for cells with Type: SPORE_CLUSTER
-2. Filter by owner's lock script
-3. Parse description JSON
-4. Return Cluster objects
+1. Load clusters from localStorage (mock storage for MVP)
+2. If address provided and real client available:
+   - Search for SporeCluster cells owned by the address
+   - Scan transactions for Cluster and Certificate cells
+3. Filter results by address if provided
+4. Return Cluster array
 
 ### 4.3 getCluster
 
@@ -141,15 +147,13 @@ Fee:    ~0.001 CKB
 **Parameters**:
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `client` | `ccc.Client` | Yes | CKB client |
-| `clusterId` | `string` | Yes | Cluster ID (type script args) |
+| `clusterId` | `string` | Yes | Cluster ID |
 
 **Returns**: `Cluster | null`
 
 **Process**:
-1. Find cell by type script with matching args
-2. Parse description JSON
-3. Return Cluster or null
+1. Query localStorage for matching clusterId
+2. Return Cluster or null if not found
 
 ---
 
@@ -180,50 +184,53 @@ sequenceDiagram
 
 ## 6. Implementation Notes
 
-### 6.1 Description JSON Structure
+### 6.1 Cluster Metadata Structure
+
+The cluster metadata is stored in the SporeCluster cell's description field as a JSON string:
 
 ```json
 {
   "name": "CKB Academy",
   "description": "Official CKB developer training provider",
-  "providerInfo": {
-    "url": "https://ckb.academy",
-    "logo": "https://...",
-    "contact": "contact@ckb.academy"
-  },
-  "certificatePolicy": {
-    "transferable": false,
-    "expirationDefault": "P1Y",
-    "allowRenewal": true,
-    "revocationEnabled": true
-  }
+  "websiteUrl": "https://ckb.academy",
+  "contactEmail": "contact@ckb.academy"
 }
 ```
 
 ### 6.2 Cluster ID
 
-Cluster ID = Type script args của Cluster Cell
-- Format: 32-byte hex string
-- Derived from transaction during creation
+Cluster ID = Transaction hash that created the Cluster Cell
+- Format: 32-byte hex string (0x...)
+- Derived from transaction during creation via `@ckb-ccc/spore`
 
-### 6.3 CCC Spore SDK Reference
+### 6.3 CCC Spore SDK Integration
+
+The cluster service uses `@ckb-ccc/spore` which is natively integrated with `@ckb-ccc/core`:
 
 ```typescript
+import { ccc } from '@ckb-ccc/core';
 import { createSporeCluster } from '@ckb-ccc/spore';
 
+// Create cluster with live signer
 const { tx, id: clusterId } = await createSporeCluster({
   signer: liveSigner,
   data: {
     name: config.name,
-    description: JSON.stringify(descriptionObj),
+    description: JSON.stringify(clusterMetadata),
   },
-  to: ownerLockScript,
+  to: addrObj.script,
 });
 
 await tx.completeInputsByCapacity(liveSigner);
 await tx.completeFeeBy(liveSigner, 1000);
 const txHash = await liveSigner.sendTransaction(tx);
 ```
+
+**Benefits of @ckb-ccc/spore over legacy @spore-sdk/core:**
+- Native integration with `@ckb-ccc/core` (no separate Lumos dependencies)
+- Uses CCC's unified `Transaction` and `Signer` APIs
+- No browser `Illegal invocation` errors from `cross-fetch`
+- Consistent TypeScript types across the SDK
 
 ---
 
@@ -257,5 +264,5 @@ const txHash = await liveSigner.sendTransaction(tx);
 
 ---
 
-*Version: 1.0*
-*Last Updated: 2026-08-11*
+*Version: 2.0*
+*Last Updated: 2026-08-29*
