@@ -1,45 +1,9 @@
-import { ccc, Address, ClientPublicTestnet } from '@ckb-ccc/core';
+import { ccc, Address as CkbAddress, ClientPublicTestnet } from '@ckb-ccc/core';
 import { createSpore, meltSpore, findSpore } from '@ckb-ccc/spore';
+import { unpackToRawSporeData } from '@ckb-ccc/spore/advanced';
 import type { CertificateDNA, CredentialSubject, CredentialStatus } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
-
-const CERT_STORAGE_KEY = 'ckb_credential_certificates';
-
-interface CertificateStorageItem {
-  certificate: CertificateDNA;
-  txHash: string;
-  sporeId?: string;
-}
-
-// In-memory cache for certificate data (synced with localStorage for UI performance)
-const certificateCache = new Map<string, CertificateStorageItem>();
-
-function syncCertificatesFromLocalStorage(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    const raw = localStorage.getItem(CERT_STORAGE_KEY);
-    if (raw) {
-      const parsed: [string, CertificateStorageItem][] = JSON.parse(raw);
-      for (const [key, value] of parsed) {
-        if (key && value) {
-          certificateCache.set(key, value);
-        }
-      }
-    }
-  } catch (e) {
-    console.error('Failed to load certificates from localStorage:', e);
-  }
-}
-
-function syncCertificatesToLocalStorage(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    const arr = Array.from(certificateCache.entries());
-    localStorage.setItem(CERT_STORAGE_KEY, JSON.stringify(arr));
-  } catch (e) {
-    console.error('Failed to save certificates to localStorage:', e);
-  }
-}
+import { certificateCache } from '@/lib/storage';
 
 interface IssueCertificateParams {
   signer: unknown; // ccc.Signer in production
@@ -69,18 +33,12 @@ interface GetCertificateResult {
  */
 export function clearCertificateCache(): void {
   certificateCache.clear();
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.removeItem(CERT_STORAGE_KEY);
-    } catch {}
-  }
 }
 
 /**
  * Get certificate cache
  */
-export function getCertificateCache(): Map<string, { certificate: CertificateDNA; txHash: string }> {
-  syncCertificatesFromLocalStorage();
+export function getCertificateCache() {
   return certificateCache;
 }
 
@@ -128,7 +86,7 @@ export async function issueCertificate(
     let recipientLockScript: ccc.Script | null = null;
 
     try {
-      const AddressClass = Address || ccc?.Address;
+      const AddressClass = CkbAddress;
       if (AddressClass?.fromString) {
         const addrObj = await AddressClass.fromString(recipientAddr, liveSigner.client);
         recipientLockScript = addrObj.script;
@@ -165,11 +123,9 @@ export async function issueCertificate(
       await tx.completeFeeBy(liveSigner, 1000);
       const txHash = await liveSigner.sendTransaction(tx);
 
-      // Save to local storage for quick retrieval & caching
-      syncCertificatesFromLocalStorage();
+      // Save to cache for quick retrieval
       const primaryId = sporeId || certificateId;
       certificateCache.set(primaryId, { certificate: dna, txHash, sporeId });
-      syncCertificatesToLocalStorage();
 
       return {
         certificateId: sporeId || certificateId,
@@ -205,13 +161,44 @@ export function isCertificateJson(text: string): boolean {
 }
 
 /**
+ * Robustly extract CertificateDNA from on-chain cell outputData
+ * Supports both Spore Molecule SporeData format and plain JSON format.
+ */
+export function extractCertificateFromCell(outputData?: string): CertificateDNA | null {
+  if (!outputData || outputData === '0x' || outputData.length < 10) return null;
+  try {
+    const rawBytes = ccc.bytesFrom(outputData);
+
+    // 1. Try unpacking as SporeData (Molecule format)
+    try {
+      const sporeData = unpackToRawSporeData(rawBytes);
+      if (sporeData?.content) {
+        const contentText = new TextDecoder().decode(ccc.bytesFrom(sporeData.content));
+        if (isCertificateJson(contentText)) {
+          return JSON.parse(contentText) as CertificateDNA;
+        }
+      }
+    } catch {}
+
+    // 2. Try unpacking as direct UTF-8 JSON text (plain cell format)
+    try {
+      const text = new TextDecoder().decode(rawBytes);
+      if (isCertificateJson(text)) {
+        return JSON.parse(text) as CertificateDNA;
+      }
+    } catch {}
+  } catch {}
+
+  return null;
+}
+
+/**
  * Get certificate by ID or Transaction Hash
  */
 export async function getCertificate(
   certificateId: string,
   client?: unknown
 ): Promise<GetCertificateResult | null> {
-  syncCertificatesFromLocalStorage();
   // 1. Try local cache by ID
   const cached = certificateCache.get(certificateId);
   if (cached) {
@@ -224,8 +211,8 @@ export async function getCertificate(
     };
   }
 
-  // 2. Search local storage by transaction hash
-  for (const [id, item] of Array.from(certificateCache.entries())) {
+  // 2. Search local cache by transaction hash
+  for (const [id, item] of certificateCache.entries()) {
     if (item.txHash === certificateId) {
       return {
         certificate: item.certificate,
@@ -237,7 +224,7 @@ export async function getCertificate(
     }
   }
 
-  // 3. Query on-chain CKB Testnet transaction if given a 66-character hex hash
+  // 3. Query on-chain CKB Testnet if given a 66-character hex ID/hash
   if (
     typeof window !== 'undefined' &&
     certificateId.startsWith('0x') &&
@@ -247,32 +234,69 @@ export async function getCertificate(
       const ckbClient =
         (client as ccc.Client) ||
         (ClientPublicTestnet ? new ClientPublicTestnet() : new ccc.ClientPublicTestnet());
-      const tx = await ckbClient.getTransaction(certificateId as `0x${string}`);
-      if (tx?.transaction?.outputsData) {
-        for (let i = 0; i < tx.transaction.outputsData.length; i++) {
-          const hex = tx.transaction.outputsData[i];
-          if (!hex || hex === '0x' || hex.length < 10) continue;
-          try {
-            const text = new TextDecoder().decode(ccc.bytesFrom(hex));
-            if (isCertificateJson(text)) {
-              const certDna = JSON.parse(text) as CertificateDNA;
-              const certId = certDna.id || certificateId;
-              certificateCache.set(certId, { certificate: certDna, txHash: certificateId });
-              syncCertificatesToLocalStorage();
+
+      // 3.1 Try querying as a Spore ID using findSpore (direct live Spore lookup)
+      try {
+        const found = await findSpore(ckbClient, certificateId as `0x${string}`);
+        if (found?.cell) {
+          const certDna = extractCertificateFromCell(found.cell.outputData);
+          if (certDna) {
+            const sporeId = certificateId;
+            const certId = sporeId || certDna.id;
+            const txHash = found.cell.outPoint.txHash;
+            const clusterId =
+              certDna.issuer?.id ||
+              (found.sporeData?.clusterId ? ccc.hexFrom(found.sporeData.clusterId) : '');
+
+            certificateCache.set(certId, { certificate: certDna, txHash, sporeId });
+            return {
+              certificate: certDna,
+              certificateId: certId,
+              transactionHash: txHash,
+              clusterId,
+              sporeId,
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('findSpore check failed, trying getTransaction fallback:', err);
+      }
+
+      // 3.2 Try querying as a transaction hash using getTransaction
+      if (typeof (ckbClient as any).getTransaction === 'function') {
+        const tx = await (ckbClient as any).getTransaction(certificateId as `0x${string}`);
+        if (tx?.transaction?.outputsData) {
+          for (let i = 0; i < tx.transaction.outputsData.length; i++) {
+            const hex = tx.transaction.outputsData[i];
+            const certDna = extractCertificateFromCell(hex);
+            if (certDna) {
+              const sporeId = tx.transaction?.outputs?.[i]?.type?.args ? ccc.hexFrom(tx.transaction.outputs[i].type!.args) : undefined;
+              if (sporeId) {
+                try {
+                  const liveSpore = await findSpore(ckbClient, sporeId as `0x${string}`);
+                  if (!liveSpore?.cell) {
+                    continue; // Spore cell has been melted
+                  }
+                } catch {
+                  continue;
+                }
+              }
+
+              const certId = sporeId || certDna.id || certificateId;
+              certificateCache.set(certId, { certificate: certDna, txHash: certificateId, sporeId });
               return {
                 certificate: certDna,
                 certificateId: certId,
                 transactionHash: certificateId,
                 clusterId: certDna.issuer?.id || '',
+                sporeId,
               };
             }
-          } catch {
-            // Ignore non-VC outputs
           }
         }
       }
     } catch (e) {
-      console.warn('Error fetching on-chain tx for certificate:', e);
+      console.warn('Error fetching on-chain certificate:', e);
     }
   }
 
@@ -286,12 +310,11 @@ export async function getHolderCertificates(
   holderAddress?: string,
   client?: unknown
 ): Promise<GetCertificateResult[]> {
-  syncCertificatesFromLocalStorage();
   const results: GetCertificateResult[] = [];
   const seenIds = new Set<string>();
 
   // 1. Get from local cache
-  for (const [certId, cached] of Array.from(certificateCache.entries())) {
+  for (const [certId, cached] of certificateCache.entries()) {
     const cert = cached.certificate;
     const certDnaId = cert?.id;
     const sporeId = cached.sporeId;
@@ -325,20 +348,16 @@ export async function getHolderCertificates(
   if (holderAddress && typeof window !== 'undefined') {
     try {
       const ckbClient = (client as ccc.Client) || (ClientPublicTestnet ? new ClientPublicTestnet() : new ccc.ClientPublicTestnet());
-      const AddressClass = Address || ccc?.Address;
+      const AddressClass = CkbAddress;
       if (AddressClass?.fromString) {
         const addrObj = await AddressClass.fromString(holderAddress, ckbClient);
 
-        // Search all live cells owned by the recipient lock script
+        // Search all live cells owned by the recipient lock script (findCellsByLock only returns LIVE cells)
         for await (const cell of ckbClient.findCellsByLock(addrObj.script, undefined, true)) {
           try {
-            if (!cell.outputData || cell.outputData === '0x' || cell.outputData.length < 10) continue;
+            const certDna = extractCertificateFromCell(cell.outputData);
+            if (!certDna) continue;
 
-            // Decode hex outputData to UTF-8 string
-            const text = new TextDecoder().decode(ccc.bytesFrom(cell.outputData));
-            if (!isCertificateJson(text)) continue;
-
-            const certDna = JSON.parse(text) as CertificateDNA;
             const sporeId = cell.cellOutput.type?.args ? ccc.hexFrom(cell.cellOutput.type.args) : undefined;
             const certId = sporeId || certDna.id || cell.outPoint.txHash;
             const certDnaId = certDna.id;
@@ -365,10 +384,9 @@ export async function getHolderCertificates(
 
               results.push(item);
 
-              // Persist to local storage for fast caching (normalize to sporeId as primary key)
+              // Persist to cache (normalize to sporeId as primary key)
               const storageKey = sporeId || certId;
-              const existing = certificateCache.get(storageKey);
-              if (!existing) {
+              if (!certificateCache.has(storageKey)) {
                 certificateCache.set(storageKey, {
                   certificate: certDna,
                   txHash: cell.outPoint.txHash,
@@ -380,7 +398,6 @@ export async function getHolderCertificates(
             // Ignore cells that are not valid JSON certificates
           }
         }
-        syncCertificatesToLocalStorage();
       }
     } catch (e) {
       console.warn('Error querying on-chain certificate cells for holder:', e);
@@ -394,11 +411,10 @@ export async function getHolderCertificates(
  * Get all certificates issued under a specific cluster ID
  */
 export async function getClusterCertificates(clusterId: string): Promise<GetCertificateResult[]> {
-  syncCertificatesFromLocalStorage();
   const results: GetCertificateResult[] = [];
   const seenIds = new Set<string>();
 
-  for (const [certId, cached] of Array.from(certificateCache.entries())) {
+  for (const [certId, cached] of certificateCache.entries()) {
     const cert = cached.certificate;
     const certDnaId = cert?.id;
     const sporeId = cached.sporeId;
@@ -438,7 +454,6 @@ export async function getAllCertificates(
   client?: unknown,
   address?: string
 ): Promise<GetCertificateResult[]> {
-  syncCertificatesFromLocalStorage();
   const results: GetCertificateResult[] = [];
   const seenIds = new Set<string>();
   const seenByTxHash = new Map<string, GetCertificateResult>();
@@ -472,7 +487,7 @@ export async function getAllCertificates(
   };
 
   // 1. Get all certificates from local cache (both issued by user and received by user)
-  for (const [certId, cached] of Array.from(certificateCache.entries())) {
+  for (const [certId, cached] of certificateCache.entries()) {
     const cid = cached.certificate.issuer?.id || '';
     addCertificate({
       certificate: cached.certificate,
@@ -493,7 +508,7 @@ export async function getAllCertificates(
 
       // 3. Scan on-chain transactions where address was the sender/issuer (input lock = address)
       const ckbClient = (client as ccc.Client) || (ClientPublicTestnet ? new ClientPublicTestnet() : new ccc.ClientPublicTestnet());
-      const AddressClass = Address || ccc?.Address;
+      const AddressClass = CkbAddress;
       if (AddressClass?.fromString) {
         const addrObj = await AddressClass.fromString(address, ckbClient);
         let txCount = 0;
@@ -506,40 +521,47 @@ export async function getAllCertificates(
 
             for (let i = 0; i < txResponse.transaction.outputsData.length; i++) {
               const hex = txResponse.transaction.outputsData[i];
-              if (!hex || hex === '0x' || hex.length < 10) continue;
-              try {
-                const text = new TextDecoder().decode(ccc.bytesFrom(hex));
-                if (isCertificateJson(text)) {
-                  const certDna = JSON.parse(text) as CertificateDNA;
-                  const sporeId = txResponse.transaction?.outputs?.[i]?.type?.args ? ccc.hexFrom(txResponse.transaction.outputs[i].type!.args) : undefined;
-                  const certId = sporeId || certDna.id || txRecord.txHash;
+              const certDna = extractCertificateFromCell(hex);
+              if (certDna) {
+                const sporeId = txResponse.transaction?.outputs?.[i]?.type?.args ? ccc.hexFrom(txResponse.transaction.outputs[i].type!.args) : undefined;
 
-                  const item: GetCertificateResult = {
-                    certificate: certDna,
-                    certificateId: certId,
-                    transactionHash: txRecord.txHash,
-                    clusterId: certDna.issuer?.id || '',
-                    sporeId,
-                  };
-
-                  addCertificate(item);
-
-                  // Normalize storage key to sporeId as primary key
-                  const storageKey = sporeId || certId;
-                  const existing = certificateCache.get(storageKey);
-                  if (!existing) {
-                    certificateCache.set(storageKey, {
-                      certificate: certDna,
-                      txHash: txRecord.txHash,
-                      sporeId,
-                    });
+                // Verify that the spore cell is still alive on-chain (has not been melted)
+                if (sporeId) {
+                  try {
+                    const liveSpore = await findSpore(ckbClient, sporeId as `0x${string}`);
+                    if (!liveSpore?.cell) {
+                      continue; // Spore cell has been melted, do NOT resurrect!
+                    }
+                  } catch {
+                    continue;
                   }
                 }
-              } catch {}
+
+                const certId = sporeId || certDna.id || txRecord.txHash;
+
+                const item: GetCertificateResult = {
+                  certificate: certDna,
+                  certificateId: certId,
+                  transactionHash: txRecord.txHash,
+                  clusterId: certDna.issuer?.id || '',
+                  sporeId,
+                };
+
+                addCertificate(item);
+
+                // Normalize storage key to sporeId as primary key
+                const storageKey = sporeId || certId;
+                if (!certificateCache.has(storageKey)) {
+                  certificateCache.set(storageKey, {
+                    certificate: certDna,
+                    txHash: txRecord.txHash,
+                    sporeId,
+                  });
+                }
+              }
             }
           } catch {}
         }
-        syncCertificatesToLocalStorage();
       }
     } catch (e) {
       console.warn('Error syncing on-chain certificates:', e);
@@ -556,7 +578,11 @@ export async function getAllCertificates(
  * This is a soft revocation - the certificate cell remains on-chain
  * but is marked as revoked in its DNA.
  *
- * @param signer - The issuer's wallet signer
+ * Note: This does NOT create an on-chain transaction. For true revocation,
+ * the certificate cell would need to be melted. This is a local-only
+ * revocation status update.
+ *
+ * @param signer - The issuer's wallet signer (unused for soft revocation)
  * @param certificateId - The certificate ID to revoke
  * @param reason - The reason for revocation
  */
@@ -564,8 +590,7 @@ export async function revokeCertificate(
   _signer: unknown,
   certificateId: string,
   reason?: string
-): Promise<{ transactionHash: string }> {
-  syncCertificatesFromLocalStorage();
+): Promise<{ transactionHash: string | null }> {
   const cached = certificateCache.get(certificateId);
 
   if (!cached) {
@@ -584,7 +609,6 @@ export async function revokeCertificate(
   // Update the certificate in cache
   cached.certificate.credentialStatus = revokedStatus;
   certificateCache.set(certificateId, cached);
-  syncCertificatesToLocalStorage();
 
   console.log('Certificate revoked (soft):', {
     certificateId,
@@ -592,8 +616,9 @@ export async function revokeCertificate(
     revokedAt: revokedStatus.revokedAt,
   });
 
+  // Return null since soft revocation doesn't create an on-chain transaction
   return {
-    transactionHash: '0x' + 'b'.repeat(64),
+    transactionHash: null,
   };
 }
 
@@ -621,13 +646,12 @@ export async function meltCertificate(
 
   const liveSigner = signer as ccc.Signer;
 
-  // Look up the certificate record from localStorage first
-  syncCertificatesFromLocalStorage();
+  // Look up the certificate record from cache first
   let certRecord = await getCertificate(certificateId, liveSigner.client);
 
-  // If not found by certificateId, search all local storage entries for a matching sporeId
+  // If not found by certificateId, search all local cache entries for a matching sporeId
   if (!certRecord) {
-    for (const [key, item] of Array.from(certificateCache.entries())) {
+    for (const [key, item] of certificateCache.entries()) {
       if (item.sporeId === certificateId || key === certificateId) {
         certRecord = {
           certificate: item.certificate,
@@ -666,8 +690,8 @@ export async function meltCertificate(
     candidateIds.push(certificateId);
   }
 
-  // Priority 3: Search through all local storage entries for a matching certificate
-  for (const [key, item] of Array.from(certificateCache.entries())) {
+  // Priority 3: Search through all local cache entries for a matching certificate
+  for (const [key, item] of certificateCache.entries()) {
     if (item.sporeId && item.sporeId.startsWith('0x') && item.sporeId.length === 66) {
       if (!candidateIds.includes(item.sporeId)) candidateIds.push(item.sporeId);
     }
@@ -765,12 +789,32 @@ export async function meltCertificate(
     }
     const meltTxHash = await liveSigner.sendTransaction(tx);
 
-    // Remove from local storage
-    syncCertificatesFromLocalStorage();
-    certificateCache.delete(certificateId);
-    if (certRecord?.certificate?.id) certificateCache.delete(certRecord.certificate.id);
-    if (targetSporeId) certificateCache.delete(targetSporeId);
-    syncCertificatesToLocalStorage();
+    // Remove from cache - collect keys first, then delete (avoid modifying while iterating)
+    const keysToDelete: string[] = [
+      certificateId,
+      certRecord?.certificateId,
+      certRecord?.certificate?.id,
+      targetSporeId,
+      certRecord?.sporeId,
+      certRecord?.transactionHash,
+    ].filter((k): k is string => Boolean(k));
+
+    // Also search for any entries matching the sporeId or txHash
+    for (const [key, item] of certificateCache.entries()) {
+      if (
+        key === certificateId ||
+        key === targetSporeId ||
+        item.sporeId === targetSporeId ||
+        (certRecord?.transactionHash && item.txHash === certRecord.transactionHash)
+      ) {
+        if (!keysToDelete.includes(key)) {
+          keysToDelete.push(key);
+        }
+      }
+    }
+
+    // Delete all collected keys
+    keysToDelete.forEach((key) => certificateCache.delete(key));
 
     return { transactionHash: meltTxHash };
   } catch (err: any) {
@@ -783,4 +827,3 @@ export async function meltCertificate(
     throw err;
   }
 }
-

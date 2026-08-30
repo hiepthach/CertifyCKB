@@ -30,7 +30,7 @@ describe('Certificate Service (Issuer)', () => {
         codeHash: '0x',
         hashType: 'type',
       },
-    });
+    } as any);
   });
 
   // Test fixtures

@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { useWallet } from '@/hooks/useWallet';
 import { VerifyForm, VerifyResult } from '@/components/verification';
 import { Spinner, Card, Badge } from '@/components/ui';
 import type { VerificationResult } from '@/types';
@@ -10,6 +11,7 @@ import { verifyCertificate } from '@/lib/credentials';
 import { Shield, CheckCircle2, Lock, Cpu } from 'lucide-react';
 
 function VerifyPageContent() {
+  const { client } = useWallet();
   const searchParams = useSearchParams();
   const [certificateId, setCertificateId] = useState<string | null>(
     searchParams.get('certId') ?? null
@@ -19,7 +21,7 @@ function VerifyPageContent() {
     queryKey: ['verify', certificateId],
     queryFn: () => {
       if (!certificateId) return null;
-      return verifyCertificate(certificateId);
+      return verifyCertificate(certificateId, client);
     },
     enabled: !!certificateId,
   });

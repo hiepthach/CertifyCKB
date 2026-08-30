@@ -1,13 +1,11 @@
 import type { Template, TemplateField, VisualConfig } from '@/types';
-
-// In-memory storage for templates
-const templates: Map<string, Template> = new Map();
+import { templateCache } from '@/lib/storage';
 
 /**
  * Clear all templates (for testing)
  */
 export function clearTemplateCache(): void {
-  templates.clear();
+  templateCache.clear();
 }
 
 /**
@@ -30,7 +28,7 @@ export async function createTemplate(params: {
     createdAt: new Date().toISOString(),
   };
 
-  templates.set(template.id, template);
+  templateCache.set(template.id, template);
   return template;
 }
 
@@ -38,14 +36,14 @@ export async function createTemplate(params: {
  * Get template by ID
  */
 export async function getTemplate(templateId: string): Promise<Template | null> {
-  return templates.get(templateId) || null;
+  return templateCache.get(templateId) || null;
 }
 
 /**
  * Get all templates for a cluster
  */
 export async function getTemplates(clusterId: string): Promise<Template[]> {
-  return Array.from(templates.values()).filter((t) => t.clusterId === clusterId);
+  return templateCache.values().filter((t) => t.clusterId === clusterId);
 }
 
 /**
@@ -55,7 +53,7 @@ export async function updateTemplate(
   templateId: string,
   updates: Partial<Omit<Template, 'id' | 'clusterId' | 'createdAt'>>
 ): Promise<Template | null> {
-  const template = templates.get(templateId);
+  const template = templateCache.get(templateId);
   if (!template) return null;
 
   const updated: Template = {
@@ -64,7 +62,7 @@ export async function updateTemplate(
     updatedAt: new Date().toISOString(),
   };
 
-  templates.set(templateId, updated);
+  templateCache.set(templateId, updated);
   return updated;
 }
 
@@ -72,7 +70,7 @@ export async function updateTemplate(
  * Delete a template
  */
 export async function deleteTemplate(templateId: string): Promise<boolean> {
-  return templates.delete(templateId);
+  return templateCache.delete(templateId);
 }
 
 /**

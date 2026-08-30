@@ -32,7 +32,7 @@ export async function parseBatchFile(file: File): Promise<{
 }
 
 /**
- * Parse CSV content (exported for testing)
+ * Parse CSV content 
  */
 export function parseCSV(content: string): {
   totalRows: number;
@@ -63,7 +63,7 @@ export function parseCSV(content: string): {
 }
 
 /**
- * Parse JSON content (exported for testing)
+ * Parse JSON content 
  */
 export function parseJSON(content: string): {
   totalRows: number;
@@ -108,7 +108,7 @@ export function validateBatchEntries(entries: BatchEntry[]): BatchValidationResu
 }
 
 /**
- * Validate single entry (exported for testing)
+ * Validate single entry 
  */
 export function validateEntry(entry: BatchEntry): BatchEntry {
   const errors: string[] = [];

@@ -1,38 +1,7 @@
-import { ccc, Address, ClientPublicTestnet } from '@ckb-ccc/core';
-import { createSporeCluster } from '@ckb-ccc/spore';
+import { ccc, Address as CkbAddress, ClientPublicTestnet } from '@ckb-ccc/core';
+import { createSporeCluster, findSporeClusters, findCluster } from '@ckb-ccc/spore';
 import type { Cluster, ClusterConfig } from '@/types';
-
-const CLUSTER_STORAGE_KEY = 'ckb_credential_clusters';
-
-// In-memory cache for cluster data (synced with localStorage for UI performance)
-const clusterCache = new Map<string, Cluster>();
-
-function syncClustersFromLocalStorage(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    const raw = localStorage.getItem(CLUSTER_STORAGE_KEY);
-    if (raw) {
-      const parsed: Cluster[] = JSON.parse(raw);
-      for (const item of parsed) {
-        if (item && item.clusterId) {
-          clusterCache.set(item.clusterId, item);
-        }
-      }
-    }
-  } catch (e) {
-    console.error('Failed to load clusters from localStorage:', e);
-  }
-}
-
-function syncClustersToLocalStorage(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    const arr = Array.from(clusterCache.values());
-    localStorage.setItem(CLUSTER_STORAGE_KEY, JSON.stringify(arr));
-  } catch (e) {
-    console.error('Failed to save clusters to localStorage:', e);
-  }
-}
+import { clusterCache } from '@/lib/storage';
 
 interface CreateClusterResult {
   clusterId: string;
@@ -62,7 +31,7 @@ export async function createCluster(params: {
     const addrObj = await liveSigner.getRecommendedAddressObj();
     const creatorAddress = addrObj.toString();
 
-    // Encode cluster metadata — same JSON structure as before
+    // Encode cluster metadata
     const clusterMetadata = {
       name: config.name,
       description: config.description,
@@ -96,7 +65,7 @@ export async function createCluster(params: {
         createdAt: new Date().toISOString(),
       };
 
-      saveClusterToCache(cluster);
+      clusterCache.set(clusterId, cluster);
 
       return {
         clusterId,
@@ -119,12 +88,52 @@ export async function createCluster(params: {
 /**
  * Get cluster by ID
  */
-export async function getCluster(clusterId: string): Promise<Cluster | null> {
-  syncClustersFromLocalStorage();
-  const cachedCluster = getClusterFromCache(clusterId);
-  if (cachedCluster) {
-    return cachedCluster;
+export async function getCluster(clusterId: string, client?: unknown): Promise<Cluster | null> {
+  const cached = clusterCache.get(clusterId);
+  if (cached) return cached;
+
+  // If not in cache and clusterId is a valid hex, query on-chain with findCluster
+  if (
+    typeof window !== 'undefined' &&
+    clusterId.startsWith('0x') &&
+    clusterId.length === 66
+  ) {
+    try {
+      const ckbClient =
+        (client as ccc.Client) ||
+        (ClientPublicTestnet ? new ClientPublicTestnet() : new ccc.ClientPublicTestnet());
+      const found = await findCluster(ckbClient, clusterId as `0x${string}`);
+      if (found) {
+        let meta: any = {
+          name: found.clusterData.name,
+          description: found.clusterData.description,
+        };
+        if (found.clusterData.description) {
+          try {
+            const parsed = JSON.parse(found.clusterData.description);
+            if (typeof parsed === 'object' && parsed !== null) {
+              meta = { ...meta, ...parsed };
+            }
+          } catch {}
+        }
+        const cluster: Cluster = {
+          id: clusterId,
+          clusterId,
+          name: meta.name || found.clusterData.name || `Cluster ${clusterId.slice(0, 10)}...`,
+          description: meta.description || found.clusterData.description || '',
+          websiteUrl: meta.websiteUrl || '',
+          contactEmail: meta.contactEmail || '',
+          creatorAddress: meta.creatorAddress || '',
+          createdAt: meta.createdAt || new Date().toISOString(),
+        };
+        clusterCache.set(clusterId, cluster);
+        return cluster;
+      }
+    } catch (e) {
+      console.warn('Error querying on-chain cluster:', e);
+    }
   }
+
   return null;
 }
 
@@ -135,118 +144,85 @@ export async function getProviderClusters(
   address?: string,
   client?: unknown
 ): Promise<Cluster[]> {
-  syncClustersFromLocalStorage();
-  const results = Array.from(clusterCache.values());
+  // 1. Purge any invalid/polluted entries from cache (e.g. certificate DNA stored by mistake)
+  const keysToDelete: string[] = [];
+  for (const [id, cluster] of clusterCache.entries()) {
+    if (
+      cluster.description &&
+      (cluster.description.includes('@context') ||
+        cluster.description.includes('VerifiableCredential') ||
+        cluster.description.includes('CourseCertificate'))
+    ) {
+      keysToDelete.push(id);
+    }
+  }
+  keysToDelete.forEach((id) => clusterCache.delete(id));
+
+  // 2. Get cached clusters, filtering by address if provided
+  const results: Cluster[] = clusterCache.values().filter((c) => {
+    const isValidCluster = !c.description ||
+      (!c.description.includes('@context') && !c.description.includes('VerifiableCredential'));
+
+    // If address is provided, only include clusters created by that address
+    const matchesAddress = !address || !c.creatorAddress ||
+      c.creatorAddress.toLowerCase() === address.toLowerCase();
+
+    return isValidCluster && matchesAddress;
+  });
+
   const seenIds = new Set(results.map((c) => c.clusterId));
 
   if (address && typeof window !== 'undefined') {
     try {
-      const ckbClient = (client as ccc.Client) || (ClientPublicTestnet ? new ClientPublicTestnet() : new ccc.ClientPublicTestnet());
-      const AddressClass = Address || ccc?.Address;
+      const ckbClient =
+        (client as ccc.Client) ||
+        (ClientPublicTestnet ? new ClientPublicTestnet() : new ccc.ClientPublicTestnet());
+      const AddressClass = CkbAddress;
       if (AddressClass?.fromString) {
         const addrObj = await AddressClass.fromString(address, ckbClient);
 
-        // 1. Search live cells owned by the creator for SporeCluster cells
-        for await (const cell of ckbClient.findCellsByLock(addrObj.script, undefined, true)) {
-          try {
-            if (!cell.outputData || cell.outputData === '0x' || cell.outputData.length < 10) continue;
-            const text = new TextDecoder().decode(ccc.bytesFrom(cell.outputData));
-            if (!text.includes('SporeCluster')) continue;
+        // 2. Query real Spore Clusters via CCC Spore SDK (filters strictly by Spore Cluster script)
+        for await (const { cluster, clusterData } of findSporeClusters({
+          client: ckbClient,
+          lock: addrObj.script,
+        })) {
+          if (!cluster.cellOutput.type?.args) continue;
+          const clusterId = ccc.hexFrom(cluster.cellOutput.type.args);
 
-            const meta = JSON.parse(text);
-            const clusterId = cell.outPoint.txHash;
+          if (!seenIds.has(clusterId)) {
+            seenIds.add(clusterId);
+            let meta: any = {
+              name: clusterData.name,
+              description: clusterData.description,
+            };
 
-            if (!seenIds.has(clusterId)) {
-              seenIds.add(clusterId);
-              const cluster: Cluster = {
-                id: clusterId,
-                clusterId,
-                name: meta.name || 'Unnamed Cluster',
-                description: meta.description || '',
-                websiteUrl: meta.websiteUrl || '',
-                contactEmail: meta.contactEmail || '',
-                creatorAddress: address,
-                createdAt: meta.createdAt || new Date().toISOString(),
-              };
-              results.push(cluster);
-              clusterCache.set(clusterId, cluster);
+            if (clusterData.description) {
+              try {
+                const parsed = JSON.parse(clusterData.description);
+                if (typeof parsed === 'object' && parsed !== null) {
+                  meta = { ...meta, ...parsed };
+                }
+              } catch {}
             }
-          } catch {
-            // Ignore non-cluster cells
+
+            const clusterObj: Cluster = {
+              id: clusterId,
+              clusterId,
+              name: meta.name || clusterData.name || `Cluster ${clusterId.slice(0, 10)}...`,
+              description: meta.description || clusterData.description || '',
+              websiteUrl: meta.websiteUrl || '',
+              contactEmail: meta.contactEmail || '',
+              creatorAddress: address,
+              createdAt: meta.createdAt || new Date().toISOString(),
+            };
+
+            results.push(clusterObj);
+            clusterCache.set(clusterId, clusterObj);
           }
         }
-
-        // 2. Scan transactions sent by this creator (input = creator lock)
-        // If this wallet created clusters or issued certificates on-chain, discover them!
-        let txCount = 0;
-        for await (const txRecord of ckbClient.findTransactionsByLock(addrObj.script, undefined, false, 'desc', 20)) {
-          if (txCount++ > 20) break;
-          try {
-            if (!txRecord.isInput) continue;
-            const txResponse = await ckbClient.getTransaction(txRecord.txHash);
-            if (!txResponse?.transaction?.outputsData) continue;
-
-            for (let i = 0; i < txResponse.transaction.outputsData.length; i++) {
-              const hex = txResponse.transaction.outputsData[i];
-              if (!hex || hex === '0x' || hex.length < 10) continue;
-              try {
-                const text = new TextDecoder().decode(ccc.bytesFrom(hex));
-
-                // If it's a Cluster Cell created by this sender
-                if (text.includes('SporeCluster')) {
-                  const meta = JSON.parse(text);
-                  const clusterId = txRecord.txHash;
-                  if (!seenIds.has(clusterId)) {
-                    seenIds.add(clusterId);
-                    const cluster: Cluster = {
-                      id: clusterId,
-                      clusterId,
-                      name: meta.name || 'Unnamed Cluster',
-                      description: meta.description || '',
-                      websiteUrl: meta.websiteUrl || '',
-                      contactEmail: meta.contactEmail || '',
-                      creatorAddress: address,
-                      createdAt: meta.createdAt || new Date().toISOString(),
-                    };
-                    results.push(cluster);
-                    clusterCache.set(clusterId, cluster);
-                  }
-                }
-
-                // If it's a Certificate Cell issued by this sender
-                if (
-                  text.includes('@context') &&
-                  (text.includes('VerifiableCredential') ||
-                   text.includes('credentialSubject') ||
-                   text.includes('CourseCertificate'))
-                ) {
-                  const certDna = JSON.parse(text);
-                  const cid = certDna.issuer?.id;
-                  if (cid && !seenIds.has(cid)) {
-                    seenIds.add(cid);
-                    const cluster: Cluster = {
-                      id: cid,
-                      clusterId: cid,
-                      name: certDna.issuer?.name || 'Accredited Institution',
-                      description: certDna.issuer?.description || 'Verified On-Chain Credential Provider Cluster',
-                      websiteUrl: '',
-                      contactEmail: '',
-                      creatorAddress: address,
-                      createdAt: certDna.issuanceDate || new Date().toISOString(),
-                    };
-                    results.push(cluster);
-                          clusterCache.set(cid, cluster);
-                  }
-                }
-              } catch { }
-            }
-          } catch { }
-        }
-
-        syncClustersToLocalStorage();
       }
     } catch (e) {
-      console.warn('Error querying on-chain cluster cells:', e);
+      console.warn('Error querying on-chain spore clusters:', e);
     }
   }
 
@@ -260,30 +236,13 @@ export async function getProviderClusters(
 }
 
 export function saveClusterToCache(cluster: Cluster): void {
-  syncClustersFromLocalStorage();
   clusterCache.set(cluster.clusterId, cluster);
-  syncClustersToLocalStorage();
 }
 
-/**
- * Clear all cluster cache (for testing)
- */
 export function clearClusterCache(): void {
   clusterCache.clear();
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.removeItem(CLUSTER_STORAGE_KEY);
-    } catch { }
-  }
-}
-
-function getClusterFromCache(clusterId: string): Cluster | null {
-  syncClustersFromLocalStorage();
-  return clusterCache.get(clusterId) || null;
 }
 
 export function getClustersFromCache(): Cluster[] {
-  syncClustersFromLocalStorage();
-  return Array.from(clusterCache.values());
+  return clusterCache.values();
 }
-

@@ -98,6 +98,16 @@ vi.mock('@ckb-ccc/spore', () => ({
   findSporeClustersBySigner: vi.fn(),
 }));
 
+// Mock @ckb-ccc/spore/advanced
+vi.mock('@ckb-ccc/spore/advanced', () => ({
+  unpackToRawSporeData: vi.fn().mockImplementation((data: any) => {
+    return {
+      contentType: 'application/json',
+      content: data,
+    };
+  }),
+}));
+
 // Mock @ckb-ccc/core
 vi.mock('@ckb-ccc/core', () => ({
   ccc: {

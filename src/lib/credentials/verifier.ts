@@ -1,5 +1,5 @@
 import type { VerificationResult, VerificationHistory, CertificateDNA } from '@/types';
-import { isExpired, isRevoked } from './decoder';
+import { isExpired, isRevoked, isValidDNAFormat, decodeCertificateDNA } from './decoder';
 import { getCertificate } from './issuer';
 import { getCluster } from './cluster';
 
@@ -12,7 +12,10 @@ import { getCluster } from './cluster';
  * - Expiration check
  * - Revocation check
  */
-export async function verifyCertificate(certificateId: string): Promise<VerificationResult> {
+export async function verifyCertificate(
+  certificateId: string,
+  client?: unknown
+): Promise<VerificationResult> {
   const errors: string[] = [];
 
   // Initialize checks object
@@ -26,7 +29,7 @@ export async function verifyCertificate(certificateId: string): Promise<Verifica
 
   try {
     // Step 1: Find the certificate
-    const certResult = await getCertificate(certificateId);
+    const certResult = await getCertificate(certificateId, client);
 
     if (!certResult) {
       errors.push('Certificate not found on chain');
@@ -38,7 +41,14 @@ export async function verifyCertificate(certificateId: string): Promise<Verifica
     // Step 2: Get and validate the certificate DNA
     let certificate: CertificateDNA;
     try {
-      certificate = certResult.certificate;
+      if (typeof certResult.certificate === 'string') {
+        certificate = decodeCertificateDNA(certResult.certificate);
+      } else if (isValidDNAFormat(certResult.certificate)) {
+        certificate = certResult.certificate;
+      } else {
+        errors.push('Invalid certificate format');
+        return createInvalidResult(certificateId, errors, checks);
+      }
       checks.dnaValid = true;
     } catch {
       errors.push('Invalid certificate format');
@@ -50,7 +60,7 @@ export async function verifyCertificate(certificateId: string): Promise<Verifica
     let issuerName = certificate.issuer.name || 'Unknown';
 
     if (issuerId) {
-      const cluster = await getCluster(issuerId);
+      const cluster = await getCluster(issuerId, client);
       if (cluster) {
         issuerName = cluster.name;
         checks.issuerVerified = true;
