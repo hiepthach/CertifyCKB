@@ -248,7 +248,6 @@ export async function getCertificate(
               certDna.issuer?.id ||
               (found.sporeData?.clusterId ? ccc.hexFrom(found.sporeData.clusterId) : '');
 
-            certificateCache.set(certId, { certificate: certDna, txHash, sporeId });
             return {
               certificate: certDna,
               certificateId: certId,
@@ -283,7 +282,6 @@ export async function getCertificate(
               }
 
               const certId = sporeId || certDna.id || certificateId;
-              certificateCache.set(certId, { certificate: certDna, txHash: certificateId, sporeId });
               return {
                 certificate: certDna,
                 certificateId: certId,

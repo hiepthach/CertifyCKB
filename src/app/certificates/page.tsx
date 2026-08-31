@@ -61,12 +61,8 @@ export default function CertificatesPage() {
 
     const isAddressMatch = (addr1?: string, addr2?: string): boolean => {
       if (!addr1 || !addr2) return false;
-      const a1 = addr1.toLowerCase().replace(/^0x/, '').trim();
-      const a2 = addr2.toLowerCase().replace(/^0x/, '').trim();
-      if (!a1 || !a2) return false;
-      if (a1 === a2) return true;
-      if (a1.length >= 10 && a2.length >= 10 && (a1.startsWith(a2) || a2.startsWith(a1))) return true;
-      return false;
+      // Use strict full equality - CKB addresses must match exactly
+      return addr1.toLowerCase() === addr2.toLowerCase();
     };
 
     const checkIsRecipient = (c: CertificateWithMeta): boolean => {

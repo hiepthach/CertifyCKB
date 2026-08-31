@@ -31,8 +31,13 @@ export default function ClustersPage() {
       const onChainClusters = await getProviderClusters(address || undefined, client);
       const cachedClusters = getClustersFromCache();
 
+      // Only include cached clusters that belong to the current user
+      const userCachedClusters = cachedClusters.filter(
+        (c) => c.creatorAddress?.toLowerCase() === address?.toLowerCase()
+      );
+
       const allClusters = [...onChainClusters];
-      for (const cached of cachedClusters) {
+      for (const cached of userCachedClusters) {
         if (!allClusters.find((c) => c.clusterId === cached.clusterId)) {
           allClusters.push(cached);
         }

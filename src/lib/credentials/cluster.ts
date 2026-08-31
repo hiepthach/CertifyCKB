@@ -126,7 +126,6 @@ export async function getCluster(clusterId: string, client?: unknown): Promise<C
           creatorAddress: meta.creatorAddress || '',
           createdAt: meta.createdAt || new Date().toISOString(),
         };
-        clusterCache.set(clusterId, cluster);
         return cluster;
       }
     } catch (e) {
@@ -163,9 +162,10 @@ export async function getProviderClusters(
     const isValidCluster = !c.description ||
       (!c.description.includes('@context') && !c.description.includes('VerifiableCredential'));
 
-    // If address is provided, only include clusters created by that address
-    const matchesAddress = !address || !c.creatorAddress ||
-      c.creatorAddress.toLowerCase() === address.toLowerCase();
+    // If address is provided, only include clusters with matching creatorAddress
+    // Never use wildcard fallback - clusters without creatorAddress should be excluded
+    const matchesAddress = !address ||
+      (c.creatorAddress && c.creatorAddress.toLowerCase() === address.toLowerCase());
 
     return isValidCluster && matchesAddress;
   });
@@ -217,7 +217,6 @@ export async function getProviderClusters(
             };
 
             results.push(clusterObj);
-            clusterCache.set(clusterId, clusterObj);
           }
         }
       }
@@ -229,7 +228,7 @@ export async function getProviderClusters(
   if (!address) return results;
   return results.filter((c) => {
     return (
-      !c.creatorAddress ||
+      c.creatorAddress &&
       c.creatorAddress.toLowerCase() === address.toLowerCase()
     );
   });
