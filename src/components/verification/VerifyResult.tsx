@@ -14,7 +14,7 @@ interface VerifyResultProps {
 export function VerifyResult({ result, onViewDetails }: VerifyResultProps) {
   const { explorerUrl } = useNetwork();
 
-  if (result.valid && !result.certificate.isExpired && !result.certificate.isRevoked) {
+  if (result.valid && !result.certificate.isExpired) {
     return (
       <ValidResult result={result} onViewDetails={onViewDetails} />
     );
@@ -23,12 +23,6 @@ export function VerifyResult({ result, onViewDetails }: VerifyResultProps) {
   if (result.certificate.isExpired) {
     return (
       <ExpiredResult result={result} />
-    );
-  }
-
-  if (result.certificate.isRevoked) {
-    return (
-      <RevokedResult result={result} />
     );
   }
 
@@ -129,41 +123,6 @@ function ExpiredResult({ result }: { result: VerificationResult }) {
         <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
           <span className="text-mid-ash uppercase tracking-wider font-semibold">Status</span>
           <Badge variant="warning">Expired</Badge>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-function RevokedResult({ result }: { result: VerificationResult }) {
-  return (
-    <Card variant="default" padding="xl" className="border-red-500/40 animate-fade-in-scale">
-      <div className="text-center py-6">
-        <div className="w-16 h-16 mx-auto mb-4 bg-midnight-plum border border-red-500/40 rounded-2xl flex items-center justify-center text-red-400 shadow-glow-sm animate-float">
-          <XCircle className="w-9 h-9" />
-        </div>
-        <h2 className="text-xl font-bold text-red-400 mb-1.5 tracking-tight">
-          Revoked Credential
-        </h2>
-        <p className="text-ash-veil text-xs max-w-sm mx-auto">
-          This certificate has been revoked by the issuing authority.
-        </p>
-      </div>
-
-      <div className="space-y-3 mt-4 pt-5 border-t border-fog-line/10 text-xs">
-        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
-          <span className="text-mid-ash uppercase tracking-wider font-semibold">Certificate ID</span>
-          <span className="font-mono text-bone-white">
-            {truncateAddress(result.certificateId, 10, 8)}
-          </span>
-        </div>
-        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
-          <span className="text-mid-ash uppercase tracking-wider font-semibold">Issuer Authority</span>
-          <span className="text-bone-white">{result.issuer.name}</span>
-        </div>
-        <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
-          <span className="text-mid-ash uppercase tracking-wider font-semibold">Status</span>
-          <Badge variant="danger">Revoked</Badge>
         </div>
       </div>
     </Card>

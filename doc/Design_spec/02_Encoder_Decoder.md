@@ -47,9 +47,6 @@ function decodeCertificateDNA(
 // Check if certificate is expired
 function isExpired(certificate: CertificateDNA): boolean
 
-// Check if certificate is revoked
-function isRevoked(certificate: CertificateDNA): boolean
-
 // Format certificate for display
 function formatCertificateDisplay(
   certificate: CertificateDNA
@@ -129,8 +126,6 @@ interface CertificateDNA {
   credentialStatus?: {
     id: string;
     type: string;
-    revoked: boolean;
-    revocationReason?: string;
   };
   metadata: {
     clusterId: string;
@@ -149,7 +144,7 @@ interface CertificateDisplay {
   subtitle: string;
   issuer: string;
   date: string;
-  status: 'active' | 'expired' | 'revoked';
+  status: 'active' | 'expired';
 }
 ```
 
@@ -240,23 +235,7 @@ if (!certificate.expirationDate) return false;
 return new Date(certificate.expirationDate) < new Date();
 ```
 
-### 5.4 isRevoked
-
-**Purpose**: Check if certificate has been revoked.
-
-**Parameters**:
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| `certificate` | `CertificateDNA` | Yes | Certificate to check |
-
-**Returns**: `boolean`
-
-**Logic**:
-```typescript
-return certificate.credentialStatus?.revoked === true;
-```
-
-### 5.5 formatCertificateDisplay
+### 5.4 formatCertificateDisplay
 
 **Purpose**: Format certificate data for UI display.
 
@@ -395,8 +374,6 @@ const METADATA_VERSION = "1.0";
 | isExpired - not expired | Future expirationDate | false |
 | isExpired - expired | Past expirationDate | true |
 | isExpired - no date | No expirationDate | false |
-| isRevoked - not revoked | revoked: false | false |
-| isRevoked - revoked | revoked: true | true |
 | formatCertificateDisplay | CertificateDNA | CertificateDisplay |
 
 ---

@@ -1,8 +1,8 @@
 /**
  * Verification Service Tests - Certificate Verification Logic
  *
- * Tests for certificate verification including expiration checking,
- * revocation status, and W3C VC structure validation.
+ * Tests for certificate verification including expiration checking
+ * and W3C VC structure validation.
  * Reference: Design_spec/04_Verification_Service.md
  */
 
@@ -30,9 +30,9 @@ describe('Verification Service', () => {
   });
 
   describe('Certificate Verification Logic', () => {
-    // Test: Valid certificate (future expiration, not revoked)
+    // Test: Valid certificate (future expiration)
     // Input: Certificate with expirationDate 1 year in future
-    // Expected: isExpired=false, isRevoked=false
+    // Expected: isExpired=false
     it('should consider valid certificate as valid', () => {
       const dna = createMockDNA({
         expirationDate: new Date(Date.now() + 86400000 * 365).toISOString(),
@@ -41,10 +41,8 @@ describe('Verification Service', () => {
       const isExpired = dna.expirationDate
         ? new Date(dna.expirationDate) < new Date()
         : false;
-      const isRevoked = !!dna.credentialStatus;
 
       expect(isExpired).toBe(false);
-      expect(isRevoked).toBe(false);
     });
 
     // Test: Expired certificate detection
@@ -60,42 +58,6 @@ describe('Verification Service', () => {
         : false;
 
       expect(isExpired).toBe(true);
-    });
-
-    // Test: Revoked certificate detection
-    // Input: Certificate with credentialStatus.revoked = true
-    // Expected: isRevoked=true
-    it('should detect revoked certificate with revoked flag', () => {
-      const dna = createMockDNA({
-        credentialStatus: {
-          id: 'https://example.com/revocations/1',
-          type: 'RevocationList2023Status',
-          revoked: true,
-          revocationReason: 'Certificate was issued in error',
-        },
-      });
-
-      const isRevoked = dna.credentialStatus?.revoked === true;
-
-      expect(isRevoked).toBe(true);
-      expect(dna.credentialStatus?.revocationReason).toBe('Certificate was issued in error');
-    });
-
-    // Test: Non-revoked certificate with credentialStatus present
-    // Input: Certificate with credentialStatus but revoked=false
-    // Expected: isRevoked=false
-    it('should not consider certificate revoked if revoked flag is false', () => {
-      const dna = createMockDNA({
-        credentialStatus: {
-          id: 'https://example.com/status/1',
-          type: 'RevocationList2023Status',
-          revoked: false,
-        },
-      });
-
-      const isRevoked = dna.credentialStatus?.revoked === true;
-
-      expect(isRevoked).toBe(false);
     });
 
     // Test: W3C VC structure validation
@@ -144,7 +106,7 @@ describe('Verification Service', () => {
   describe('Verification Result Structure', () => {
     // Test: Build valid verification result
     // Input: Valid certificateId and DNA
-    // Expected: Result with valid=true, correct issuer, no expiration/revocation
+    // Expected: Result with valid=true, correct issuer, no expiration
     it('should build valid verification result', () => {
       const certificateId = '0x1234567890abcdef';
       const dna = createMockDNA();
@@ -158,7 +120,6 @@ describe('Verification Service', () => {
         },
         certificate: {
           isExpired: false,
-          isRevoked: false,
           issuanceDate: dna.issuanceDate,
           expirationDate: dna.expirationDate,
         },
@@ -167,7 +128,6 @@ describe('Verification Service', () => {
           dnaValid: true,
           issuerVerified: true,
           expirationVerified: true,
-          revocationVerified: true,
         },
         timestamp: new Date().toISOString(),
       };
@@ -192,7 +152,6 @@ describe('Verification Service', () => {
         issuer: { id: '', name: '' },
         certificate: {
           isExpired: false,
-          isRevoked: false,
           issuanceDate: '',
         },
         errors,
@@ -201,7 +160,6 @@ describe('Verification Service', () => {
           dnaValid: false,
           issuerVerified: false,
           expirationVerified: false,
-          revocationVerified: false,
         },
       };
 
@@ -224,7 +182,6 @@ describe('Verification Service', () => {
         issuer: { id: '', name: '' },
         certificate: {
           isExpired: true,
-          isRevoked: false,
           issuanceDate: '',
           expirationDate: expiredDNA.expirationDate,
         },
@@ -234,7 +191,6 @@ describe('Verification Service', () => {
           dnaValid: true,
           issuerVerified: true,
           expirationVerified: false,
-          revocationVerified: true,
         },
       };
 

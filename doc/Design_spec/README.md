@@ -79,7 +79,7 @@ graph TD
 ### Business Layer
 | Module | File | Key Functions |
 |--------|------|---------------|
-| Certificate Service | 03_Certificate_Service.md | `issueCertificate()`, `getHolderCertificates()`, `revokeCertificate()` |
+| Certificate Service | 03_Certificate_Service.md | `issueCertificate()`, `getHolderCertificates()`, `meltCertificate()` |
 | Verification Service | 04_Verification_Service.md | `verifyCertificate()` |
 | Template Service | 05_Template_Service.md | `createTemplate()`, `applyTemplate()` |
 | Batch Issuance | 06_Batch_Issuance.md | `parseBatchFile()`, `issueBatchCertificates()` |
@@ -141,7 +141,7 @@ interface VerificationResult {
   valid: boolean;
   certificateId: string;
   issuer: { id: string; name: string; };
-  certificate: { isExpired: boolean; isRevoked: boolean; };
+  certificate: { isExpired: boolean; };
 }
 ```
 

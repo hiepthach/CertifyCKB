@@ -10,7 +10,6 @@ import { describe, it, expect } from 'vitest';
 import {
   decodeCertificateDNA,
   isExpired,
-  isRevoked,
   getExpirationStatus,
   formatCertificateDisplay,
   isValidDNAFormat,
@@ -108,30 +107,6 @@ describe('Decoder', () => {
     });
   });
 
-  describe('isRevoked', () => {
-    // Test: Certificate without revocation status
-    // Input: CertificateDNA without credentialStatus field
-    // Expected: Returns false (not revoked)
-    it('should return false for certificate without status', () => {
-      expect(isRevoked(validDNA)).toBe(false);
-    });
-
-    // Test: Certificate with revocation status
-    // Input: CertificateDNA with credentialStatus containing revocation info
-    // Expected: Returns true (revoked)
-    it('should return true for revoked certificate', () => {
-      const revokedDNA: CertificateDNA = {
-        ...validDNA,
-        credentialStatus: {
-          id: 'https://example.com/revocations/1',
-          type: 'RevocationList2023Status',
-          revoked: true,
-        },
-      };
-      expect(isRevoked(revokedDNA)).toBe(true);
-    });
-  });
-
   describe('getExpirationStatus', () => {
     // Test: Certificate without expiration date
     // Input: CertificateDNA without expirationDate
@@ -211,22 +186,6 @@ describe('Decoder', () => {
       expect(display.status).toBe('expired');
     });
 
-    // Test: Revoked certificate status
-    // Input: CertificateDNA with credentialStatus.revoked = true
-    // Expected: Returns status='revoked'
-    it('should return revoked status for revoked certificate', () => {
-      const revokedDNA: CertificateDNA = {
-        ...validDNA,
-        credentialStatus: {
-          id: 'https://example.com/revocation/1',
-          type: 'RevocationList2023Status',
-          revoked: true,
-          revocationReason: 'Issued in error',
-        },
-      };
-      const display = formatCertificateDisplay(revokedDNA);
-      expect(display.status).toBe('revoked');
-    });
   });
 
   describe('isValidDNAFormat', () => {

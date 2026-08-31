@@ -1,5 +1,5 @@
 import type { VerificationResult, VerificationHistory, CertificateDNA } from '@/types';
-import { isExpired, isRevoked, isValidDNAFormat, decodeCertificateDNA } from './decoder';
+import { isExpired, isValidDNAFormat, decodeCertificateDNA } from './decoder';
 import { getCertificate } from './issuer';
 import { getCluster } from './cluster';
 
@@ -10,7 +10,6 @@ import { getCluster } from './cluster';
  * - DNA format validation
  * - Issuer verification
  * - Expiration check
- * - Revocation check
  */
 export async function verifyCertificate(
   certificateId: string,
@@ -24,7 +23,6 @@ export async function verifyCertificate(
     dnaValid: false,
     issuerVerified: false,
     expirationVerified: true,
-    revocationVerified: true,
   };
 
   try {
@@ -74,15 +72,8 @@ export async function verifyCertificate(
       errors.push('Certificate has expired');
     }
 
-    // Step 5: Check revocation
-    const revoked = isRevoked(certificate);
-    if (revoked) {
-      checks.revocationVerified = false;
-      errors.push('Certificate has been revoked');
-    }
-
     // Overall validity - all checks must pass
-    const valid = checks.cellExists && checks.dnaValid && checks.expirationVerified && checks.revocationVerified;
+    const valid = checks.cellExists && checks.dnaValid && checks.expirationVerified;
 
     return {
       valid,
@@ -93,7 +84,6 @@ export async function verifyCertificate(
       },
       certificate: {
         isExpired: expired,
-        isRevoked: revoked,
         issuanceDate: certificate.issuanceDate,
         expirationDate: certificate.expirationDate,
       },
@@ -119,7 +109,6 @@ function createInvalidResult(
     dnaValid: boolean;
     issuerVerified: boolean;
     expirationVerified: boolean;
-    revocationVerified: boolean;
   }
 ): VerificationResult {
   return {
@@ -128,7 +117,6 @@ function createInvalidResult(
     issuer: { id: '', name: '' },
     certificate: {
       isExpired: false,
-      isRevoked: false,
       issuanceDate: '',
     },
     checks,

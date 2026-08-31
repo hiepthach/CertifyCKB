@@ -91,7 +91,7 @@
 
 ### 3. Decoder Tests (`tests/unit/credentials/decoder.test.ts`)
 
-**Coverage:** W3C VC decoding, expiration/revocation checks, format validation
+**Coverage:** W3C VC decoding, expiration checks, format validation
 
 #### decodeCertificateDNA
 | # | Test Case | Status |
@@ -108,12 +108,6 @@
 | 6 | should return false for certificate with future expiration | ✅ Pass |
 | 7 | should return true for certificate with past expiration | ✅ Pass |
 
-#### isRevoked
-| # | Test Case | Status |
-|---|-----------|--------|
-| 8 | should return false for certificate without status | ✅ Pass |
-| 9 | should return true for revoked certificate | ✅ Pass |
-
 #### getExpirationStatus
 | # | Test Case | Status |
 |---|-----------|--------|
@@ -127,7 +121,6 @@
 | 13 | should format valid certificate correctly | ✅ Pass |
 | 14 | should return Unknown for missing fields | ✅ Pass |
 | 15 | should return expired status for expired certificate | ✅ Pass |
-| 16 | should return revoked status for revoked certificate | ✅ Pass |
 
 #### isValidDNAFormat
 | # | Test Case | Status |
@@ -217,8 +210,7 @@
 |---|-----------|--------|
 | 1 | should consider valid certificate as valid | ✅ Pass |
 | 2 | should detect expired certificate | ✅ Pass |
-| 3 | should detect revoked certificate with revoked flag | ✅ Pass |
-| 4 | should not consider certificate revoked if revoked flag is false | ✅ Pass |
+| 3 | should detect melted certificate (cell not found) | ✅ Pass |
 | 5 | should validate W3C VC structure | ✅ Pass |
 | 6 | should extract issuer information correctly | ✅ Pass |
 | 7 | should handle certificate with no expiration | ✅ Pass |
@@ -240,7 +232,7 @@
 
 ### 7. Certificate Service Tests (`tests/unit/credentials/issuer.test.ts`)
 
-**Coverage:** Certificate issuance, retrieval, revocation, and credential subject handling
+**Coverage:** Certificate issuance, retrieval, melting, and credential subject handling
 
 #### issueCertificate
 | # | Test Case | Status |
@@ -267,12 +259,13 @@
 | 12 | should only return certificates for specified holder | ✅ Pass |
 | 13 | should include certificateId and clusterId in results | ✅ Pass |
 
-#### revokeCertificate
+#### meltCertificate
 | # | Test Case | Status |
 |---|-----------|--------|
-| 14 | should revoke existing certificate | ✅ Pass |
-| 15 | should handle revoke non-existent certificate | ✅ Pass |
-| 16 | should not return revoked certificate in holder list | ✅ Pass |
+| 14 | should melt certificate and remove from local storage | ✅ Pass |
+| 15 | should throw if signer is not a live signer | ✅ Pass |
+| 16 | should throw if certificate not found | ✅ Pass |
+| 17 | should throw if signer is not the holder | ✅ Pass |
 
 #### CredentialSubject structure
 | # | Test Case | Status |
@@ -505,8 +498,7 @@ Tests implemented according to `doc/Design_spec/`:
 - Mock data is used for CKB SDK dependencies
 - Tests follow the arrange-act-assert pattern with descriptive comments
 - UI components tested with @testing-library/react
-- Soft revocation tests: `issuer.test.ts` now covers soft revocation with DNA update
-- Revocation flag tests: `verifier.test.ts` now validates revoked flag in credentialStatus
+- Melt certificate tests: `issuer.test.ts` covers permanent certificate destruction with CKB reclaim
 
 ---
 

@@ -3,7 +3,7 @@
 import { Card, Badge, Button } from '@/components/ui';
 import type { CertificateDNA } from '@/types';
 import { formatDate, truncateAddress } from '@/utils';
-import { formatCertificateDisplay, isExpired, isRevoked } from '@/lib/credentials';
+import { formatCertificateDisplay, isExpired } from '@/lib/credentials';
 import { Award, Calendar, User, ExternalLink, ArrowRight } from 'lucide-react';
 import { useNetwork } from '@/hooks';
 
@@ -25,10 +25,8 @@ export function CertificateCard({
   const { explorerUrl } = useNetwork();
   const display = formatCertificateDisplay(certificate);
   const expired = isExpired(certificate);
-  const revoked = isRevoked(certificate);
 
   const getStatusBadge = () => {
-    if (revoked) return <Badge variant="danger">Revoked</Badge>;
     if (expired) return <Badge variant="warning">Expired</Badge>;
     return <Badge variant="success" pulse>Valid DOB</Badge>;
   };

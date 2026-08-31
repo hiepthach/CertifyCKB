@@ -22,11 +22,6 @@ export interface CredentialSubject {
 export interface CredentialStatus {
   id: string;
   type: string;
-  revoked: boolean;
-  revocationReason?: string;
-  revokedAt?: string;
-  revocationListIndex?: string;
-  revocationListCredential?: string;
 }
 
 export interface CertificateDNA {
@@ -45,7 +40,6 @@ export interface VerificationChecks {
   dnaValid: boolean;
   issuerVerified: boolean;
   expirationVerified: boolean;
-  revocationVerified: boolean;
 }
 
 export interface VerificationResult {
@@ -54,7 +48,6 @@ export interface VerificationResult {
   issuer: { id: string; name: string };
   certificate: {
     isExpired: boolean;
-    isRevoked: boolean;
     issuanceDate: string;
     expirationDate?: string;
   };
@@ -76,5 +69,5 @@ export interface CertificateDisplay {
   course: string;
   issuer: string;
   date?: string;
-  status: 'active' | 'expired' | 'revoked';
+  status: 'active' | 'expired';
 }

@@ -1,7 +1,7 @@
 import { ccc, Address as CkbAddress, ClientPublicTestnet } from '@ckb-ccc/core';
 import { createSpore, meltSpore, findSpore } from '@ckb-ccc/spore';
 import { unpackToRawSporeData } from '@ckb-ccc/spore/advanced';
-import type { CertificateDNA, CredentialSubject, CredentialStatus } from '@/types';
+import type { CertificateDNA, CredentialSubject } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
 import { certificateCache } from '@/lib/storage';
 
@@ -569,57 +569,6 @@ export async function getAllCertificates(
   }
 
   return results;
-}
-
-/**
- * Revoke a certificate (Soft Revocation)
- *
- * Updates the credentialStatus in the DNA to mark as revoked.
- * This is a soft revocation - the certificate cell remains on-chain
- * but is marked as revoked in its DNA.
- *
- * Note: This does NOT create an on-chain transaction. For true revocation,
- * the certificate cell would need to be melted. This is a local-only
- * revocation status update.
- *
- * @param signer - The issuer's wallet signer (unused for soft revocation)
- * @param certificateId - The certificate ID to revoke
- * @param reason - The reason for revocation
- */
-export async function revokeCertificate(
-  _signer: unknown,
-  certificateId: string,
-  reason?: string
-): Promise<{ transactionHash: string | null }> {
-  const cached = certificateCache.get(certificateId);
-
-  if (!cached) {
-    throw new Error('Certificate not found');
-  }
-
-  // Update the certificate DNA with revocation status (soft revocation)
-  const revokedStatus: CredentialStatus = {
-    id: `revocation:${certificateId}`,
-    type: 'RevocationList2023Status',
-    revoked: true,
-    revocationReason: reason,
-    revokedAt: new Date().toISOString(),
-  };
-
-  // Update the certificate in cache
-  cached.certificate.credentialStatus = revokedStatus;
-  certificateCache.set(certificateId, cached);
-
-  console.log('Certificate revoked (soft):', {
-    certificateId,
-    reason,
-    revokedAt: revokedStatus.revokedAt,
-  });
-
-  // Return null since soft revocation doesn't create an on-chain transaction
-  return {
-    transactionHash: null,
-  };
 }
 
 /**

@@ -13,7 +13,7 @@
 
 ## 2. Purpose
 
-The Certificate Service handles the issuance and management of course completion certificates as Spore DOBs. It coordinates between the Encoder module and Spore SDK to create, query, and revoke certificates.
+The Certificate Service handles the issuance and management of course completion certificates as Spore DOBs. It coordinates between the Encoder module and Spore SDK to create, query, and melt certificates.
 
 ---
 
@@ -44,13 +44,6 @@ async function getClusterCertificates(clusterId: string): Promise<GetCertificate
 
 // Get all certificates in the system
 async function getAllCertificates(client?: ccc.Client, address?: string): Promise<GetCertificateResult[]>
-
-// Revoke a certificate (soft revocation)
-async function revokeCertificate(
-  signer: unknown,
-  certificateId: string,
-  reason?: string
-): Promise<{ transactionHash: string }>
 
 // Get a specific certificate by ID
 async function getCertificate(
@@ -95,7 +88,7 @@ interface CertificateDisplay {
   course: string;
   issuer: string;
   date?: string;
-  status: 'active' | 'expired' | 'revoked';
+  status: 'active' | 'expired';
 }
 ```
 
@@ -188,41 +181,7 @@ Fee:    ~0.001 CKB
 
 **Note**: This requires tracking issued certificates off-chain or using an indexer that supports cluster queries.
 
-### 4.4 revokeCertificate
-
-**Purpose**: Mark a certificate as revoked (soft revocation).
-
-> ⚠️ **Important**: This is **SOFT REVOCATION**, not hard revocation.
->
-> - **Soft Revocation**: Updates the `credentialStatus.revoked` flag in the certificate DNA to `true`. The certificate cell remains on-chain but is marked as revoked.
-> - **Hard Revocation**: Would permanently destroy the certificate cell (burn). This requires a custom on-chain script (Phase 2+).
-
-**Parameters**:
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| `signer` | `ccc.Signer` | Yes | Provider's wallet signer |
-| `certificateId` | `string` | Yes | Certificate to revoke |
-| `reason` | `string` | Yes | Revocation reason |
-
-**Process**:
-1. Find certificate cell by ID
-2. Verify signer is issuer (matches Cluster owner)
-3. Decode current DNA
-4. Update `credentialStatus` with:
-   - `revoked: true`
-   - `revocationReason: reason`
-   - `revokedAt: current timestamp`
-5. Create new cell with updated DNA (same lock/type)
-6. Burn old cell (consume input)
-
-**Returns**: `RevokeCertificateResult`
-
-**Phase 2 Improvement**:
-- Support hard revocation (burn cell)
-- Add revocation registry for efficient revocation list queries
-- Consider Merkle tree-based revocation status for scalability
-
-### 4.5 getCertificate
+### 4.4 getCertificate
 
 **Purpose**: Get a specific certificate by ID.
 
@@ -239,7 +198,7 @@ Fee:    ~0.001 CKB
 2. Decode W3C VC JSON from cell data
 3. Return CertificateWithId or null
 
-### 4.6 meltCertificate
+### 4.5 meltCertificate
 
 **Purpose**: Destroy a certificate Spore DOB and reclaim the locked CKB capacity. Only the certificate holder can melt their own certificates.
 
@@ -424,17 +383,17 @@ const meltTxHash = await liveSigner.sendTransaction(tx);
 | `CLUSTER_NOT_FOUND` | Cluster doesn't exist | "Provider cluster not found" |
 | `INSUFFICIENT_BALANCE` | Not enough CKB | "Insufficient CKB balance" |
 | `NOT_ISSUER` | Signer not Cluster owner | "You are not the issuer" |
-| `ALREADY_REVOKED` | Certificate already revoked | "Certificate is already revoked" |
 | `LIVE_SIGNER_REQUIRED` | Mock signer used for melt | "Live signer is required to melt a certificate" |
 | `CERTIFICATE_NOT_FOUND` | Certificate doesn't exist | "Certificate not found" |
 | `NOT_HOLDER` | Signer not certificate owner | "Only the certificate holder can melt this certificate" |
 
-### 7.1 Soft Revocation Limitations
+### 7.1 Certificate Lifecycle & Melt as Permanent Deactivation
 
-> ⚠️ **Note**: Soft revocation relies on honest verifiers checking `credentialStatus.revoked`.
-> - The revoked certificate cell still exists on-chain
-> - A malicious verifier could ignore the revocation flag
-> - Phase 2 will address this with hard revocation or on-chain revocation registry
+> **Note**: Instead of soft revocation (marking certificates as revoked in metadata), this system uses **melt certificate** as the permanent deactivation mechanism.
+>
+> - **Melt Certificate**: Permanently destroys the Spore DOB cell on-chain, reclaiming the locked CKB capacity. The certificate no longer exists on the blockchain and cannot be verified.
+> - This approach is more secure than soft revocation because there is no on-chain record to ignore — the certificate is truly gone.
+> - The holder controls their own certificates and can melt them at any time.
 
 ---
 

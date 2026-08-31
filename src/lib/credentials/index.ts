@@ -17,7 +17,6 @@ export {
   getHolderCertificates,
   getClusterCertificates,
   getAllCertificates,
-  revokeCertificate,
   meltCertificate,
   clearCertificateCache,
 } from './issuer';

@@ -1,7 +1,7 @@
 /**
  * Certificate Service Tests - Issuer Module
  *
- * Tests for certificate issuance, retrieval, and revocation.
+ * Tests for certificate issuance, retrieval, and melting.
  * Reference: Design_spec/03_Certificate_Service.md
  */
 
@@ -12,7 +12,6 @@ import {
   issueCertificate,
   getCertificate,
   getHolderCertificates,
-  revokeCertificate,
   clearCertificateCache,
 } from '../../../src/lib/credentials/issuer';
 import type { CredentialSubject } from '@/types';
@@ -322,71 +321,6 @@ describe('Certificate Service (Issuer)', () => {
       expect(certificates[0].certificateId).toBeDefined();
       expect(certificates[0].clusterId).toBe(testClusterId);
       expect(certificates[0].transactionHash).toBeDefined();
-    });
-  });
-
-  describe('revokeCertificate', () => {
-    // Test: Revoke existing certificate - soft revocation
-    // Input: Valid certificateId and reason
-    // Expected: Returns transactionHash, certificate marked as revoked
-    it('should mark existing certificate as revoked (soft revocation)', async () => {
-      const issued = await issueCertificate({
-        signer: createMockSigner(),
-        clusterId: testClusterId,
-        issuerName: testIssuerName,
-        subject: validSubject,
-      });
-
-      // Verify certificate exists and is not revoked before
-      const beforeRevocation = await getCertificate(issued.certificateId);
-      expect(beforeRevocation).not.toBeNull();
-      expect(beforeRevocation?.certificate.credentialStatus?.revoked).toBeUndefined();
-
-      // Revoke the certificate with reason
-      const revokeResult = await revokeCertificate({}, issued.certificateId, 'Certificate was issued in error');
-
-      expect(revokeResult.transactionHash).toBeDefined();
-
-      // Verify certificate still exists but is marked as revoked
-      const afterRevocation = await getCertificate(issued.certificateId);
-      expect(afterRevocation).not.toBeNull();
-      expect(afterRevocation?.certificate.credentialStatus?.revoked).toBe(true);
-      expect(afterRevocation?.certificate.credentialStatus?.revocationReason).toBe('Certificate was issued in error');
-      expect(afterRevocation?.certificate.credentialStatus?.revokedAt).toBeDefined();
-    });
-
-    // Test: Revoke non-existent certificate
-    // Input: certificateId that was never issued
-    // Expected: Throws error or returns failure
-    it('should throw error when revoking non-existent certificate', async () => {
-      await expect(
-        revokeCertificate({}, '0x' + 'f'.repeat(64), 'Test reason')
-      ).rejects.toThrow('Certificate not found');
-    });
-
-    // Test: Revoked certificate still in holder certificates list
-    // Input: Holder with certificate, then revoke it
-    // Expected: getHolderCertificates still returns the certificate (with revoked status)
-    it('should still return revoked certificate in holder list with revoked status', async () => {
-      const issued = await issueCertificate({
-        signer: createMockSigner(),
-        clusterId: testClusterId,
-        issuerName: testIssuerName,
-        subject: { id: validRecipientAddress, type: 'CourseCertificate', courseName: 'Test', completionDate: '2024-01-01' },
-      });
-
-      // Verify it exists
-      const before = await getHolderCertificates(validRecipientAddress);
-      expect(before).toHaveLength(1);
-      expect(before[0].certificate.credentialStatus?.revoked).toBeUndefined();
-
-      // Revoke it
-      await revokeCertificate({}, issued.certificateId, 'Test revocation');
-
-      // Verify it still appears but is marked revoked
-      const after = await getHolderCertificates(validRecipientAddress);
-      expect(after).toHaveLength(1);
-      expect(after[0].certificate.credentialStatus?.revoked).toBe(true);
     });
   });
 

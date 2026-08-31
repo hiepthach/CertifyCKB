@@ -17,7 +17,7 @@
 |------|-------|-------------------|
 | **Week 9** | Project Setup & Provider Registration | Scaffold, wallet connection, Cluster creation |
 | **Week 10** | Certificate Issuance & View | Single issuance, W3C VC encoding, holder dashboard |
-| **Week 11** | Verification & Extended Features | Verify, templates, batch issuance, revocation |
+| **Week 11** | Verification & Extended Features | Verify, templates, batch issuance, melt certificate |
 | **Week 12** | Polish & Documentation | Error handling, testing, README, demo |
 
 ---
@@ -194,7 +194,7 @@
 - Build certificate verification functionality
 - Add certificate templates
 - Implement batch issuance
-- Add revocation capability
+- Add melt certificate capability
 
 ### Tasks
 
@@ -203,9 +203,9 @@
 - [ ] Implement `verifyCertificate()`
   - Query certificate cell by ID
   - Decode and validate credential DNA
-  - Check expiration and revocation status
+  - Check expiration status
 
-- [ ] Implement `isExpired()` and `isRevoked()`
+- [ ] Implement `isExpired()`
 
 - [ ] Define `VerificationResult` type
 
@@ -250,17 +250,17 @@
   - Preview list
   - Confirm and issue
 
-#### 4. Revocation (2h)
+#### 4. Melt Certificate (2h)
 
-- [ ] Implement `revokeCertificate()`
-  - Mark certificate as revoked
-  - Update credential status
+- [ ] Implement `meltCertificate()`
+  - Destroy Spore DOB cell on CKB
+  - Reclaim CKB capacity to holder wallet
 
-- [ ] Add revocation UI
-  - Provider selects certificate to revoke
-  - Confirm revocation
+- [ ] Add melt certificate UI
+  - Holder selects certificate to melt
+  - Confirm melt
 
-- [ ] Add "Revoked" badge in holder dashboard
+- [ ] Add "Melt" action in certificate detail
 
 ### Tech References
 | Tech | Link | Purpose |
@@ -275,7 +275,7 @@
 - [ ] Can view full certificate details
 - [ ] Templates work
 - [ ] Batch issuance works
-- [ ] Revocation works
+- [ ] Melt certificate works
 
 ---
 
@@ -321,7 +321,6 @@
 - [ ] Write unit tests for `decoder`
   ```typescript
   // Test isExpired
-  // Test isRevoked
   // Test formatCertificateDisplay
   ```
 
@@ -430,13 +429,13 @@
 
 ### Week 11
 - [ ] Implement verifyCertificate
-- [ ] Implement isExpired, isRevoked
+- [ ] Implement isExpired
 - [ ] Build verifier page
 - [ ] Build CertificateDetail component
 - [ ] Define CertificateTemplate interface
 - [ ] Implement template management
 - [ ] Implement batch issuance
-- [ ] Implement revocation
+- [ ] Implement meltCertificate
 
 ### Week 12
 - [ ] Add error handling

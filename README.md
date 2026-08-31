@@ -85,16 +85,16 @@ src/
   - Expiration date on certificates
   - Visual "Expired" status badges
   - Verification checks expiration
-- [x] Revocation
-  - Issuer can revoke certificates
-  - Soft revocation with reason tracking
-  - Verification shows revoked status
+- [x] Melt Certificate
+  - Holder can permanently destroy certificates
+  - Reclaims locked CKB capacity
+  - Melted certificates are no longer verifiable on-chain
 
 ### Quality & Polish (Week 12)
-- [x] Error Handling
-- [x] Loading States (Spinner component)
-- [x] Empty States (EmptyState component)
-- [x] Unit Tests (188 tests passing)
+- [ ] Error Handling
+- [ ] Loading States (Spinner component)
+- [ ] Empty States (EmptyState component)
+- [ ] Unit Tests (188 tests passing)
 - [ ] Integration Tests
 - [ ] Demo/Screencast
 

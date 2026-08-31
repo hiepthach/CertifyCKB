@@ -267,7 +267,7 @@ interface ClusterFormProps {
 interface CertificateCardProps {
   certificate: CertificateDNA;
   certificateId: string;
-  status?: 'active' | 'expired' | 'revoked';
+  status?: 'active' | 'expired';
   onClick?: () => void;
   onShare?: () => void;
 }

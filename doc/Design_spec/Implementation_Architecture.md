@@ -61,7 +61,7 @@
 | **F7: Certificate Templates** | P1 | Pre-defined certificate formats |
 | **F8: Batch Issuance** | P1 | Issue multiple certificates at once |
 | **F9: Expiration** | P1 | Time-based certificate validity |
-| **F10: Revocation** | P1 | Mark certificate as revoked |
+| **F10: Melt Certificate** | P1 | Permanently destroy certificate and reclaim CKB |
 
 ### 2.3 Future Features
 
@@ -77,7 +77,7 @@
 
 | Role | Capabilities |
 |------|-------------|
-| **Course Provider** | Register, Issue Certificates, Revoke |
+| **Course Provider** | Register, Issue Certificates |
 | **Student** | View Own Certificates, Share, Transfer (if allowed) |
 | **Verifier** | Verify Certificate Validity |
 
@@ -243,8 +243,6 @@ classDiagram
     class CredentialStatus {
         +id: string
         +type: string
-        +revoked: boolean
-        +revocationReason?: string
     }
 
     VerifiableCredential --> Issuer
@@ -286,8 +284,6 @@ interface CertificateSubject {
 interface CredentialStatus {
   id: string;
   type: string;
-  revoked: boolean;
-  revocationReason?: string;
 }
 
 interface CertificateMetadata {
@@ -315,7 +311,6 @@ interface CertificatePolicy {
   transferable: boolean;
   expirationDefault?: string;
   allowRenewal: boolean;
-  revocationEnabled: boolean;
 }
 
 // Certificate Template
@@ -355,7 +350,6 @@ interface VerificationResult {
     issuanceDate: string;
     expirationDate?: string;
     isExpired: boolean;
-    isRevoked: boolean;
   };
   timestamp: string;
 }
@@ -413,8 +407,8 @@ graph TB
 | Module | Operations |
 |--------|-----------|
 | **Cluster Service** | `createCluster`, `getClusters` |
-| **Certificate Service** | `issueCertificate`, `getHolderCertificates`, `revokeCertificate` |
-| **Verify Service** | `verifyCertificate`, `isExpired`, `isRevoked` |
+| **Certificate Service** | `issueCertificate`, `getHolderCertificates`, `meltCertificate` |
+| **Verify Service** | `verifyCertificate`, `isExpired` |
 | **Template Service** | `createTemplate`, `getTemplates`, `applyTemplate` |
 
 ### 6.3 SDK Usage
@@ -508,7 +502,6 @@ sequenceDiagram
     Frontend->>DECODER: Decode DNA
     DECODER-->>Frontend: Certificate
     Frontend->>Frontend: Check expiration
-    Frontend->>Frontend: Check revocation
     Frontend-->>Verifier: Verification result
 ```
 
@@ -632,7 +625,7 @@ gantt
 |------|-----------|--------------|
 | **Week 9** | Project Setup & Provider Registration | Scaffold, wallet connection, Cluster creation |
 | **Week 10** | Certificate Issuance & View | Issuance, W3C VC encoding, holder dashboard |
-| **Week 11** | Verification & Extended Features | Verify, templates, batch, revocation |
+| **Week 11** | Verification & Extended Features | Verify, templates, batch, melt certificate |
 | **Week 12** | Polish & Documentation | Error handling, testing, README, demo |
 
 ---

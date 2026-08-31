@@ -48,7 +48,7 @@ A registry for issuing, managing, and verifying course completion certificates o
 | **F7** | Batch Issuance | Issue multiple certificates at once | P1 |
 | **F8** | Expiration | Time-based certificate validity | P1 |
 | **F9** | Renewal | Renew expired certificates | P2 |
-| **F10** | Revocation | Issuer can revoke certificates | P1 |
+| **F10** | Melt Certificate | Holder can permanently destroy certificate and reclaim CKB | P1 |
 | **F11** | Credential Embedding | Embed certificate on external platforms | P2 |
 | **F12** | Issuer Verification | Trust layer for issuers | P2 |
 | **F13** | Analytics Dashboard | Provider sees issuance stats | P2 |
@@ -70,7 +70,7 @@ graph LR
         F6["Templates"]
         F7["Batch Issuance"]
         F8["Expiration"]
-        F10["Revocation"]
+        F10["Melt Certificate"]
     end
 
     subgraph Future["Future Releases"]
@@ -154,7 +154,7 @@ Steps:
 1. Verifier enters certificate ID
 2. System queries Spore cell
 3. System decodes credential DNA
-4. System checks expiration, revocation
+4. System checks expiration
 5. System returns verification result
 Result: Verifier knows if certificate is valid
 ```
@@ -170,15 +170,17 @@ Steps:
 Result: Multiple students receive certificates
 ```
 
-#### UC7: Certificate Revocation (Extended)
+#### UC7: Certificate Melt (Extended)
 ```
-Actor: Course Provider
-Goal: Revoke a certificate
+Actor: Certificate Holder
+Goal: Permanently destroy a certificate and reclaim CKB capacity
 Steps:
-1. Provider selects certificate to revoke
-2. Provider confirms revocation
-3. System updates credential status
-Result: Certificate marked as revoked
+1. Holder opens certificate detail
+2. Holder clicks "Melt & Reclaim CKB"
+3. System prompts for confirmation
+4. System creates melt transaction on CKB
+5. Spore DOB cell is destroyed, CKB capacity reclaimed
+Result: Certificate no longer exists on-chain
 ```
 
 ---
@@ -218,8 +220,6 @@ classDiagram
     class CredentialStatus {
         +id: string
         +type: string
-        +revoked: boolean
-        +revocationReason?: string
     }
 
     VerifiableCredential --> Issuer
@@ -274,7 +274,6 @@ interface ClusterConfig {
     transferable: boolean;
     expirationDefault?: string; // ISO duration e.g., "P1Y" (1 year)
     allowRenewal: boolean;
-    revocationEnabled: boolean;
   };
   metadata?: Record<string, any>;
 }
@@ -389,7 +388,7 @@ graph TB
 - [x] F6: Certificate Templates (basic)
 - [x] F7: Batch Issuance
 - [x] F8: Expiration check (UI)
-- [x] F10: Revocation (mark as revoked)
+- [x] F10: Melt Certificate (permanent destruction with CKB reclaim)
 
 **NOT in Week 11**:
 - Renewal
@@ -401,13 +400,13 @@ graph TB
 ### 6.3 Week 12 - Polish (Adjusted)
 
 **Features**:
-- [x] Error handling
-- [x] Loading states
-- [x] Empty states
-- [x] Unit tests
-- [x] Integration tests
-- [x] README
-- [x] Demo
+- [ ] Error handling
+- [ ] Loading states
+- [ ] Empty states
+- [ ] Unit tests
+- [ ] Integration tests
+- [ ] README
+- [ ] Demo
 
 **NOT in Week 12**:
 - Analytics Dashboard
@@ -487,9 +486,7 @@ interface CertificateDNA {
   },
   "credentialStatus": {
     "id": "https://credentials.ckb.dob/status/0x...",
-    "type": "RevocationList2023",
-    "revoked": false,
-    "revocationReason": null
+    "type": "StatusList2023Entry"
   },
   "metadata": {
     "clusterId": "0x...",

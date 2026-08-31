@@ -11,7 +11,6 @@ import {
   getHolderCertificates,
   getAllCertificates,
   getProviderClusters,
-  revokeCertificate,
   meltCertificate,
 } from '@/lib/credentials';
 import { ArrowLeft, Wallet, RefreshCw, Sparkles, Filter } from 'lucide-react';
@@ -134,30 +133,6 @@ export default function CertificatesPage() {
     setTimeout(() => setShareResult(null), 3000);
   };
 
-  const handleRevoke = async (cert: CertificateWithMeta, reason: string) => {
-    await revokeCertificate(signer, cert.certificateId, reason);
-    await queryClient.invalidateQueries({ queryKey: ['certificates'] });
-    await refetch();
-
-    // Update selected cert state so it reflects revoked immediately
-    setSelectedCert((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        certificate: {
-          ...prev.certificate,
-          credentialStatus: {
-            id: `revocation:${prev.certificateId}`,
-            type: 'RevocationList2023Status',
-            revoked: true,
-            revocationReason: reason,
-            revokedAt: new Date().toISOString(),
-          },
-        },
-      };
-    });
-  };
-
   const handleMelt = async (cert: CertificateWithMeta) => {
     if (!signer) {
       setMeltError('Wallet not connected');
@@ -253,7 +228,6 @@ export default function CertificatesPage() {
           transactionHash={selectedCert.transactionHash}
           isIssuer={isIssuerOfSelected}
           onShare={() => handleShare(selectedCert)}
-          onRevoke={(reason) => handleRevoke(selectedCert, reason)}
           onMelt={() => handleMelt(selectedCert)}
           melting={meltingCertId === selectedCert.certificateId}
         />

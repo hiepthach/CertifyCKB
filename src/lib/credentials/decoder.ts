@@ -37,14 +37,6 @@ export function isExpired(dna: CertificateDNA): boolean {
 }
 
 /**
- * Check if certificate is revoked
- * Soft revocation: checks the revoked flag in credentialStatus
- */
-export function isRevoked(dna: CertificateDNA): boolean {
-  return dna.credentialStatus?.revoked === true;
-}
-
-/**
  * Get expiration status with days remaining
  */
 export function getExpirationStatus(dna: CertificateDNA): {
@@ -74,11 +66,9 @@ export function getExpirationStatus(dna: CertificateDNA): {
 export function formatCertificateDisplay(dna: CertificateDNA): CertificateDisplay {
   const subject = dna.credentialSubject as unknown as Record<string, unknown>;
 
-  let status: 'active' | 'expired' | 'revoked' = 'active';
+  let status: 'active' | 'expired' = 'active';
 
-  if (isRevoked(dna)) {
-    status = 'revoked';
-  } else if (isExpired(dna)) {
+  if (isExpired(dna)) {
     status = 'expired';
   }
 

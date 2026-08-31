@@ -3,9 +3,9 @@
 import { Modal, Card, Badge, Button, Input } from '@/components/ui';
 import type { CertificateDNA } from '@/types';
 import { formatDate, truncateAddress, copyToClipboard } from '@/utils';
-import { formatCertificateDisplay, isExpired, isRevoked } from '@/lib/credentials';
+import { formatCertificateDisplay, isExpired } from '@/lib/credentials';
 import { getTransactionUrl } from '@/lib/ckb';
-import { Award, Calendar, User, Building, ExternalLink, Copy, Check, Sparkles, AlertTriangle, Ban, Flame } from 'lucide-react';
+import { Award, Calendar, User, Building, ExternalLink, Copy, Check, Sparkles, AlertTriangle, Flame } from 'lucide-react';
 import { useState } from 'react';
 import { useNetwork } from '@/hooks';
 
@@ -17,9 +17,7 @@ interface CertificateDetailProps {
   onCopyId?: () => void;
   onOpenExplorer?: () => void;
   onShare?: () => void;
-  onRevoke?: (reason: string) => Promise<void> | void;
   onMelt?: () => Promise<void> | void;
-  revoking?: boolean;
   melting?: boolean;
 }
 
@@ -30,22 +28,16 @@ export function CertificateDetail({
   isIssuer = false,
   onOpenExplorer,
   onShare,
-  onRevoke,
   onMelt,
-  revoking = false,
   melting = false,
 }: CertificateDetailProps) {
   const { explorerUrl } = useNetwork();
   const [copied, setCopied] = useState(false);
-  const [showRevokeModal, setShowRevokeModal] = useState(false);
-  const [revokeReason, setRevokeReason] = useState('');
-  const [isSubmittingRevoke, setIsSubmittingRevoke] = useState(false);
   const [showMeltModal, setShowMeltModal] = useState(false);
   const [meltReason, setMeltReason] = useState('');
   const [meltModalError, setMeltModalError] = useState<string | null>(null);
   const display = formatCertificateDisplay(certificate);
   const expired = isExpired(certificate);
-  const revoked = isRevoked(certificate);
   const subject = certificate.credentialSubject;
 
   const handleCopyId = async () => {
@@ -57,7 +49,6 @@ export function CertificateDetail({
   };
 
   const getStatusBadge = () => {
-    if (revoked) return <Badge variant="danger">Revoked</Badge>;
     if (expired) return <Badge variant="warning">Expired</Badge>;
     return <Badge variant="success" pulse>Verified On-Chain DOB</Badge>;
   };
@@ -211,19 +202,7 @@ export function CertificateDetail({
           Share Certificate
         </Button>
 
-        {isIssuer && !revoked && onRevoke && (
-          <Button
-            variant="danger"
-            className="flex-1 min-w-[140px] text-xs gap-1.5 bg-red-950/50 hover:bg-red-900/60 border border-red-800/50 text-red-300"
-            onClick={() => setShowRevokeModal(true)}
-            disabled={revoking || isSubmittingRevoke}
-          >
-            <Ban className="w-3.5 h-3.5" />
-            Revoke Credential
-          </Button>
-        )}
-
-        {!revoked && onMelt && (
+        {!expired && onMelt && (
           <Button
             variant="secondary"
             className="flex-1 min-w-[140px] text-xs gap-1.5 border border-orange-500/40 text-orange-400 hover:bg-orange-950/30"
@@ -238,62 +217,6 @@ export function CertificateDetail({
           </Button>
         )}
       </div>
-
-      {/* Revoke Confirmation Modal */}
-      <Modal
-        isOpen={showRevokeModal}
-        onClose={() => setShowRevokeModal(false)}
-        title="Revoke Certificate"
-        size="md"
-      >
-        <div className="space-y-4">
-          <div className="p-3 bg-red-950/40 border border-red-800/40 rounded-xl flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-red-300 leading-relaxed">
-              This action will mark the certificate as <strong>Revoked</strong> in its on-chain verifiable credential DNA state. This cannot be undone.
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-ash-veil">
-              Revocation Reason (Optional)
-            </label>
-            <Input
-              placeholder="e.g., Issued in error, failed requirements..."
-              value={revokeReason}
-              onChange={(v) => setRevokeReason(v)}
-            />
-          </div>
-
-          <div className="flex gap-3 pt-3 border-t border-fog-line/10">
-            <Button
-              variant="secondary"
-              onClick={() => setShowRevokeModal(false)}
-              className="flex-1 text-xs"
-              disabled={isSubmittingRevoke}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              className="flex-1 text-xs bg-red-600 hover:bg-red-700 text-white"
-              loading={isSubmittingRevoke}
-              onClick={async () => {
-                if (!onRevoke) return;
-                try {
-                  setIsSubmittingRevoke(true);
-                  await onRevoke(revokeReason || 'Revoked by issuer authority');
-                  setShowRevokeModal(false);
-                } finally {
-                  setIsSubmittingRevoke(false);
-                }
-              }}
-            >
-              Confirm Revoke
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Melt Certificate Modal */}
       <Modal

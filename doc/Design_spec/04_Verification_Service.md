@@ -13,7 +13,7 @@
 
 ## 2. Purpose
 
-The Verification Service provides functionality to verify certificates by querying the CKB blockchain, decoding the certificate DNA, and checking validity, expiration, and revocation status.
+The Verification Service provides functionality to verify certificates by querying the CKB blockchain, decoding the certificate DNA, and checking validity and expiration status.
 
 ---
 
@@ -45,7 +45,6 @@ interface VerificationResult {
   };
   certificate: {
     isExpired: boolean;
-    isRevoked: boolean;
     issuanceDate: string;
     expirationDate?: string;
   };
@@ -60,7 +59,6 @@ interface VerificationChecks {
   dnaValid: boolean;
   issuerVerified: boolean;
   expirationVerified: boolean;
-  revocationVerified: boolean;
 }
 
 interface VerificationHistory {
@@ -108,8 +106,6 @@ sequenceDiagram
         end
         SVC->>DECODER: isExpired()
         DECODER-->>SVC: isExpired
-        SVC->>DECODER: isRevoked()
-        DECODER-->>SVC: isRevoked
         SVC->>SVC: Build VerificationResult
     else Certificate not found
         SVC->>SVC: Build not found result
@@ -126,15 +122,13 @@ sequenceDiagram
 | `dnaValid` | DNA decodes to valid W3C VC | Decode succeeds |
 | `issuerVerified` | Issuer cluster exists | Cluster found |
 | `expirationVerified` | Certificate not expired | Not past expirationDate |
-| `revocationVerified` | Certificate not revoked | revoked !== true |
 
 **Validity Logic**:
 ```typescript
 const valid =
   checks.cellExists &&
   checks.dnaValid &&
-  checks.expirationVerified &&
-  checks.revocationVerified;
+  checks.expirationVerified;
 ```
 
 ### 4.2 getVerificationHistory
@@ -169,14 +163,12 @@ const valid =
     issuanceDate: "2024-01-15T00:00:00Z",
     expirationDate: "2025-01-15T00:00:00Z",
     isExpired: false,
-    isRevoked: false,
   },
   checks: {
     cellExists: true,
     dnaValid: true,
     issuerVerified: true,
     expirationVerified: true,
-    revocationVerified: true,
   },
   timestamp: "2024-06-01T12:00:00Z",
   transactionHash: "0xdef456...",
@@ -194,7 +186,6 @@ const valid =
     // ...
     expirationDate: "2024-01-15T00:00:00Z",
     isExpired: true,
-    isRevoked: false,
   },
   checks: {
     // ...
@@ -215,14 +206,12 @@ const valid =
     type: [],
     issuanceDate: "",
     isExpired: false,
-    isRevoked: false,
   },
   checks: {
     cellExists: false,  // FAILED
     dnaValid: false,
     issuerVerified: false,
     expirationVerified: false,
-    revocationVerified: false,
   },
   timestamp: "2024-06-01T12:00:00Z",
 }
@@ -247,7 +236,7 @@ graph TD
 
     subgraph Invalid["❌ Invalid Certificate"]
         I1["Certificate ID: 0xdef..."]
-        I2["Status: Expired / Revoked / Not Found"]
+        I2["Status: Expired / Not Found / Melted"]
         I3["Reason: [Details]"]
     end
 ```
@@ -258,7 +247,7 @@ graph TD
 |--------|-------|-------|
 | Active | ✅ Valid | Green |
 | Expired | ⚠️ Expired | Yellow |
-| Revoked | ❌ Revoked | Red |
+| Melted | ❌ Melted | Red |
 | Not Found | ❌ Not Found | Red |
 
 ---
@@ -281,7 +270,7 @@ graph TD
 |-----------|-------|----------------|
 | Verify valid cert | Existing cert ID | valid: true |
 | Verify expired cert | Expired cert ID | valid: false, isExpired: true |
-| Verify revoked cert | Revoked cert ID | valid: false, isRevoked: true |
+| Verify melted cert | Melted cert ID | valid: false, cellExists: false |
 | Verify not found | Non-existent ID | valid: false, cellExists: false |
 | Verify with expected issuer | Wrong issuer ID | valid: false, issuerVerified: false |
 | Verify with correct issuer | Correct issuer ID | valid: true |
@@ -313,7 +302,6 @@ describe('Verification Service - Mock CCC SDK', () => {
       expect(result.checks.cellExists).toBe(true);
       expect(result.checks.dnaValid).toBe(true);
       expect(result.certificate.isExpired).toBe(false);
-      expect(result.certificate.isRevoked).toBe(false);
     });
 
     it('should verify expired certificate', async () => {
@@ -330,19 +318,6 @@ describe('Verification Service - Mock CCC SDK', () => {
       expect(result.checks.expirationVerified).toBe(false);
     });
 
-    it('should verify revoked certificate', async () => {
-      const mockCell = createMockSporeCell({
-        contentType: 'application/json',
-        content: createRevokedCertificateDNA(),
-      });
-      mockClient.findCellsByType.mockResolvedValue([mockCell]);
-
-      const result = await verifyCertificate(mockClient, 'revoked_cert');
-
-      expect(result.valid).toBe(false);
-      expect(result.certificate.isRevoked).toBe(true);
-      expect(result.checks.revocationVerified).toBe(false);
-    });
   });
 
   describe('Edge Cases', () => {
@@ -496,27 +471,27 @@ describe('Verification Service - OffCKB Devnet', () => {
     });
   });
 
-  describe('Revocation Scenarios', () => {
-    it('should detect revoked certificate', async () => {
+  describe('Melt Certificate Scenarios', () => {
+    it('should return not found for melted certificate', async () => {
       // Issue certificate
       const issueResult = await issueCertificate(testSigner, {
         clusterId: testCluster.clusterId,
         recipientAddress: await testSigner.getAddress(),
         issuerName: testCluster.name,
-        course: { name: 'Revoked Course', completionDate: '2026-08-20' },
+        course: { name: 'Melted Course', completionDate: '2026-08-20' },
       });
 
-      // Revoke it
-      await revokeCertificate(testSigner, issueResult.certificateId, 'Test revocation');
+      // Melt it
+      await meltCertificate(testSigner, issueResult.certificateId);
 
-      // Verify - should be invalid due to revocation
+      // Verify - should be invalid due to cell no longer existing
       const verifyResult = await verifyCertificate(
         testnetClient,
         issueResult.certificateId
       );
 
       expect(verifyResult.valid).toBe(false);
-      expect(verifyResult.certificate.isRevoked).toBe(true);
+      expect(verifyResult.checks.cellExists).toBe(false);
     });
   });
 });
@@ -537,9 +512,10 @@ describe('Verification Service - OffCKB Devnet', () => {
 | expirationVerified | No expiration date | true (N/A) |
 | expirationVerified | Future expiration date | true |
 | expirationVerified | Past expiration date | false |
-| revocationVerified | credentialStatus.revoked = false | true |
-| revocationVerified | credentialStatus.revoked = true | false |
-| revocationVerified | No credentialStatus | true (N/A) |
+
+### 8.5 Melt Certificate (Permanent Deactivation)
+
+> Instead of revocation, the system uses **melt certificate** as permanent deactivation. A melted certificate no longer exists on-chain, so verification will return `valid: false` with `cellExists: false`.
 
 ---
 

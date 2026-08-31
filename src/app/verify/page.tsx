@@ -114,7 +114,7 @@ export default function VerifyPage() {
               3
             </span>
             <span className="leading-relaxed">
-              <strong className="text-bone-white font-medium">Real-Time Revocation & Expiration Status</strong> — Immediate check against issuer cluster state preventing fraudulent credential reuse.
+              <strong className="text-bone-white font-medium">On-Chain Expiration Status</strong> — Immediate check against issuer cluster state preventing fraudulent credential reuse.
             </span>
           </li>
         </ul>
