@@ -5,9 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '@/hooks/useWallet';
 import { VerifyForm, VerifyResult } from '@/components/verification';
-import { Spinner, Card, Badge } from '@/components/ui';
+import { Spinner, Card, Badge, Modal } from '@/components/ui';
+import { CertificateDetail } from '@/components/certificate';
 import type { VerificationResult } from '@/types';
-import { verifyCertificate } from '@/lib/credentials';
+import { verifyCertificate, getCertificate } from '@/lib/credentials';
 import { Shield, CheckCircle2, Lock, Cpu } from 'lucide-react';
 
 function VerifyPageContent() {
@@ -16,6 +17,7 @@ function VerifyPageContent() {
   const [certificateId, setCertificateId] = useState<string | null>(
     searchParams.get('certId') ?? null
   );
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const { data: result, isLoading, error } = useQuery({
     queryKey: ['verify', certificateId],
@@ -26,8 +28,20 @@ function VerifyPageContent() {
     enabled: !!certificateId,
   });
 
+  const targetCertId = result?.certificateId || certificateId;
+
+  const { data: certDetails, isLoading: isLoadingCertDetails } = useQuery({
+    queryKey: ['certificate', targetCertId],
+    queryFn: () => {
+      if (!targetCertId) return null;
+      return getCertificate(targetCertId, client);
+    },
+    enabled: !!targetCertId && showDetailModal,
+  });
+
   const handleVerify = (id: string) => {
     setCertificateId(id);
+    setShowDetailModal(false);
   };
 
   return (
@@ -46,7 +60,10 @@ function VerifyPageContent() {
         )}
 
         {result && !isLoading && (
-          <VerifyResult result={result} />
+          <VerifyResult
+            result={result}
+            onViewDetails={() => setShowDetailModal(true)}
+          />
         )}
 
         {error && (
@@ -55,6 +72,31 @@ function VerifyPageContent() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        title="Visual Certificate & Credential DNA"
+        size="xl"
+      >
+        {isLoadingCertDetails && (
+          <div className="flex justify-center py-8">
+            <Spinner label="Fetching full certificate DNA..." />
+          </div>
+        )}
+        {certDetails && !isLoadingCertDetails && (
+          <CertificateDetail
+            certificate={certDetails.certificate}
+            certificateId={certDetails.certificateId}
+            transactionHash={certDetails.transactionHash}
+          />
+        )}
+        {!isLoadingCertDetails && !certDetails && (
+          <div className="text-center py-8 text-ash-veil text-sm">
+            Certificate DNA details could not be loaded.
+          </div>
+        )}
+      </Modal>
     </>
   );
 }

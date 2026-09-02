@@ -24,8 +24,18 @@ export interface TypographyConfig {
   headingWeight: 'normal' | 'medium' | 'bold';
 }
 
+export type CertificateLayout = 'classic' | 'modern' | 'compact' | 'detailed' | 'badge';
+export type CertificateTheme = 'blue' | 'purple' | 'green' | 'gold' | 'red' | 'custom';
+
+export interface VisualStyleConfig {
+  layout: CertificateLayout;
+  theme: CertificateTheme;
+  customColor?: string;
+  customTitle?: string;
+}
+
 export interface ColorConfig {
-  theme: 'blue' | 'purple' | 'green' | 'gold' | 'red' | 'custom';
+  theme: CertificateTheme;
   primaryColor?: string;
   secondaryColor?: string;
   backgroundColor?: string;
@@ -40,10 +50,11 @@ export interface VisualSection {
 }
 
 export interface VisualConfig {
-  layout: 'classic' | 'modern' | 'compact' | 'detailed' | 'badge';
+  layout: CertificateLayout;
   branding: BrandingConfig;
   typography: TypographyConfig;
   colors: ColorConfig;
+
   background: {
     type: 'solid' | 'gradient' | 'pattern' | 'image';
     value: string;

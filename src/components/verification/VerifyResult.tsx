@@ -78,7 +78,7 @@ function ValidResult({
       {onViewDetails && (
         <Button className="w-full mt-6 text-xs gap-1.5 shadow-glow-green/30" onClick={onViewDetails}>
           <Award className="w-4 h-4" />
-          <span>View Complete Credential DNA</span>
+          <span>View Visual Certificate & Details</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </Button>
       )}

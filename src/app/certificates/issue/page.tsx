@@ -1,13 +1,17 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, Button, Modal, Spinner } from '@/components/ui';
-import { CertificateForm, type CertificateData } from '@/components/certificate';
-import { CheckCircle2, ArrowRight, ExternalLink } from 'lucide-react';
-import type { Cluster } from '@/types';
+import {
+  CertificateForm,
+  type CertificateData,
+  PaperCertificate,
+} from '@/components/certificate';
+import { CheckCircle2, ArrowRight, ExternalLink, Eye, EyeOff, Sparkles } from 'lucide-react';
+import type { Cluster, CertificateDNA, CertificateLayout, CertificateTheme } from '@/types';
 import { getCluster, issueCertificate } from '@/lib/credentials';
 import { getTransactionUrl } from '@/lib/ckb';
 
@@ -15,18 +19,67 @@ function IssuePageContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const { signer, address, isLoadingAddress, open } = useWallet();
+  const { signer, address, isLoadingAddress } = useWallet();
   const clusterId = searchParams.get('cluster');
+  const queryLayout = searchParams.get('layout') as CertificateLayout | null;
+  const queryTheme = searchParams.get('theme') as CertificateTheme | null;
 
   const [cluster, setCluster] = useState<Cluster | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [result, setResult] = useState<{ certificateId: string; transactionHash: string } | null>(null);
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
+
+  // Live preview form state
+  const [liveFormData, setLiveFormData] = useState<CertificateData>({
+    recipientAddress: address || '',
+    recipientName: '',
+    courseName: '',
+    completionDate: new Date().toISOString().split('T')[0],
+    layout: queryLayout || 'classic',
+    theme: queryTheme || 'blue',
+    customColor: '#1E40AF',
+    customTitle: '',
+  });
 
   useEffect(() => {
     if (clusterId) {
       getCluster(clusterId).then(setCluster);
     }
   }, [clusterId]);
+
+  const previewCertificate: CertificateDNA = useMemo(() => {
+    return {
+      '@context': [
+        'https://www.w3.org/2018/credentials/v1',
+        'https://schema.org',
+      ],
+      id: '0x0000000000000000000000000000000000000000000000000000000000000000',
+      type: ['VerifiableCredential', 'CourseCertificate'],
+      issuer: {
+        id: clusterId || 'ckt1qcluster',
+        name: cluster?.name || 'Certificate Authority',
+        description: cluster?.description,
+      },
+      issuanceDate: new Date().toISOString(),
+      credentialSubject: {
+        id: liveFormData.recipientAddress || address || 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+        type: 'CourseCertificate',
+        name: liveFormData.recipientName || 'Jane Doe',
+        courseName: liveFormData.courseName || 'Certified CKB & DOB Developer',
+        completionDate: liveFormData.completionDate || new Date().toISOString().split('T')[0],
+        grade: liveFormData.grade,
+        score: liveFormData.score,
+        skills: liveFormData.skills && liveFormData.skills.length > 0 ? liveFormData.skills : ['CKB-VM', 'Spore DOB', 'Cell Model'],
+        issuerName: cluster?.name || 'Certificate Authority',
+        metadata: {
+          layout: liveFormData.layout,
+          theme: liveFormData.theme,
+          customColor: liveFormData.customColor,
+          customTitle: liveFormData.customTitle,
+        },
+      },
+    };
+  }, [liveFormData, cluster, clusterId, address]);
 
   const issueMutation = useMutation({
     mutationFn: async (data: CertificateData) => {
@@ -47,6 +100,12 @@ function IssuePageContent() {
           grade: data.grade,
           score: data.score,
           skills: data.skills,
+          metadata: {
+            layout: data.layout,
+            theme: data.theme,
+            customColor: data.customColor,
+            customTitle: data.customTitle,
+          },
         },
         expirationDate: data.expirationDate,
       });
@@ -103,47 +162,117 @@ function IssuePageContent() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
-      <div className="pb-6 border-b border-fog-line/10">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-lavender-spark text-sm font-bold">✱</span>
-          <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">DOB Minting Pipeline</span>
+    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
+      <div className="pb-6 border-b border-fog-line/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lavender-spark text-sm font-bold">✱</span>
+            <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">DOB Minting Pipeline</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Issue Certificate</h1>
+          <p className="text-sm text-ash-veil mt-1">
+            Mint an immutable Spore DOB credential directly to a student&apos;s CKB address
+          </p>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Issue Certificate</h1>
-        <p className="text-sm text-ash-veil mt-1">
-          Mint an immutable Spore DOB credential directly to a student's CKB address
-        </p>
+
+        {/* Mobile preview toggle button */}
+        <div className="lg:hidden flex items-center">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setShowMobilePreview(!showMobilePreview)}
+            className="text-xs gap-1.5 w-full sm:w-auto justify-center"
+          >
+            {showMobilePreview ? (
+              <>
+                <EyeOff className="w-3.5 h-3.5" />
+                <span>Hide Live Preview</span>
+              </>
+            ) : (
+              <>
+                <Eye className="w-3.5 h-3.5 text-lavender-spark" />
+                <span>Preview Certificate</span>
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
-      <Card variant="default" padding="xl">
-        <CertificateForm
-          clusterId={clusterId}
-          clusterName={cluster.name}
-          defaultRecipientAddress={address || ''}
-          onSubmit={(data) => issueMutation.mutate(data)}
-          onCancel={() => router.back()}
-          loading={issueMutation.isPending}
-        />
-      </Card>
+      {/* Split-screen layout: Form on Left (7 cols), Live Preview on Right (5 cols) */}
+      <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
+        {/* Form Column */}
+        <div className="lg:col-span-7 space-y-6">
+          <Card variant="default" padding="xl">
+            <CertificateForm
+              clusterId={clusterId}
+              clusterName={cluster.name}
+              defaultRecipientAddress={address || ''}
+              defaultLayout={queryLayout || 'classic'}
+              defaultTheme={queryTheme || 'blue'}
+              onChange={setLiveFormData}
+              onSubmit={(data) => issueMutation.mutate(data)}
+              onCancel={() => router.back()}
+              loading={issueMutation.isPending}
+            />
+          </Card>
 
-      {issueMutation.isError && (
-        <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-xl">
-          <p className="text-sm text-red-400">
-            Failed to issue certificate: {issueMutation.error?.message || 'Unknown error'}
-          </p>
-          {(issueMutation.error?.message || '').includes('faucet') && (
-            <a
-              href="https://faucet.nervos.org"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-block text-xs text-lavender-spark hover:underline"
-            >
-              Get free testnet CKB →
-            </a>
+          {issueMutation.isError && (
+            <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-xl">
+              <p className="text-sm text-red-400">
+                Failed to issue certificate: {issueMutation.error?.message || 'Unknown error'}
+              </p>
+              {(issueMutation.error?.message || '').includes('faucet') && (
+                <a
+                  href="https://faucet.nervos.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-xs text-lavender-spark hover:underline"
+                >
+                  Get free testnet CKB →
+                </a>
+              )}
+            </div>
           )}
         </div>
-      )}
 
+        {/* Live Preview Column (Sticky on Desktop, Toggleable on Mobile) */}
+        <div
+          className={`lg:col-span-5 space-y-4 lg:sticky lg:top-8 ${
+            showMobilePreview ? 'block mt-6 lg:mt-0' : 'hidden lg:block'
+          }`}
+        >
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-lavender-spark" />
+              <h3 className="text-xs font-semibold text-bone-white uppercase tracking-wider">
+                Live Certificate Preview
+              </h3>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-midnight-plum text-lavender-spark border border-lavender-spark/20">
+              WYSIWYG
+            </span>
+          </div>
+
+          <div className="p-4 sm:p-5 bg-midnight-plum/40 rounded-2xl border border-fog-line/15 shadow-xl backdrop-blur-xs">
+            <PaperCertificate
+              certificate={previewCertificate}
+              certificateId="PREVIEW_ID"
+              layout={liveFormData.layout}
+              theme={liveFormData.theme}
+              customColor={liveFormData.customColor}
+              customTitle={liveFormData.customTitle}
+              className="transform scale-100 origin-top"
+            />
+          </div>
+
+          <div className="p-3 bg-midnight-plum/20 rounded-xl border border-fog-line/10 text-[11px] text-mid-ash flex items-center justify-between">
+            <span>Theme: <strong className="text-bone-white capitalize">{liveFormData.theme || 'Blue'}</strong></span>
+            <span>Layout: <strong className="text-bone-white capitalize">{liveFormData.layout || 'Classic'}</strong></span>
+          </div>
+        </div>
+      </div>
+
+      {/* Success Modal */}
       <Modal
         isOpen={showSuccessModal}
         onClose={() => {
@@ -228,4 +357,3 @@ export default function IssuePage() {
     </Suspense>
   );
 }
-

@@ -1,18 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button, Input } from '@/components/ui';
-import type { CredentialSubject } from '@/types';
-import { ArrowRight, Sparkles } from 'lucide-react';
-
-interface CertificateFormProps {
-  clusterId: string;
-  clusterName: string;
-  defaultRecipientAddress?: string;
-  onSubmit: (data: CertificateData) => void;
-  onCancel?: () => void;
-  loading?: boolean;
-}
+import type { CertificateLayout, CertificateTheme } from '@/types';
+import { ArrowRight, Palette, Layout as LayoutIcon } from 'lucide-react';
+import { cn } from '@/utils';
 
 export interface CertificateData {
   recipientAddress: string;
@@ -23,15 +15,55 @@ export interface CertificateData {
   grade?: string;
   score?: number;
   skills?: string[];
+  layout?: CertificateLayout;
+  theme?: CertificateTheme;
+  customColor?: string;
+  customTitle?: string;
+}
+
+interface CertificateFormProps {
+  clusterId: string;
+  clusterName: string;
+  defaultRecipientAddress?: string;
+  defaultLayout?: CertificateLayout;
+  defaultTheme?: CertificateTheme;
+  defaultCustomColor?: string;
+  defaultCustomTitle?: string;
+  onSubmit: (data: CertificateData) => void;
+  onChange?: (data: CertificateData) => void;
+  onCancel?: () => void;
+  loading?: boolean;
 }
 
 const GRADE_OPTIONS = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D', 'F', 'Pass', 'Fail'];
+
+const LAYOUT_OPTIONS: { id: CertificateLayout; label: string; icon: string; description: string }[] = [
+  { id: 'classic', label: 'Classic', icon: '📜', description: 'Traditional ornate border' },
+  { id: 'modern', label: 'Modern', icon: '🎨', description: 'Bold header banner' },
+  { id: 'compact', label: 'Compact', icon: '📄', description: 'Clean space-saver' },
+  { id: 'detailed', label: 'Detailed', icon: '📋', description: 'Full breakdown & skills' },
+  { id: 'badge', label: 'Badge', icon: '🎓', description: 'Digital seal & badge' },
+];
+
+const THEME_OPTIONS: { id: CertificateTheme; label: string; color: string }[] = [
+  { id: 'blue', label: 'Blue', color: '#1E40AF' },
+  { id: 'purple', label: 'Purple', color: '#6B21A8' },
+  { id: 'green', label: 'Green', color: '#166534' },
+  { id: 'gold', label: 'Gold', color: '#92400E' },
+  { id: 'red', label: 'Red', color: '#991B1B' },
+  { id: 'custom', label: 'Custom', color: '#F26F21' },
+];
 
 export function CertificateForm({
   clusterId,
   clusterName,
   defaultRecipientAddress,
+  defaultLayout = 'classic',
+  defaultTheme = 'blue',
+  defaultCustomColor = '#1E40AF',
+  defaultCustomTitle = '',
   onSubmit,
+  onChange,
   onCancel,
   loading = false,
 }: CertificateFormProps) {
@@ -44,9 +76,30 @@ export function CertificateForm({
     grade: '',
     score: undefined,
     skills: [],
+    layout: defaultLayout,
+    theme: defaultTheme,
+    customColor: defaultCustomColor,
+    customTitle: defaultCustomTitle,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [skillsInput, setSkillsInput] = useState('');
+
+  const notifyChange = (updatedData: CertificateData, currentSkillsInput = skillsInput) => {
+    if (onChange) {
+      onChange({
+        ...updatedData,
+        skills: currentSkillsInput
+          ? currentSkillsInput.split(',').map((s) => s.trim()).filter(Boolean)
+          : undefined,
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (onChange) {
+      onChange(formData);
+    }
+  }, []);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -97,20 +150,29 @@ export function CertificateForm({
     });
   };
 
-  const updateField = (field: keyof CertificateData, value: string | number | undefined) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
+  const updateField = <K extends keyof CertificateData>(field: K, value: CertificateData[K]) => {
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      notifyChange(next);
+      return next;
+    });
+    if (errors[field as string]) {
       setErrors((prev) => {
         const next = { ...prev };
-        delete next[field];
+        delete next[field as string];
         return next;
       });
     }
   };
 
+  const handleSkillsChange = (val: string) => {
+    setSkillsInput(val);
+    notifyChange(formData, val);
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="p-4 bg-midnight-plum rounded-xl border border-fog-line/10 mb-6 flex items-center justify-between">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="p-4 bg-midnight-plum rounded-xl border border-fog-line/10 flex items-center justify-between">
         <div>
           <p className="text-xs text-mid-ash uppercase tracking-wider font-semibold">Issuing Provider Authority</p>
           <p className="font-semibold text-bone-white text-base mt-0.5">{clusterName}</p>
@@ -120,110 +182,238 @@ export function CertificateForm({
         </span>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="block text-xs font-medium text-ash-veil">
-            Recipient CKB Address <span className="text-lavender-spark">*</span>
-          </label>
-          {defaultRecipientAddress && formData.recipientAddress !== defaultRecipientAddress && (
-            <button
-              type="button"
-              onClick={() => updateField('recipientAddress', defaultRecipientAddress)}
-              className="text-[11px] text-lavender-spark hover:underline"
-            >
-              Use my connected address
-            </button>
-          )}
+      {/* Recipient Details */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-bone-white uppercase tracking-wider flex items-center gap-2">
+          <span>1. Recipient & Credential Info</span>
+        </h3>
+
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-medium text-ash-veil">
+              Recipient CKB Address <span className="text-lavender-spark">*</span>
+            </label>
+            {defaultRecipientAddress && formData.recipientAddress !== defaultRecipientAddress && (
+              <button
+                type="button"
+                onClick={() => updateField('recipientAddress', defaultRecipientAddress)}
+                className="text-[11px] text-lavender-spark hover:underline"
+              >
+                Use my connected address
+              </button>
+            )}
+          </div>
+          <Input
+            placeholder="ckt1qzda0cr08m85hc8j..."
+            value={formData.recipientAddress}
+            onChange={(v) => updateField('recipientAddress', v)}
+            error={errors.recipientAddress}
+            required
+          />
         </div>
+
         <Input
-          placeholder="ckt1qzda0cr08m85hc8j..."
-          value={formData.recipientAddress}
-          onChange={(v) => updateField('recipientAddress', v)}
-          error={errors.recipientAddress}
-          required
-        />
-      </div>
-
-      <Input
-        label="Recipient Full Name"
-        placeholder="e.g., Jane Doe"
-        value={formData.recipientName}
-        onChange={(v) => updateField('recipientName', v)}
-        error={errors.recipientName}
-        required
-      />
-
-      <Input
-        label="Course / Program Name"
-        placeholder="e.g., Advanced CKB Cell Model & DOB Engineering"
-        value={formData.courseName}
-        onChange={(v) => updateField('courseName', v)}
-        error={errors.courseName}
-        required
-      />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input
-          label="Completion Date"
-          type="date"
-          value={formData.completionDate}
-          onChange={(v) => updateField('completionDate', v)}
-          error={errors.completionDate}
+          label="Recipient Full Name"
+          placeholder="Student name (e.g. Satoshi Nakamoto)"
+          value={formData.recipientName}
+          onChange={(v) => updateField('recipientName', v)}
+          error={errors.recipientName}
           required
         />
 
         <Input
-          label="Expiration Date (Optional)"
-          type="date"
-          value={formData.expirationDate || ''}
-          onChange={(v) => updateField('expirationDate', v)}
-          error={errors.expirationDate}
-          helperText="Leave blank for lifetime validity"
+          label="Course / Program Name"
+          placeholder="Course or program name (e.g. Proof of Work Economics)"
+          value={formData.courseName}
+          onChange={(v) => updateField('courseName', v)}
+          error={errors.courseName}
+          required
         />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label="Completion Date"
+            type="date"
+            value={formData.completionDate}
+            onChange={(v) => updateField('completionDate', v)}
+            error={errors.completionDate}
+            required
+          />
+
+          <Input
+            label="Expiration Date (Optional)"
+            type="date"
+            value={formData.expirationDate || ''}
+            onChange={(v) => updateField('expirationDate', v)}
+            error={errors.expirationDate}
+            helperText="Leave blank for lifetime validity"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-ash-veil">
+              Grade (Optional)
+            </label>
+            <select
+              value={formData.grade}
+              onChange={(e) => updateField('grade', e.target.value || undefined)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-midnight-plum border border-fog-line/15 text-bone-white text-sm focus:outline-none focus:ring-2 focus:ring-lavender-spark/40 focus:border-lavender-spark/50 transition-all duration-200"
+            >
+              <option value="" className="bg-midnight-plum text-ash-veil">Select grade...</option>
+              {GRADE_OPTIONS.map((grade) => (
+                <option key={grade} value={grade} className="bg-midnight-plum text-bone-white">
+                  {grade}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <Input
+            label="Score (% - Optional)"
+            type="number"
+            placeholder="98"
+            value={formData.score?.toString() || ''}
+            onChange={(v) => updateField('score', v ? parseInt(v, 10) : undefined)}
+            error={errors.score}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium text-ash-veil">
+            Skills Certified (Optional)
+          </label>
+          <input
+            type="text"
+            placeholder="Rust, CKB-VM, Spore DOBs, Cryptography (comma-separated)"
+            value={skillsInput}
+            onChange={(e) => handleSkillsChange(e.target.value)}
+            className="w-full px-3.5 py-2.5 rounded-xl bg-midnight-plum border border-fog-line/15 text-bone-white placeholder-mid-ash text-sm focus:outline-none focus:ring-2 focus:ring-lavender-spark/40 focus:border-lavender-spark/50 transition-all duration-200"
+          />
+          <p className="text-[11px] text-mid-ash">
+            Enter acquired skills separated by commas
+          </p>
+        </div>
       </div>
 
-      {/* Grade */}
-      <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-ash-veil">
-          Grade (Optional)
-        </label>
-        <select
-          value={formData.grade}
-          onChange={(e) => updateField('grade', e.target.value || undefined)}
-          className="w-full px-3.5 py-2.5 rounded-xl bg-midnight-plum border border-fog-line/15 text-bone-white text-sm focus:outline-none focus:ring-2 focus:ring-lavender-spark/40 focus:border-lavender-spark/50 transition-all duration-200"
-        >
-          <option value="" className="bg-midnight-plum text-ash-veil">Select grade...</option>
-          {GRADE_OPTIONS.map((grade) => (
-            <option key={grade} value={grade} className="bg-midnight-plum text-bone-white">
-              {grade}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Style & Appearance Section */}
+      <div className="space-y-5 pt-4 border-t border-fog-line/10">
+        <h3 className="text-sm font-semibold text-bone-white uppercase tracking-wider flex items-center gap-2">
+          <Palette className="w-4 h-4 text-lavender-spark" />
+          <span>2. Certificate Style & Appearance</span>
+        </h3>
 
-      <Input
-        label="Score (% - Optional)"
-        type="number"
-        placeholder="98"
-        value={formData.score?.toString() || ''}
-        onChange={(v) => updateField('score', v ? parseInt(v, 10) : undefined)}
-        error={errors.score}
-      />
+        {/* Layout Selection */}
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-ash-veil">
+            Certificate Layout
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {LAYOUT_OPTIONS.map((opt) => {
+              const isSelected = formData.layout === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => updateField('layout', opt.id)}
+                  className={cn(
+                    'p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-lavender-spark/50',
+                    isSelected
+                      ? 'border-lavender-spark bg-lavender-spark/15 text-bone-white shadow-glow-violet/20 font-semibold'
+                      : 'border-fog-line/15 bg-midnight-plum/60 text-ash-veil hover:border-fog-line/30 hover:text-bone-white'
+                  )}
+                >
+                  <span className="text-xl">{opt.icon}</span>
+                  <span className="text-xs">{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-      <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-ash-veil">
-          Skills Certified (Optional)
-        </label>
-        <input
-          type="text"
-          placeholder="Rust, CKB-VM, Spore DOBs, Cryptography (comma-separated)"
-          value={skillsInput}
-          onChange={(e) => setSkillsInput(e.target.value)}
-          className="w-full px-3.5 py-2.5 rounded-xl bg-midnight-plum border border-fog-line/15 text-bone-white placeholder-mid-ash text-sm focus:outline-none focus:ring-2 focus:ring-lavender-spark/40 focus:border-lavender-spark/50 transition-all duration-200"
-        />
-        <p className="text-[11px] text-mid-ash">
-          Enter acquired skills separated by commas
-        </p>
+        {/* Theme & Color Selection */}
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-ash-veil">
+            Theme & Color Accent
+          </label>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {THEME_OPTIONS.map((thm) => {
+              const isSelected = formData.theme === thm.id;
+              return (
+                <button
+                  key={thm.id}
+                  type="button"
+                  onClick={() => updateField('theme', thm.id)}
+                  className={cn(
+                    'p-2.5 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-lavender-spark/50',
+                    isSelected
+                      ? 'border-lavender-spark bg-lavender-spark/15 text-bone-white shadow-glow-violet/20 font-semibold'
+                      : 'border-fog-line/15 bg-midnight-plum/60 text-ash-veil hover:border-fog-line/30 hover:text-bone-white'
+                  )}
+                >
+                  <span
+                    className="w-5 h-5 rounded-full border border-white/20 shadow-xs"
+                    style={{
+                      backgroundColor:
+                        thm.id === 'custom' && formData.customColor ? formData.customColor : thm.color,
+                    }}
+                  />
+                  <span className="text-xs">{thm.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Custom Color Input if theme === 'custom' */}
+        {formData.theme === 'custom' && (
+          <div className="p-3.5 rounded-xl bg-midnight-plum/60 border border-lavender-spark/20 space-y-2 animate-fade-in">
+            <label className="block text-xs font-medium text-ash-veil">
+              Custom Hex Color Accent
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                aria-label="Color picker"
+                value={(() => {
+                  const val = formData.customColor?.trim();
+                  if (!val) return '#1E40AF';
+                  if (/^#[0-9A-Fa-f]{6}$/.test(val)) return val;
+                  if (/^#[0-9A-Fa-f]{3}$/.test(val)) {
+                    return `#${val[1]}${val[1]}${val[2]}${val[2]}${val[3]}${val[3]}`;
+                  }
+                  return '#1E40AF';
+                })()}
+                onChange={(e) => updateField('customColor', e.target.value)}
+                className="w-10 h-10 rounded-lg cursor-pointer border border-fog-line/20 bg-transparent p-0 flex-shrink-0"
+              />
+              <input
+                type="text"
+                placeholder="#1E40AF"
+                value={formData.customColor || ''}
+                onChange={(e) => updateField('customColor', e.target.value)}
+                className="flex-1 px-3.5 py-2 rounded-xl bg-midnight-plum border border-fog-line/15 text-bone-white font-mono placeholder-mid-ash text-sm focus:outline-none focus:ring-2 focus:ring-lavender-spark/40 focus:border-lavender-spark/50 transition-all"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Custom Title Input */}
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium text-ash-veil">
+            Custom Certificate Title (Optional)
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. DIPLOMA, CERTIFICATE OF EXCELLENCE"
+            value={formData.customTitle || ''}
+            onChange={(e) => updateField('customTitle', e.target.value)}
+            className="w-full px-3.5 py-2.5 rounded-xl bg-midnight-plum border border-fog-line/15 text-bone-white placeholder-mid-ash text-sm focus:outline-none focus:ring-2 focus:ring-lavender-spark/40 focus:border-lavender-spark/50 transition-all duration-200"
+          />
+          <p className="text-[11px] text-mid-ash">
+            Optional custom headline for the certificate (e.g. &quot;HONORARY DIPLOMA&quot;, &quot;CERTIFICATE OF ACHIEVEMENT&quot;)
+          </p>
+        </div>
       </div>
 
       <div className="flex gap-3 pt-5 border-t border-fog-line/10">
@@ -233,11 +423,10 @@ export function CertificateForm({
           </Button>
         )}
         <Button type="submit" loading={loading} className="flex-1 text-xs shadow-glow-green/30 gap-1.5">
-          <span>Mint Spore DOB Certificate</span>
+          <span>Mint Certificate (Spore DOB)</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </Button>
       </div>
     </form>
   );
 }
-

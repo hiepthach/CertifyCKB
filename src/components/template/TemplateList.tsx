@@ -1,280 +1,281 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, Button, Badge, EmptyState } from '@/components/ui';
-import type { Template, TemplateField } from '@/types';
-import { getTemplates, deleteTemplate } from '@/lib/credentials/services';
-import { getDefaultCertificateFields } from '@/lib/credentials/services';
-import { Plus, FileText, Pencil, Trash2, Copy } from 'lucide-react';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card, Button, Badge, Modal } from '@/components/ui';
+import { PaperCertificate } from '@/components/certificate/PaperCertificate';
+import { Eye, Sparkles, ArrowRight, Palette, Check } from 'lucide-react';
+import type { CertificateDNA, CertificateLayout, CertificateTheme } from '@/types';
 
-interface TemplateListProps {
-  clusterId: string;
-  onSelect?: (template: Template) => void;
-  onCreateNew?: () => void;
-  onDelete?: (templateId: string) => void;
-  // Legacy props (for backwards compatibility)
-  onSelectTemplate?: (template: Template) => void;
-  onCreateTemplate?: () => void;
-  onEditTemplate?: (template: Template) => void;
-  // Optional: pass templates directly to avoid internal loading
-  templates?: Template[];
+export interface CertificatePreset {
+  id: string;
+  name: string;
+  description: string;
+  layout: CertificateLayout;
+  theme: CertificateTheme;
+  badge: string;
 }
 
-const LAYOUT_LABELS: Record<string, string> = {
-  classic: 'Classic',
-  modern: 'Modern',
-  compact: 'Compact',
-  detailed: 'Detailed',
-  badge: 'Badge',
-};
+export const CERTIFICATE_PRESETS: CertificatePreset[] = [
+  {
+    id: 'academic-classic',
+    name: 'Academic Classic',
+    description: 'Traditional gold ornate border layout, ideal for formal academic degrees, graduation diplomas, and institutional honors.',
+    layout: 'classic',
+    theme: 'gold',
+    badge: 'Classic Gold',
+  },
+  {
+    id: 'modern-tech',
+    name: 'Modern Tech',
+    description: 'Clean modern header banner aesthetic with crisp typography for engineering courses, bootcamps, and developer credentials.',
+    layout: 'modern',
+    theme: 'blue',
+    badge: 'Modern Blue',
+  },
+  {
+    id: 'executive-detailed',
+    name: 'Executive Detailed',
+    description: 'Comprehensive multi-column layout showcasing verified competencies, subject grades, and formal institutional verification.',
+    layout: 'detailed',
+    theme: 'purple',
+    badge: 'Executive Purple',
+  },
+  {
+    id: 'achievement-badge',
+    name: 'Achievement Badge',
+    description: 'Centered emblem and official badge highlight, perfect for hackathon prizes, participation awards, and special achievements.',
+    layout: 'badge',
+    theme: 'green',
+    badge: 'Badge Green',
+  },
+  {
+    id: 'compact-diploma',
+    name: 'Compact Diploma',
+    description: 'Streamlined horizontal layout designed for rapid micro-credentials, workshop completions, and compact verification.',
+    layout: 'compact',
+    theme: 'red',
+    badge: 'Compact Red',
+  },
+];
 
-const THEME_COLORS: Record<string, string> = {
-  blue: 'bg-blue-900 text-blue-400 border-blue-700',
-  purple: 'bg-purple-900 text-purple-400 border-purple-700',
-  green: 'bg-green-900 text-green-400 border-green-700',
-  gold: 'bg-yellow-900 text-yellow-400 border-yellow-700',
-  red: 'bg-red-900 text-red-400 border-red-700',
+const THEME_BADGE_CLASSES: Record<CertificateTheme, string> = {
+  gold: 'bg-yellow-950/60 text-yellow-400 border-yellow-700/50',
+  blue: 'bg-blue-950/60 text-blue-400 border-blue-700/50',
+  purple: 'bg-purple-950/60 text-purple-400 border-purple-700/50',
+  green: 'bg-emerald-950/60 text-emerald-400 border-emerald-700/50',
+  red: 'bg-red-950/60 text-red-400 border-red-700/50',
   custom: 'bg-slate-900 text-slate-400 border-slate-700',
 };
 
+export interface TemplateListProps {
+  clusterId: string;
+  clusterName?: string;
+  presets?: CertificatePreset[];
+  onSelectPreset?: (preset: CertificatePreset) => void;
+  // Backward compatibility props
+  onSelect?: (preset: CertificatePreset) => void;
+  templates?: any[];
+  onCreateNew?: () => void;
+  onDelete?: (templateId: string) => void;
+}
+
 export function TemplateList({
   clusterId,
+  clusterName = 'CKB Certificate Authority',
+  presets = CERTIFICATE_PRESETS,
+  onSelectPreset,
   onSelect,
-  onCreateNew,
-  onDelete,
-  // Legacy props
-  onSelectTemplate,
-  onCreateTemplate,
-  onEditTemplate,
-  templates: externalTemplates,
 }: TemplateListProps) {
-  const [internalTemplates, setInternalTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const [selectedPreset, setSelectedPreset] = useState<CertificatePreset | null>(null);
 
-  // Use external templates if provided, otherwise load internally
-  const templates = externalTemplates ?? internalTemplates;
-
-  useEffect(() => {
-    if (!externalTemplates) {
-      loadTemplates();
-    } else {
-      setLoading(false);
+  const handleIssue = (preset: CertificatePreset) => {
+    if (onSelectPreset) {
+      onSelectPreset(preset);
+      return;
     }
-  }, [clusterId, externalTemplates]);
-
-  const loadTemplates = async () => {
-    try {
-      setLoading(true);
-      const loaded = await getTemplates(clusterId);
-      setInternalTemplates(loaded);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load templates');
-    } finally {
-      setLoading(false);
+    if (onSelect) {
+      onSelect(preset);
+      return;
     }
-  };
-
-  const handleDelete = async (template: Template) => {
-    if (!confirm(`Delete template "${template.name}"?`)) return;
-
-    try {
-      await deleteTemplate(template.id);
-
-      // If using external templates, notify parent
-      if (onDelete) {
-        onDelete(template.id);
-      } else {
-        // Otherwise, reload internally
-        await loadTemplates();
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete template');
-    }
-  };
-
-  // Normalize callbacks
-  const handleSelect = onSelect ?? onSelectTemplate;
-  const handleCreate = onCreateNew ?? onCreateTemplate;
-  const handleEdit = onEditTemplate ?? onSelect;
-
-  const handleDuplicate = (template: Template) => {
-    // Clone template for editing
-    if (handleEdit) {
-      const duplicated: Template = {
-        ...template,
-        id: '', // Will be assigned new ID on create
-        name: `${template.name} (Copy)`,
-        createdAt: new Date().toISOString(),
-      };
-      handleEdit(duplicated);
-    }
-  };
-
-  const getFieldCount = (fields: TemplateField[]): number => {
-    return fields.length;
-  };
-
-  const getRequiredFieldCount = (fields: TemplateField[]): number => {
-    return fields.filter((f) => f.required).length;
-  };
-
-  const getLayoutBadge = (template: Template): string => {
-    const layout = template.visual?.layout || 'classic';
-    return LAYOUT_LABELS[layout] || layout;
-  };
-
-  const getThemeBadge = (template: Template): { label: string; className: string } => {
-    const theme = template.visual?.colors?.theme || 'blue';
-    return {
-      label: theme.charAt(0).toUpperCase() + theme.slice(1),
-      className: THEME_COLORS[theme] || THEME_COLORS.blue,
-    };
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-      </div>
+    router.push(
+      `/certificates/issue?cluster=${encodeURIComponent(clusterId)}&layout=${encodeURIComponent(
+        preset.layout
+      )}&theme=${encodeURIComponent(preset.theme)}`
     );
-  }
+  };
 
-  if (error) {
-    return (
-      <Card variant="default" padding="lg">
-        <p className="text-red-400">{error}</p>
-        <Button onClick={loadTemplates} variant="secondary" className="mt-4">
-          Retry
-        </Button>
-      </Card>
-    );
-  }
-
-  if (templates.length === 0) {
-    return (
-      <EmptyState
-        icon="📄"
-        title="No templates yet"
-        description="Create your first certificate template to define the structure and design of your certificates."
-        action={
-          handleCreate
-            ? { label: 'Create Template', onClick: handleCreate }
-            : undefined
-        }
-      />
-    );
-  }
+  const createSampleCertificate = (preset: CertificatePreset): CertificateDNA => ({
+    '@context': [
+      'https://www.w3.org/2018/credentials/v1',
+      'https://schema.org',
+    ],
+    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    type: ['VerifiableCredential', 'CourseCertificate'],
+    issuer: {
+      id: clusterId || 'ckt1qcluster',
+      name: clusterName || 'CKB Certificate Authority',
+    },
+    issuanceDate: '2026-02-01T00:00:00Z',
+    credentialSubject: {
+      id: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+      type: 'CourseCertificate',
+      name: 'Jane Doe',
+      courseName: 'Certified CKB & DOB Developer',
+      completionDate: '2026-02-01',
+      grade: 'A+',
+      score: 98,
+      skills: ['CKB-VM', 'Spore DOB', 'Cell Model'],
+      issuerName: clusterName || 'CKB Certificate Authority',
+      metadata: {
+        layout: preset.layout,
+        theme: preset.theme,
+      },
+    },
+  });
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">
-          Certificate Templates ({templates.length})
-        </h3>
-        {handleCreate && (
-          <Button onClick={handleCreate} size="sm">
-            <Plus className="w-4 h-4 mr-1" />
-            New Template
-          </Button>
-        )}
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-bone-white tracking-tight flex items-center gap-2">
+            <Palette className="w-5 h-5 text-lavender-spark" />
+            Certificate Style Presets ({presets.length})
+          </h2>
+          <p className="text-xs text-ash-veil mt-1">
+            Choose a preset template style to issue branded, verifiable DOB credentials for{' '}
+            <strong className="text-bone-white font-medium">{clusterName}</strong>
+          </p>
+        </div>
       </div>
 
-      <div className="grid gap-4">
-        {templates.map((template) => {
-          const themeBadge = getThemeBadge(template);
+      {/* Grid of Presets */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {presets.map((preset) => {
+          const sampleCert = createSampleCertificate(preset);
+          const themeBadgeClass = THEME_BADGE_CLASSES[preset.theme] || THEME_BADGE_CLASSES.blue;
 
           return (
             <Card
-              key={template.id}
-              variant="interactive"
+              key={preset.id}
+              variant="default"
               padding="lg"
-              onClick={() => handleSelect?.(template)}
-              className="hover:border-slate-500 transition-colors"
+              className="flex flex-col justify-between border-fog-line/15 hover:border-lavender-spark/40 transition-all duration-300 hover:shadow-glow-violet/20 group"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h4 className="font-medium text-white truncate">{template.name}</h4>
-                    <Badge className={themeBadge.className}>{themeBadge.label}</Badge>
-                    <Badge variant="neutral">{getLayoutBadge(template)}</Badge>
-                  </div>
-
-                  {template.description && (
-                    <p className="text-sm text-slate-400 mb-3 line-clamp-2">
-                      {template.description}
+              {/* Card Header */}
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="text-base font-bold text-bone-white tracking-tight group-hover:text-lavender-spark transition-colors">
+                      {preset.name}
+                    </h3>
+                    <p className="text-xs text-ash-veil mt-1 leading-relaxed line-clamp-2">
+                      {preset.description}
                     </p>
-                  )}
-
-                  <div className="flex items-center gap-4 text-sm text-slate-500">
-                    <span>
-                      {getFieldCount(template.fields)} fields
-                    </span>
-                    <span>
-                      {getRequiredFieldCount(template.fields)} required
-                    </span>
-                    <span>
-                      Created {new Date(template.createdAt).toLocaleDateString()}
-                    </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 ml-4">
-                  {handleSelect && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelect(template);
-                      }}
-                    >
-                      Use
-                    </Button>
-                  )}
-                  {onEditTemplate && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditTemplate(template);
-                      }}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDuplicate(template);
-                    }}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(template);
-                    }}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <Badge className={`text-[10px] uppercase tracking-wider font-semibold border ${themeBadgeClass}`}>
+                    {preset.badge}
+                  </Badge>
+                  <Badge variant="neutral" className="text-[10px] uppercase tracking-wider">
+                    Layout: {preset.layout}
+                  </Badge>
                 </div>
+
+                {/* Mini Preview Box */}
+                <div className="relative mt-3 rounded-xl overflow-hidden border border-fog-line/10 bg-midnight-plum/40 p-2 sm:p-3 shadow-inner">
+                  <div className="transform scale-[0.72] sm:scale-[0.78] origin-top -mb-16 sm:-mb-12 pointer-events-none select-none">
+                    <PaperCertificate
+                      certificate={sampleCert}
+                      certificateId="0xSAMPLE_PREVIEW"
+                      layout={preset.layout}
+                      theme={preset.theme}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 pt-4 mt-4 border-t border-fog-line/10">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setSelectedPreset(preset)}
+                  className="flex-1 text-xs gap-1.5 justify-center"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Preview
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => handleIssue(preset)}
+                  className="flex-1 text-xs gap-1.5 justify-center shadow-glow-green/20"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-signal-green" />
+                  Issue With This Style
+                </Button>
               </div>
             </Card>
           );
         })}
       </div>
+
+      {/* Modal for Full Preview */}
+      <Modal
+        isOpen={!!selectedPreset}
+        onClose={() => setSelectedPreset(null)}
+        title={selectedPreset ? `Preview: ${selectedPreset.name}` : 'Template Preview'}
+        size="xl"
+      >
+        {selectedPreset && (
+          <div className="space-y-6">
+            <div className="p-4 bg-midnight-plum/40 rounded-xl border border-fog-line/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-ash-veil">{selectedPreset.description}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge className={`text-[10px] uppercase font-semibold border ${THEME_BADGE_CLASSES[selectedPreset.theme]}`}>
+                    Theme: {selectedPreset.theme}
+                  </Badge>
+                  <Badge variant="neutral" className="text-[10px] uppercase">
+                    Layout: {selectedPreset.layout}
+                  </Badge>
+                </div>
+              </div>
+              <Button
+                onClick={() => {
+                  const preset = selectedPreset;
+                  setSelectedPreset(null);
+                  handleIssue(preset);
+                }}
+                className="text-xs gap-1.5 shadow-glow-green/30 flex-shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-signal-green" />
+                Use This Style to Issue
+              </Button>
+            </div>
+
+            <div className="p-4 sm:p-6 bg-midnight-plum/30 rounded-2xl border border-fog-line/15 overflow-auto max-h-[65vh]">
+              <PaperCertificate
+                certificate={createSampleCertificate(selectedPreset)}
+                certificateId="0xSAMPLE_PREVIEW"
+                layout={selectedPreset.layout}
+                theme={selectedPreset.theme}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="secondary" onClick={() => setSelectedPreset(null)} className="text-xs">
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
 
-// Re-export for convenience
 export { getDefaultCertificateFields } from '@/lib/credentials/services';

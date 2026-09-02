@@ -5,7 +5,8 @@
  * for storage on CKB via Spore Protocol.
  */
 
-import type { CertificateDNA } from '@/types';
+import type { CertificateDNA, CredentialSubjectMetadata } from '@/types';
+
 
 /**
  * Encode certificate data into W3C VC format
@@ -22,6 +23,7 @@ export function encodeCertificateDNA(params: {
     grade?: string;
     score?: number;
     skills?: string[];
+    metadata?: CredentialSubjectMetadata;
   };
   issuanceDate?: string;
   expirationDate?: string;
@@ -68,6 +70,9 @@ export function encodeCertificateDNA(params: {
   }
   if (subject.skills) {
     subjectRecord.skills = subject.skills;
+  }
+  if (subject.metadata) {
+    subjectRecord.metadata = subject.metadata;
   }
 
   // Add expiration date if provided

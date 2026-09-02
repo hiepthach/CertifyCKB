@@ -1,8 +1,18 @@
+import type { CertificateLayout, CertificateTheme } from './template';
+
 // W3C Verifiable Credentials Types
 export interface Issuer {
   id: string;
   name?: string;
   description?: string;
+}
+
+export interface CredentialSubjectMetadata {
+  layout?: CertificateLayout;
+  theme?: CertificateTheme;
+  customColor?: string;
+  customTitle?: string;
+  [key: string]: unknown;
 }
 
 export interface CredentialSubject {
@@ -16,8 +26,9 @@ export interface CredentialSubject {
   grade?: string;
   score?: number;
   skills?: string[];
-  metadata?: Record<string, unknown>;
+  metadata?: CredentialSubjectMetadata;
 }
+
 
 export interface CredentialStatus {
   id: string;

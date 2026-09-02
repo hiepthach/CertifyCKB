@@ -284,3 +284,22 @@ body {
     scroll-behavior: auto !important;
   }
 }
+/* ============================================
+   Print Styles for Paper Certificate
+   ============================================ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-certificate-target, .print-certificate-target * {
+    visibility: visible;
+  }
+  .print-certificate-target {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+}
