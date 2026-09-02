@@ -6,11 +6,13 @@
  */
 
 import Papa from 'papaparse';
-import type { BatchEntry, BatchValidationResult, BatchPreview, BatchIssueParams, BatchIssueResult, BatchCertificateResult, BatchError } from '@/types';
+import type { BatchEntry, BatchValidationResult, BatchPreview, BatchIssueParams, BatchIssueResult, BatchCertificateResult, BatchError, CertificateLayout, CertificateTheme } from '@/types';
 import { issueCertificate } from './issuer';
 
 const CKB_PER_CERTIFICATE = 151;
 const LARGE_BATCH_THRESHOLD = 100;
+const VALID_LAYOUTS: readonly CertificateLayout[] = ['classic', 'modern', 'compact', 'detailed', 'badge'];
+const VALID_THEMES: readonly CertificateTheme[] = ['blue', 'purple', 'green', 'gold', 'red', 'custom'];
 
 /**
  * Parse batch file (CSV or JSON)
@@ -52,6 +54,10 @@ export function parseCSV(content: string): {
     expirationDate: row.expirationDate || undefined,
     grade: row.grade || undefined,
     score: row.score ? parseInt(row.score, 10) : undefined,
+    layout: (row.layout as CertificateLayout) || undefined,
+    theme: (row.theme as CertificateTheme) || undefined,
+    customColor: row.customColor || undefined,
+    customTitle: row.customTitle || undefined,
     errors: [],
     valid: false,
   }));
@@ -84,6 +90,10 @@ export function parseJSON(content: string): {
     expirationDate: (item.expirationDate as string) || undefined,
     grade: item.grade as string | undefined,
     score: item.score as number | undefined,
+    layout: (item.layout as CertificateLayout) || undefined,
+    theme: (item.theme as CertificateTheme) || undefined,
+    customColor: (item.customColor as string) || undefined,
+    customTitle: (item.customTitle as string) || undefined,
     errors: [],
     valid: false,
   }));
@@ -137,6 +147,16 @@ export function validateEntry(entry: BatchEntry): BatchEntry {
     if (isNaN(expDate.getTime())) {
       errors.push('Invalid expiration date format');
     }
+  }
+
+  // Validate layout if provided
+  if (entry.layout && !VALID_LAYOUTS.includes(entry.layout)) {
+    errors.push('Invalid layout');
+  }
+
+  // Validate theme if provided
+  if (entry.theme && !VALID_THEMES.includes(entry.theme)) {
+    errors.push('Invalid theme');
   }
 
   return {
@@ -206,6 +226,11 @@ export async function issueBatchCertificates(
     });
 
     try {
+      const effectiveLayout = entry.layout || params.defaultStyle?.layout || 'classic';
+      const effectiveTheme = entry.theme || params.defaultStyle?.theme || 'blue';
+      const effectiveCustomColor = entry.customColor || params.defaultStyle?.customColor;
+      const effectiveCustomTitle = entry.customTitle || params.defaultStyle?.customTitle;
+
       const result = await issueCertificate({
         signer,
         clusterId,
@@ -220,6 +245,12 @@ export async function issueBatchCertificates(
           grade: entry.grade,
           score: entry.score,
           skills: entry.skills,
+          metadata: {
+            layout: effectiveLayout,
+            theme: effectiveTheme,
+            customColor: effectiveCustomColor,
+            customTitle: effectiveCustomTitle,
+          },
         },
         expirationDate: entry.expirationDate || expirationDate,
       });

@@ -4,12 +4,12 @@ import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button, Modal, Card, Spinner, Badge } from '@/components/ui';
+import { Button, Card, Spinner, Badge } from '@/components/ui';
 import { BatchUpload, BatchPreview } from '@/components/batch';
-import { ArrowLeft, Upload, CheckCircle2, AlertTriangle, Download, FileText } from 'lucide-react';
-import type { Cluster, BatchEntry, BatchIssueParams, BatchIssueResult } from '@/types';
+import { ArrowLeft, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
+import type { Cluster, BatchEntry, BatchIssueParams, BatchIssueResult, VisualStyleConfig } from '@/types';
 import { getCluster, previewBatch, validateBatchEntries, issueBatchCertificates } from '@/lib/credentials';
-import { formatDate, truncateAddress } from '@/utils';
+import { truncateAddress } from '@/utils';
 
 type BatchStep = 'upload' | 'preview' | 'issuing' | 'result';
 
@@ -17,13 +17,14 @@ function BatchIssuePageContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const { signer, address, isLoadingAddress } = useWallet();
+  const { signer, isLoadingAddress } = useWallet();
   const clusterId = searchParams.get('cluster');
 
   const [cluster, setCluster] = useState<Cluster | null>(null);
   const [step, setStep] = useState<BatchStep>('upload');
   const [entries, setEntries] = useState<BatchEntry[]>([]);
   const [preview, setPreview] = useState<ReturnType<typeof previewBatch> | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState<VisualStyleConfig | undefined>(undefined);
   const [progress, setProgress] = useState<{
     current: number;
     total: number;
@@ -56,16 +57,19 @@ function BatchIssuePageContent() {
   }, [clusterId]);
 
   const issueMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (styleConfig?: VisualStyleConfig) => {
       if (!signer || !clusterId || !cluster || !preview) {
         throw new Error('Missing required parameters');
       }
+
+      const styleToUse = styleConfig ?? selectedStyle;
 
       const params: BatchIssueParams = {
         clusterId,
         issuerName: cluster.name,
         issuerDescription: cluster.description,
         entries: preview.validEntries,
+        defaultStyle: styleToUse,
       };
 
       return issueBatchCertificates(signer, params, (p) => setProgress(p));
@@ -82,6 +86,7 @@ function BatchIssuePageContent() {
     setStep('upload');
     setEntries([]);
     setPreview(null);
+    setSelectedStyle(undefined);
     setProgress(null);
     setResult(null);
   };
@@ -151,9 +156,10 @@ function BatchIssuePageContent() {
         <BatchPreview
           entries={entries}
           estimatedCost={preview.estimatedFee}
-          onConfirm={() => {
+          onConfirm={(defaultStyle) => {
+            setSelectedStyle(defaultStyle);
             setStep('issuing');
-            issueMutation.mutate();
+            issueMutation.mutate(defaultStyle);
           }}
           onCancel={handleCancel}
           loading={issueMutation.isPending}

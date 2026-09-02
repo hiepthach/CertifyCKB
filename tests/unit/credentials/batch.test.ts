@@ -6,14 +6,20 @@
  * Reference: Design_spec/06_Batch_Issuance.md
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   parseCSV,
   parseJSON,
   validateBatchEntries,
   previewBatch,
+  issueBatchCertificates,
 } from '../../../src/lib/credentials/batch';
+import { issueCertificate } from '../../../src/lib/credentials/issuer';
 import type { BatchEntry } from '../../../src/types';
+
+vi.mock('../../../src/lib/credentials/issuer', () => ({
+  issueCertificate: vi.fn(),
+}));
 
 describe('Batch Issuance', () => {
   // Valid batch entry fixture for testing
@@ -138,6 +144,63 @@ describe('Batch Issuance', () => {
       expect(result.entries[1].valid).toBe(false);
       expect(result.entries[1].errors?.length ?? 0).toBeGreaterThan(1);
     });
+
+    it('should detect invalid layout', () => {
+      const entries: BatchEntry[] = [
+        {
+          row: 1,
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+          courseName: 'CKB Basics',
+          completionDate: '2024-01-15',
+          layout: 'invalid-layout' as any,
+          errors: [],
+          valid: false,
+        },
+      ];
+
+      const result = validateBatchEntries(entries);
+      expect(result.valid).toBe(false);
+      expect(result.entries[0].errors).toContain('Invalid layout');
+    });
+
+    it('should detect invalid theme', () => {
+      const entries: BatchEntry[] = [
+        {
+          row: 1,
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+          courseName: 'CKB Basics',
+          completionDate: '2024-01-15',
+          theme: 'invalid-theme' as any,
+          errors: [],
+          valid: false,
+        },
+      ];
+
+      const result = validateBatchEntries(entries);
+      expect(result.valid).toBe(false);
+      expect(result.entries[0].errors).toContain('Invalid theme');
+    });
+
+    it('should validate valid layout and theme', () => {
+      const entries: BatchEntry[] = [
+        {
+          row: 1,
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+          courseName: 'CKB Basics',
+          completionDate: '2024-01-15',
+          layout: 'modern',
+          theme: 'gold',
+          customColor: '#FFD700',
+          customTitle: 'HONORS',
+          errors: [],
+          valid: false,
+        },
+      ];
+
+      const result = validateBatchEntries(entries);
+      expect(result.valid).toBe(true);
+      expect(result.entries[0].errors).toHaveLength(0);
+    });
   });
 
   describe('previewBatch', () => {
@@ -254,6 +317,22 @@ ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq,Jane Smith,CKB Adv
       expect(result.entries[1].courseName).toBe('CKB Advanced');
       expect(result.entries[1].grade).toBe('B+');
     });
+
+    it('should parse optional style columns from CSV (layout, theme, customColor, customTitle)', () => {
+      const csv = `recipientAddress,recipientName,courseName,completionDate,layout,theme,customColor,customTitle
+ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq,Alice,Rust 101,2026-03-01,modern,custom,#F26F21,DIPLOMA WITH HONORS
+ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq,Bob,Rust 101,2026-03-01,,,,`;
+
+      const { entries } = parseCSV(csv);
+      expect(entries[0].layout).toBe('modern');
+      expect(entries[0].theme).toBe('custom');
+      expect(entries[0].customColor).toBe('#F26F21');
+      expect(entries[0].customTitle).toBe('DIPLOMA WITH HONORS');
+      expect(entries[1].layout).toBeUndefined();
+      expect(entries[1].theme).toBeUndefined();
+      expect(entries[1].customColor).toBeUndefined();
+      expect(entries[1].customTitle).toBeUndefined();
+    });
   });
 
   describe('parseJSON', () => {
@@ -276,6 +355,35 @@ ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq,Jane Smith,CKB Adv
       expect(result.entries).toHaveLength(1);
       expect(result.entries[0].recipientName).toBe('John Doe');
       expect(result.entries[0].courseName).toBe('CKB Basics');
+    });
+
+    it('should parse optional style fields from JSON (layout, theme, customColor, customTitle)', () => {
+      const jsonContent = JSON.stringify([
+        {
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+          courseName: 'Rust 101',
+          completionDate: '2026-03-01',
+          layout: 'badge',
+          theme: 'gold',
+          customColor: '#FFD700',
+          customTitle: 'BADGE OF MERIT',
+        },
+        {
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+          courseName: 'Rust 101',
+          completionDate: '2026-03-01',
+        },
+      ]);
+
+      const { entries } = parseJSON(jsonContent);
+      expect(entries[0].layout).toBe('badge');
+      expect(entries[0].theme).toBe('gold');
+      expect(entries[0].customColor).toBe('#FFD700');
+      expect(entries[0].customTitle).toBe('BADGE OF MERIT');
+      expect(entries[1].layout).toBeUndefined();
+      expect(entries[1].theme).toBeUndefined();
+      expect(entries[1].customColor).toBeUndefined();
+      expect(entries[1].customTitle).toBeUndefined();
     });
 
     // Test: Parse JSON array with multiple entries
@@ -304,4 +412,122 @@ ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq,Jane Smith,CKB Adv
       expect(() => parseJSON(jsonContent)).toThrow('JSON must be an array of entries');
     });
   });
+
+  describe('issueBatchCertificates', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      vi.mocked(issueCertificate).mockResolvedValue({
+        certificateId: 'cert-mock-123',
+        transactionHash: '0x123abc',
+      });
+    });
+
+    it('should resolve metadata style with precedence: row override > defaultStyle > fallback', async () => {
+      const mockSigner = {};
+      const entries: BatchEntry[] = [
+        {
+          row: 1,
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+          recipientName: 'Alice',
+          courseName: 'Rust 101',
+          completionDate: '2026-03-01',
+          layout: 'modern',
+          theme: 'gold',
+          customColor: '#FFD700',
+          customTitle: 'HONORS',
+          errors: [],
+          valid: true,
+        },
+        {
+          row: 2,
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+          recipientName: 'Bob',
+          courseName: 'Rust 101',
+          completionDate: '2026-03-01',
+          errors: [],
+          valid: true,
+        },
+      ];
+
+      await issueBatchCertificates(mockSigner, {
+        clusterId: 'cluster-1',
+        issuerName: 'Test Issuer',
+        entries,
+        defaultStyle: {
+          layout: 'compact',
+          theme: 'purple',
+          customColor: '#800080',
+          customTitle: 'DEFAULT TITLE',
+        },
+      });
+
+      expect(issueCertificate).toHaveBeenCalledTimes(2);
+
+      // Entry 1: row style takes precedence over defaultStyle
+      expect(issueCertificate).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          subject: expect.objectContaining({
+            metadata: {
+              layout: 'modern',
+              theme: 'gold',
+              customColor: '#FFD700',
+              customTitle: 'HONORS',
+            },
+          }),
+        })
+      );
+
+      // Entry 2: defaultStyle is applied when row has no style
+      expect(issueCertificate).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          subject: expect.objectContaining({
+            metadata: {
+              layout: 'compact',
+              theme: 'purple',
+              customColor: '#800080',
+              customTitle: 'DEFAULT TITLE',
+            },
+          }),
+        })
+      );
+    });
+
+    it('should fallback to classic and blue when neither row nor defaultStyle provides style', async () => {
+      const mockSigner = {};
+      const entries: BatchEntry[] = [
+        {
+          row: 1,
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+          recipientName: 'Charlie',
+          courseName: 'Rust 101',
+          completionDate: '2026-03-01',
+          errors: [],
+          valid: true,
+        },
+      ];
+
+      await issueBatchCertificates(mockSigner, {
+        clusterId: 'cluster-1',
+        issuerName: 'Test Issuer',
+        entries,
+      });
+
+      expect(issueCertificate).toHaveBeenCalledTimes(1);
+      expect(issueCertificate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: expect.objectContaining({
+            metadata: {
+              layout: 'classic',
+              theme: 'blue',
+              customColor: undefined,
+              customTitle: undefined,
+            },
+          }),
+        })
+      );
+    });
+  });
 });
+

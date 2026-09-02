@@ -1,3 +1,5 @@
+import type { CertificateLayout, CertificateTheme, VisualStyleConfig } from './template';
+
 export interface BatchEntry {
   row: number;
   recipientAddress: string;
@@ -11,6 +13,10 @@ export interface BatchEntry {
   metadata?: Record<string, unknown>;
   errors?: string[];
   valid: boolean;
+  layout?: CertificateLayout;
+  theme?: CertificateTheme;
+  customColor?: string;
+  customTitle?: string;
 }
 
 export interface ParseBatchResult {
@@ -27,6 +33,7 @@ export interface BatchIssueParams {
   entries: BatchEntry[];
   expirationDate?: string;
   templateId?: string;
+  defaultStyle?: VisualStyleConfig;
 }
 
 export interface BatchProgress {

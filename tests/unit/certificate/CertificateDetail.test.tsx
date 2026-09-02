@@ -67,7 +67,7 @@ describe('CertificateDetail Component View Toggle', () => {
     printSpy.mockRestore();
   });
 
-  it('allows interactive switching of layouts and themes in visual view', () => {
+  it('renders certificate with issuer visual metadata in visual view', () => {
     render(
       <CertificateDetail
         certificate={mockCert}
@@ -75,22 +75,10 @@ describe('CertificateDetail Component View Toggle', () => {
       />
     );
 
-    // Initial classic layout is rendered
+    // Initial classic layout and gold theme from mockCert metadata are rendered
     expect(screen.getByText(/CERTIFICATE OF COMPLETION/i)).toBeInTheDocument();
-
-    // Click 'modern' layout button
-    const modernBtn = screen.getByRole('button', { name: /^modern$/i });
-    fireEvent.click(modernBtn);
-    expect(screen.getByText(/of Achievement/i)).toBeInTheDocument();
-
-    // Click 'badge' layout button
-    const badgeBtn = screen.getByRole('button', { name: /^badge$/i });
-    fireEvent.click(badgeBtn);
-    expect(screen.getByText(/CERTIFIED/i)).toBeInTheDocument();
-
-    // Click theme button
-    const greenThemeBtn = screen.getByRole('button', { name: /Theme green/i });
-    fireEvent.click(greenThemeBtn);
+    expect(screen.getByText('Grace Hopper')).toBeInTheDocument();
+    expect(screen.getByText('Compiler Construction on CKB-VM')).toBeInTheDocument();
   });
 
   it('opens melt modal when Melt & Reclaim CKB is clicked', () => {

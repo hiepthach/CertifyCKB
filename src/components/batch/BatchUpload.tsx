@@ -71,9 +71,9 @@ export function BatchUpload({
 
   const downloadTemplate = (format: 'csv' | 'json') => {
     if (format === 'csv') {
-      const csv = `recipientAddress,recipientName,courseName,completionDate,expirationDate,grade,score,skills
-ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,John Doe,CKB Basics,2026-01-15,2027-01-15,A,95,Rust;CKB-VM
-ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,Jane Smith,CKB Basics,2026-01-16,,B+,88,CKB-VM`;
+      const csv = `recipientAddress,recipientName,courseName,completionDate,expirationDate,grade,score,skills,layout,theme,customColor,customTitle
+ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,John Doe,CKB Basics,2026-01-15,2027-01-15,A,95,Rust;CKB-VM,classic,gold,,CERTIFICATE OF EXCELLENCE
+ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,Jane Smith,CKB Basics,2026-01-16,,B+,88,CKB-VM,modern,custom,#F26F21,DIPLOMA`;
       downloadFile(csv, 'certificate_template.csv', 'text/csv');
     } else {
       const json = JSON.stringify([
@@ -86,6 +86,9 @@ ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,Jane Smith,CKB B
           grade: 'A',
           score: 95,
           skills: ['Rust', 'CKB-VM'],
+          layout: 'classic',
+          theme: 'gold',
+          customTitle: 'CERTIFICATE OF EXCELLENCE',
         },
         {
           recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
@@ -95,6 +98,10 @@ ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,Jane Smith,CKB B
           grade: 'B+',
           score: 88,
           skills: ['CKB-VM'],
+          layout: 'modern',
+          theme: 'custom',
+          customColor: '#F26F21',
+          customTitle: 'DIPLOMA',
         },
       ], null, 2);
       downloadFile(json, 'certificate_template.json', 'application/json');
