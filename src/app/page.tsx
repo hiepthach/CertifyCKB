@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Card, Badge, Button } from '@/components/ui';
+import { CredoraLogo } from '@/components/ui/CredoraLogo';
 import { Wallet, Shield, Award, Users, FileText, Zap, ArrowRight, CheckCircle2, Lock, Sparkles, Terminal, Copy } from 'lucide-react';
 
 const features = [
@@ -214,7 +215,7 @@ export default function Home() {
             Engineered Capabilities
           </Badge>
           <h2 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">
-            Why institutions choose CKB Credential Registry
+            Why institutions choose Credora
           </h2>
           <p className="text-sm sm:text-base text-ash-veil leading-relaxed">
             Built from first principles on the Nervos Cell Model to deliver zero-trust digital credential verification.
@@ -327,8 +328,8 @@ export default function Home() {
         <div className="aurora-divider mb-8" />
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-mid-ash">
           <div className="flex items-center gap-2">
-            <span className="text-lavender-spark font-bold">✱</span>
-            <span className="text-bone-white font-medium">CKB Credential Registry</span>
+            <CredoraLogo size={18} />
+            <span className="text-bone-white font-semibold">Credora</span>
           </div>
           <p>
             Powered by <span className="text-lavender-spark">Spore Protocol</span> on Nervos CKB

@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'CKB Credential Registry',
+  title: 'Credora — Verifiable Credentials on CKB',
   description: 'Issue, manage, and verify verifiable credentials on Nervos CKB using Spore Protocol',
 };
 

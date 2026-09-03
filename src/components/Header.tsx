@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { Button } from '@/components/ui';
+import { CredoraLogo } from '@/components/ui/CredoraLogo';
 import { Wallet, LogOut, Menu, X, ExternalLink, Copy, Check, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { NetworkSelector } from './wallet/NetworkSelector';
@@ -48,19 +49,14 @@ export function Header() {
     <div className="sticky top-0 z-40 w-full pt-3 px-4 sm:px-6">
       <div className="max-w-[1200px] mx-auto">
         {/* Doppler Glass Header Nav — midnight plum with frosted blur & hairline border */}
-        <header className="relative bg-midnight-plum/85 backdrop-blur-xl border border-fog-line/10 rounded-2xl shadow-glow-sm flex items-center justify-between px-4 sm:px-6 py-2.5 transition-all duration-300">
-          {/* Left: Asterisk Logo Lockup */}
+        <header className="relative bg-midnight-plum/85 backdrop-blur-xl border border-fog-line/10 rounded-2xl shadow-glow-sm flex items-center justify-between px-4 sm:px-6 py-1.5 sm:py-2 transition-all duration-300">
+          {/* Left: Credora Logo Lockup */}
           <div className="flex items-center gap-7">
             <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
-              {/* Lavender Asterisk visual anchor */}
-              <div className="w-8 h-8 rounded-xl bg-shadow-plum border border-lavender-spark/30 flex items-center justify-center shadow-[0_0_16px_rgba(185,151,255,0.2)] group-hover:scale-105 group-hover:border-lavender-spark/50 transition-all duration-200">
-                <span className="text-lavender-spark text-lg font-bold select-none leading-none">✱</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-bone-white tracking-tight flex items-center gap-1.5">
-                  CKB Credential Registry
-                </span>
-              </div>
+              <CredoraLogo size={40} className="flex-shrink-0 transition-transform duration-200 group-hover:scale-105 drop-shadow-[0_0_14px_rgba(185,151,255,0.4)]" />
+              <span className="text-lg font-bold text-bone-white tracking-tight">
+                Credora
+              </span>
             </Link>
 
             {/* Center: Desktop Navigation */}
