@@ -181,6 +181,44 @@ describe('Batch Issuance', () => {
       expect(result.entries[0].errors).toContain('Invalid theme');
     });
 
+    it('should detect invalid hex color format', () => {
+      const entries: BatchEntry[] = [
+        {
+          row: 1,
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+          courseName: 'CKB Basics',
+          completionDate: '2024-01-15',
+          theme: 'custom',
+          customColor: '#GGGGGG',
+          errors: [],
+          valid: false,
+        },
+      ];
+
+      const result = validateBatchEntries(entries);
+      expect(result.valid).toBe(false);
+      expect(result.entries[0].errors).toContain('Invalid hex color format (expected #RRGGBB)');
+    });
+
+    it('should accept valid hex color format', () => {
+      const entries: BatchEntry[] = [
+        {
+          row: 1,
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+          courseName: 'CKB Basics',
+          completionDate: '2024-01-15',
+          theme: 'custom',
+          customColor: '#FF5500',
+          errors: [],
+          valid: false,
+        },
+      ];
+
+      const result = validateBatchEntries(entries);
+      expect(result.valid).toBe(true);
+      expect(result.entries[0].errors).toHaveLength(0);
+    });
+
     it('should validate valid layout and theme', () => {
       const entries: BatchEntry[] = [
         {

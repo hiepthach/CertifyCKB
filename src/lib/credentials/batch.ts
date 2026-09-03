@@ -159,6 +159,11 @@ export function validateEntry(entry: BatchEntry): BatchEntry {
     errors.push('Invalid theme');
   }
 
+  // Validate hex color format if provided
+  if (entry.customColor && !/^#[0-9A-Fa-f]{6}$/.test(entry.customColor)) {
+    errors.push('Invalid hex color format (expected #RRGGBB)');
+  }
+
   return {
     ...entry,
     valid: errors.length === 0,
