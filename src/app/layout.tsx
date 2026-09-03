@@ -11,8 +11,23 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: 'Credora — Verifiable Credentials on CKB',
   description: 'Issue, manage, and verify verifiable credentials on Nervos CKB using Spore Protocol',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+  },
+  openGraph: {
+    title: 'Credora — Verifiable Credentials on CKB',
+    description: 'Issue, manage, and verify verifiable credentials on Nervos CKB using Spore Protocol',
+    siteName: 'Credora',
+    images: [{ url: '/icon.svg' }],
+  },
 };
 
 export default function RootLayout({

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Spinner, Badge } from '@/components/ui';
+import { CredoraLogo } from '@/components/ui/CredoraLogo';
 import { BatchUpload, BatchPreview } from '@/components/batch';
 import { ArrowLeft, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
 import type { Cluster, BatchEntry, BatchIssueParams, BatchIssueResult, VisualStyleConfig } from '@/types';
@@ -126,7 +127,7 @@ function BatchIssuePageContent() {
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <span className="text-lavender-spark text-sm font-bold">✱</span>
+          <CredoraLogo size={14} className="inline-block" />
           <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">Batch Operations</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Batch Issuance</h1>

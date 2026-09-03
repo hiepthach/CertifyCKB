@@ -84,7 +84,7 @@ export default function Home() {
           <div className="lg:col-span-7 space-y-7 text-left">
             {/* Eyebrow Label */}
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-shadow-plum border border-lavender-spark/30 shadow-glow-sm">
-              <span className="text-lavender-spark text-xs font-semibold select-none">✱</span>
+              <CredoraLogo size={14} className="inline-block" />
               <span className="text-xs font-medium text-bone-white tracking-wide">
                 Nervos CKB · Spore DOB Protocol
               </span>
@@ -159,8 +159,8 @@ export default function Home() {
                 {/* Active Cluster Chip */}
                 <div className="p-3.5 bg-midnight-plum/90 rounded-xl border border-fog-line/10 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg bg-shadow-plum border border-lavender-spark/30 flex items-center justify-center text-lavender-spark font-bold">
-                      ✱
+                    <div className="w-7 h-7 rounded-lg bg-shadow-plum border border-lavender-spark/30 flex items-center justify-center">
+                      <CredoraLogo size={18} />
                     </div>
                     <div>
                       <p className="text-bone-white font-sans font-medium text-xs">CKB Blockchain Academy</p>

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { Button, Card, Spinner } from '@/components/ui';
+import { CredoraLogo } from '@/components/ui/CredoraLogo';
 import { TemplateList } from '@/components/template';
 import { ArrowLeft, Sparkles, Award } from 'lucide-react';
 import type { Cluster } from '@/types';
@@ -72,7 +73,7 @@ function TemplatesPageContent() {
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <span className="text-lavender-spark text-sm font-bold">✱</span>
+            <CredoraLogo size={14} className="inline-block" />
             <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">Style Showcase & Gallery</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Certificate Styles</h1>

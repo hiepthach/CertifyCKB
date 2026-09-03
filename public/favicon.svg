@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 10 44 44" fill="none">
+  <defs>
+    <linearGradient id="credora_c_grad" x1="12" y1="12" x2="52" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" />
+      <stop offset="0.4" stop-color="#D2B5FF" />
+      <stop offset="1" stop-color="#8A4FFF" />
+    </linearGradient>
+    <linearGradient id="credora_core_grad" x1="38" y1="24" x2="54" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" />
+      <stop offset="0.5" stop-color="#B997FF" />
+      <stop offset="1" stop-color="#7036D9" />
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="44" height="44" rx="10" fill="#120B1E" />
+  <path
+    d="M46 20C42 15 35 13 28 15C18 18 15 28 17 38C19 46 28 50 36 48C43 46 47 41 49 36"
+    stroke="url(#credora_c_grad)"
+    stroke-width="5.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M26 23C23 25 22 30 23 34C24 38 28 41 33 40C37 39 39 36 40 33"
+    stroke="rgba(185,151,255,0.6)"
+    stroke-width="2.5"
+    stroke-linecap="round"
+  />
+  <path
+    d="M42 24L44.5 30L51 32L44.5 34L42 40L39.5 34L33 32L39.5 30L42 24Z"
+    fill="url(#credora_core_grad)"
+  />
+  <circle cx="42" cy="32" r="1.8" fill="#FFFFFF" />
+</svg>

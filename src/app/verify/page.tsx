@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '@/hooks/useWallet';
 import { VerifyForm, VerifyResult } from '@/components/verification';
 import { Spinner, Card, Badge, Modal } from '@/components/ui';
+import { CredoraLogo } from '@/components/ui/CredoraLogo';
 import { CertificateDetail } from '@/components/certificate';
 import type { VerificationResult } from '@/types';
 import { verifyCertificate, getCertificate } from '@/lib/credentials';
@@ -107,7 +108,7 @@ export default function VerifyPage() {
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-shadow-plum border border-lavender-spark/30 shadow-glow-sm mb-2">
-          <span className="text-lavender-spark text-xs font-semibold">✱</span>
+          <CredoraLogo size={14} className="inline-block" />
           <span className="text-xs font-medium text-bone-white">Zero-Knowledge & On-Chain Audit</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">

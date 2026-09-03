@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, Button, Spinner, Badge } from '@/components/ui';
+import { CredoraLogo } from '@/components/ui/CredoraLogo';
 import { CertificateList, CertificateDetail } from '@/components/certificate';
 import type { CertificateDNA } from '@/types';
 import {
@@ -163,8 +164,8 @@ export default function CertificatesPage() {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <Card variant="default" padding="xl" className="max-w-md text-center space-y-4">
-          <div className="w-16 h-16 mx-auto bg-midnight-plum border border-lavender-spark/30 rounded-2xl flex items-center justify-center text-2xl shadow-glow-violet/30 animate-float">
-            👛
+          <div className="w-16 h-16 mx-auto bg-shadow-plum/80 border border-lavender-spark/30 rounded-2xl flex items-center justify-center shadow-glow-violet/30 animate-float">
+            <Wallet className="w-8 h-8 text-lavender-spark drop-shadow-[0_0_12px_rgba(185,151,255,0.6)]" />
           </div>
           <h2 className="text-xl font-bold text-bone-white tracking-tight">Wallet Not Connected</h2>
           <p className="text-sm text-ash-veil leading-relaxed">
@@ -237,7 +238,7 @@ export default function CertificatesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-fog-line/10">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-lavender-spark text-sm font-bold">✱</span>
+            <CredoraLogo size={14} className="inline-block" />
             <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">Credential Vault</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">My Certificates</h1>
