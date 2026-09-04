@@ -49,12 +49,12 @@ function TemplatesPageContent() {
           <div className="w-16 h-16 mx-auto bg-midnight-plum border border-lavender-spark/30 rounded-2xl flex items-center justify-center text-2xl shadow-glow-violet/30 animate-float">
             🏛️
           </div>
-          <h2 className="text-xl font-bold text-bone-white tracking-tight">Cluster Not Selected</h2>
+          <h2 className="text-xl font-bold text-bone-white tracking-tight">Institution Not Selected</h2>
           <p className="text-sm text-ash-veil leading-relaxed">
-            Please select an issuing provider cluster to view certificate design templates and presets.
+            Please select an issuing institution to view and manage certificate design templates.
           </p>
-          <Button onClick={() => router.push('/clusters')} className="text-xs">
-            Go to Clusters
+          <Button onClick={() => router.push('/certificates/issue')} className="text-xs">
+            Go to Issue Certificates
           </Button>
         </Card>
       </div>

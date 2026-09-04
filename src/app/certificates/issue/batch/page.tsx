@@ -108,8 +108,8 @@ function BatchIssuePageContent() {
           <p className="text-sm text-ash-veil leading-relaxed">
             Please select an issuing institution before batch issuing certificates.
           </p>
-          <Button onClick={() => router.push('/clusters')} className="text-xs">
-            Go to Institutions
+          <Button onClick={() => router.push('/certificates/issue')} className="text-xs">
+            Go to Issue Certificates
           </Button>
         </Card>
       </div>
