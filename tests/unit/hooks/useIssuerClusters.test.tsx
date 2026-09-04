@@ -5,8 +5,8 @@ import { useIssuerClusters } from '@/hooks/useIssuerClusters';
 import * as credentialsLib from '@/lib/credentials';
 
 const mockClusters = [
-  { id: '1', clusterId: '0xabc', name: 'CKB Academy', description: 'desc', createdAt: '2024-01-01' },
-  { id: '2', clusterId: '0xdef', name: 'Nervos U', description: 'desc2', createdAt: '2024-01-02' },
+  { id: '1', clusterId: '0xabc', name: 'CKB Academy', description: 'desc', createdAt: '2024-01-01', creatorAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv' },
+  { id: '2', clusterId: '0xdef', name: 'Nervos U', description: 'desc2', createdAt: '2024-01-02', creatorAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqw' },
 ];
 
 vi.mock('@/lib/credentials', async (importOriginal) => {
