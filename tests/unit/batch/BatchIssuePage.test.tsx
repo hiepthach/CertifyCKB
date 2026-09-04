@@ -125,9 +125,9 @@ describe('BatchIssuePage Integration', () => {
     expect(await screen.findByText(/Institution Not Selected/i)).toBeInTheDocument();
     expect(screen.getByText(/Please select an issuing institution before batch issuing certificates/i)).toBeInTheDocument();
 
-    const goButton = screen.getByRole('button', { name: /Go to Institutions/i });
+    const goButton = screen.getByRole('button', { name: /Go to Issue Certificates/i });
     fireEvent.click(goButton);
-    expect(mockPush).toHaveBeenCalledWith('/clusters');
+    expect(mockPush).toHaveBeenCalledWith('/certificates/issue');
   });
 
   it('renders loading state when wallet address is resolving', () => {
