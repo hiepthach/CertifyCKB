@@ -10,8 +10,9 @@ import {
   CertificateForm,
   type CertificateData,
   PaperCertificate,
+  InstitutionSelector,
 } from '@/components/certificate';
-import { CheckCircle2, ArrowRight, ExternalLink, Eye, EyeOff, Sparkles, Wallet } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ExternalLink, Eye, EyeOff, Sparkles, Wallet, Plus, Users, Palette } from 'lucide-react';
 import type { Cluster, CertificateDNA, CertificateLayout, CertificateTheme } from '@/types';
 import { getCluster, issueCertificate } from '@/lib/credentials';
 import { getTransactionUrl } from '@/lib/ckb';
@@ -29,6 +30,28 @@ function IssuePageContent() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [result, setResult] = useState<{ certificateId: string; transactionHash: string } | null>(null);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
+  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(clusterId);
+
+  // Sync selector when URL param changes
+  useEffect(() => {
+    if (clusterId) {
+      setSelectedClusterId(clusterId);
+    }
+  }, [clusterId]);
+
+  // Load cluster when selection changes
+  useEffect(() => {
+    const id = clusterId || selectedClusterId;
+    if (id) {
+      getCluster(id).then(setCluster);
+    } else {
+      setCluster(null);
+    }
+  }, [clusterId, selectedClusterId]);
+
+  // Derive active clusterId (URL param takes precedence, else selector)
+  const activeClusterId = clusterId || selectedClusterId;
+  const isHubMode = !activeClusterId;
 
   // Live preview form state
   const [liveFormData, setLiveFormData] = useState<CertificateData>({
@@ -42,11 +65,6 @@ function IssuePageContent() {
     customTitle: '',
   });
 
-  useEffect(() => {
-    if (clusterId) {
-      getCluster(clusterId).then(setCluster);
-    }
-  }, [clusterId]);
 
   const previewCertificate: CertificateDNA = useMemo(() => {
     return {
@@ -57,7 +75,7 @@ function IssuePageContent() {
       id: '0x0000000000000000000000000000000000000000000000000000000000000000',
       type: ['VerifiableCredential', 'CourseCertificate'],
       issuer: {
-        id: clusterId || 'ckt1qcluster',
+        id: activeClusterId || 'ckt1qcluster',
         name: cluster?.name || 'Certificate Authority',
         description: cluster?.description,
       },
@@ -80,16 +98,16 @@ function IssuePageContent() {
         },
       },
     };
-  }, [liveFormData, cluster, clusterId, address]);
+  }, [liveFormData, cluster, activeClusterId, address]);
 
   const issueMutation = useMutation({
     mutationFn: async (data: CertificateData) => {
-      if (!signer || !clusterId || !cluster) {
+      if (!signer || !activeClusterId || !cluster) {
         throw new Error('Missing required parameters');
       }
       return issueCertificate({
         signer,
-        clusterId,
+        clusterId: activeClusterId,
         issuerName: cluster.name,
         issuerDescription: cluster.description,
         subject: {
@@ -136,28 +154,113 @@ function IssuePageContent() {
           </div>
           <h2 className="text-xl font-bold text-bone-white tracking-tight">Wallet Not Connected</h2>
           <p className="text-sm text-ash-veil leading-relaxed">
-            Connect your wallet to issue sovereign on-chain certificates as Spore DOBs.
+            Connect your wallet to issue verifiable certificates on Nervos CKB.
           </p>
-          <Button onClick={() => router.push('/clusters')} className="text-xs">
-            Go to Clusters
+          <Button onClick={() => router.push('/certificates/issue')} className="text-xs">
+            Go to Issue Certificates
           </Button>
         </Card>
       </div>
     );
   }
 
-  if (!clusterId || !cluster) {
+  if (!activeClusterId || !cluster) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <Card variant="default" padding="xl" className="max-w-md text-center space-y-4">
-          <h2 className="text-xl font-bold text-bone-white tracking-tight">Institution Not Selected</h2>
-          <p className="text-sm text-ash-veil leading-relaxed">
-            Please choose an issuing institution before creating a certificate.
+      <div className="space-y-8 animate-fade-in">
+        {/* Page Header */}
+        <div className="pb-6 border-b border-fog-line/10">
+          <div className="flex items-center gap-2 mb-1">
+            <CredoraLogo size={14} className="inline-block" />
+            <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">Certificate Issuance</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Issue Certificates</h1>
+          <p className="text-sm text-ash-veil mt-1">
+            Select an institution and choose an issuance method below
           </p>
-          <Button onClick={() => router.push('/clusters')} className="text-xs">
-            Go to Institutions
-          </Button>
+        </div>
+
+        {/* Institution Selector */}
+        <Card variant="default" padding="lg">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-ash-veil mb-2">
+                Issuing Institution
+              </label>
+              <InstitutionSelector
+                value={null}
+                onChange={(id) => {
+                  if (id) {
+                    setSelectedClusterId(id);
+                    router.push(`/certificates/issue?cluster=${id}`);
+                  }
+                }}
+              />
+            </div>
+          </div>
         </Card>
+
+        {/* Action Cards */}
+        <div className="grid md:grid-cols-3 gap-5">
+          {/* Single Issue */}
+          <Card
+            variant="interactive"
+            padding="lg"
+            className="group cursor-pointer"
+            onClick={() => {
+              if (selectedClusterId) {
+                router.push(`/certificates/issue?cluster=${selectedClusterId}`);
+              }
+            }}
+          >
+            <div className="w-12 h-12 rounded-xl bg-midnight-plum border border-fog-line/15 flex items-center justify-center mb-4 group-hover:border-lavender-spark/40 transition-colors">
+              <Plus className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-base font-semibold text-bone-white mb-2">Single Certificate</h3>
+            <p className="text-sm text-ash-veil leading-relaxed">
+              Issue one verifiable certificate to a specific recipient address with live preview.
+            </p>
+          </Card>
+
+          {/* Batch Issue */}
+          <Card
+            variant="interactive"
+            padding="lg"
+            className="group cursor-pointer"
+            onClick={() => {
+              if (selectedClusterId) {
+                router.push(`/certificates/issue/batch?cluster=${selectedClusterId}`);
+              }
+            }}
+          >
+            <div className="w-12 h-12 rounded-xl bg-midnight-plum border border-fog-line/15 flex items-center justify-center mb-4 group-hover:border-lavender-spark/40 transition-colors">
+              <Users className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-base font-semibold text-bone-white mb-2">Batch Issue</h3>
+            <p className="text-sm text-ash-veil leading-relaxed">
+              Upload CSV or JSON to issue hundreds of certificates simultaneously with transaction batching.
+            </p>
+          </Card>
+
+          {/* Templates */}
+          <Card
+            variant="interactive"
+            padding="lg"
+            className="group cursor-pointer"
+            onClick={() => {
+              if (selectedClusterId) {
+                router.push(`/certificates/templates?cluster=${selectedClusterId}`);
+              }
+            }}
+          >
+            <div className="w-12 h-12 rounded-xl bg-midnight-plum border border-fog-line/15 flex items-center justify-center mb-4 group-hover:border-lavender-spark/40 transition-colors">
+              <Palette className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-base font-semibold text-bone-white mb-2">Certificate Templates</h3>
+            <p className="text-sm text-ash-veil leading-relaxed">
+              Browse visual templates, color themes, and layout presets for your certificates.
+            </p>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -168,7 +271,7 @@ function IssuePageContent() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <CredoraLogo size={14} className="inline-block" />
-            <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">DOB Minting Pipeline</span>
+            <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">Certificate Issuance</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Issue Certificate</h1>
           <p className="text-sm text-ash-veil mt-1">
@@ -205,7 +308,7 @@ function IssuePageContent() {
         <div className="lg:col-span-7 space-y-6">
           <Card variant="default" padding="xl">
             <CertificateForm
-              clusterId={clusterId}
+              clusterId={activeClusterId}
               clusterName={cluster.name}
               defaultRecipientAddress={address || ''}
               defaultLayout={queryLayout || 'classic'}
