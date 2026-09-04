@@ -30,14 +30,7 @@ function IssuePageContent() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [result, setResult] = useState<{ certificateId: string; transactionHash: string } | null>(null);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
-  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(clusterId);
-
-  // Sync selector when URL param changes
-  useEffect(() => {
-    if (clusterId) {
-      setSelectedClusterId(clusterId);
-    }
-  }, [clusterId]);
+  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
 
   // Load cluster when selection changes
   useEffect(() => {
@@ -187,13 +180,8 @@ function IssuePageContent() {
                 Issuing Institution
               </label>
               <InstitutionSelector
-                value={null}
-                onChange={(id) => {
-                  if (id) {
-                    setSelectedClusterId(id);
-                    router.push(`/certificates/issue?cluster=${id}`);
-                  }
-                }}
+                value={selectedClusterId}
+                onChange={(id) => setSelectedClusterId(id)}
               />
             </div>
           </div>
