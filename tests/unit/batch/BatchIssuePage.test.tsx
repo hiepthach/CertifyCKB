@@ -117,15 +117,15 @@ describe('BatchIssuePage Integration', () => {
     vi.mocked(credentialsLib.issueBatchCertificates).mockResolvedValue(mockIssueResult);
   });
 
-  it('renders "Cluster Not Selected" when cluster query parameter is missing', async () => {
+  it('renders "Institution Not Selected" when cluster query parameter is missing', async () => {
     mockClusterParam = null;
 
     renderWithClient(<BatchIssuePage />);
 
-    expect(await screen.findByText(/Cluster Not Selected/i)).toBeInTheDocument();
-    expect(screen.getByText(/Please select a cluster before batch issuing certificates/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Institution Not Selected/i)).toBeInTheDocument();
+    expect(screen.getByText(/Please select an issuing institution before batch issuing certificates/i)).toBeInTheDocument();
 
-    const goButton = screen.getByRole('button', { name: /Go to Clusters/i });
+    const goButton = screen.getByRole('button', { name: /Go to Institutions/i });
     fireEvent.click(goButton);
     expect(mockPush).toHaveBeenCalledWith('/clusters');
   });

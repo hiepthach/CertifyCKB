@@ -140,7 +140,7 @@ export default function ClustersPage() {
           </div>
           <h2 className="text-xl font-bold text-bone-white tracking-tight">Wallet Not Connected</h2>
           <p className="text-sm text-ash-veil leading-relaxed">
-            Connect your wallet to create and manage sovereign credential provider clusters on CKB.
+            Connect your wallet to register and manage sovereign educational institutions on CKB.
           </p>
           <div className="pt-2">
             <Button onClick={() => open()} className="gap-2 shadow-glow-green/30">
@@ -165,9 +165,9 @@ export default function ClustersPage() {
             <CredoraLogo size={14} className="inline-block" />
             <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">Institution Registry</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Clusters</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Institutions</h1>
           <p className="text-sm text-ash-veil mt-1">
-            Manage your accredited course provider clusters and on-chain authority
+            Manage your accredited educational institutions and on-chain issuing authority
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -184,7 +184,7 @@ export default function ClustersPage() {
           </Button>
           <Button onClick={() => setShowCreateModal(true)} className="gap-1.5 text-xs shadow-glow-green/30">
             <Plus className="w-3.5 h-3.5" />
-            Create Cluster
+            Register Institution
           </Button>
         </div>
       </div>
@@ -203,7 +203,7 @@ export default function ClustersPage() {
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="Register Spore Cluster"
+        title="Register Educational Institution"
         size="md"
       >
         <ClusterForm
@@ -272,7 +272,7 @@ export default function ClustersPage() {
 
             <div className="p-3.5 bg-midnight-plum rounded-xl border border-fog-line/10">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-mid-ash uppercase tracking-wider font-semibold">Spore Cluster ID</span>
+                <span className="text-xs text-mid-ash uppercase tracking-wider font-semibold">Institution ID (Spore Cluster)</span>
                 <button
                   onClick={() => handleCopyClusterId(selectedCluster.clusterId)}
                   className="flex items-center gap-1 text-[11px] text-lavender-spark hover:underline"
@@ -291,13 +291,13 @@ export default function ClustersPage() {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-xs text-mid-ash uppercase tracking-wider font-semibold flex items-center gap-1.5">
                   <Award className="w-3.5 h-3.5 text-lavender-spark" />
-                  Issued DOBs ({selectedClusterCerts.length})
+                  Issued Certificates ({selectedClusterCerts.length})
                 </h3>
               </div>
 
               {selectedClusterCerts.length === 0 ? (
                 <div className="p-4 bg-midnight-plum rounded-xl border border-fog-line/10 text-center text-xs text-ash-veil">
-                  No DOB certificates issued under this cluster yet. Click "Issue Certificate" below to mint one.
+                  No certificates issued under this institution yet. Click "Issue Single" or "Batch Issue" below to mint.
                 </div>
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -377,7 +377,7 @@ export default function ClustersPage() {
 
       {error && (
         <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-xl">
-          <p className="text-sm text-red-400">Failed to load clusters: {String(error)}</p>
+          <p className="text-sm text-red-400">Failed to load institutions: {String(error)}</p>
         </div>
       )}
     </div>

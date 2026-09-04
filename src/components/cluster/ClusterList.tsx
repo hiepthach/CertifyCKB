@@ -25,7 +25,7 @@ export function ClusterList({
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Spinner label="Loading clusters..." />
+        <Spinner label="Loading institutions..." />
       </div>
     );
   }
@@ -34,10 +34,10 @@ export function ClusterList({
     return (
       <EmptyState
         icon="🏛️"
-        title="No clusters created"
-        description="Create a cluster to start issuing certificates. Each cluster represents a course provider organization."
+        title="No institutions registered"
+        description="Register your institution or academy to start issuing certificates. Each institution is anchored on CKB as a Spore Cluster."
         action={{
-          label: 'Create Cluster',
+          label: 'Register Institution',
           onClick: onCreateNew || (() => {}),
         }}
       />

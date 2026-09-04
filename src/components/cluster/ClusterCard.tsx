@@ -44,7 +44,7 @@ export function ClusterCard({
             <div className="flex flex-wrap gap-4 text-xs text-mid-ash">
               <div className="flex items-center gap-1.5">
                 <Award className="w-3.5 h-3.5 text-lavender-spark" />
-                <span>{certificateCount} DOBs issued</span>
+                <span>{certificateCount} Certificates issued</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-mid-ash" />
@@ -61,7 +61,7 @@ export function ClusterCard({
           Manage
         </Button>
         <Button size="sm" onClick={onIssue} className="flex-1 text-xs gap-1">
-          <span>Issue DOB</span>
+          <span>Issue Certificate</span>
           <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
         </Button>
       </div>

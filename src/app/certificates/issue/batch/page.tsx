@@ -104,12 +104,12 @@ function BatchIssuePageContent() {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <Card variant="default" padding="xl" className="max-w-md text-center space-y-4">
-          <h2 className="text-xl font-bold text-bone-white tracking-tight">Cluster Not Selected</h2>
+          <h2 className="text-xl font-bold text-bone-white tracking-tight">Institution Not Selected</h2>
           <p className="text-sm text-ash-veil leading-relaxed">
-            Please select a cluster before batch issuing certificates.
+            Please select an issuing institution before batch issuing certificates.
           </p>
           <Button onClick={() => router.push('/clusters')} className="text-xs">
-            Go to Clusters
+            Go to Institutions
           </Button>
         </Card>
       </div>
@@ -139,7 +139,7 @@ function BatchIssuePageContent() {
       {/* Cluster Info */}
       <div className="p-4 bg-midnight-plum rounded-xl border border-fog-line/10 flex items-center justify-between">
         <div>
-          <p className="text-xs text-mid-ash uppercase tracking-wider font-semibold">Issuing Provider</p>
+          <p className="text-xs text-mid-ash uppercase tracking-wider font-semibold">Issuing Institution</p>
           <p className="font-semibold text-bone-white text-base mt-0.5">{cluster.name}</p>
         </div>
         <Badge className="font-mono text-xs" variant="neutral">

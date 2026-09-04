@@ -9,36 +9,42 @@ const features = [
     tag: 'W3C Standard',
     title: 'Verifiable Credentials',
     description: 'Cryptographically signed credentials anchored on Nervos CKB as tamper-proof Spore Digital Objects (DOBs).',
+    href: '/verify',
   },
   {
     icon: Users,
-    tag: 'Provider Identity',
-    title: 'Cluster Management',
+    tag: 'Issuer Identity',
+    title: 'Institution Management',
     description: 'Register accredited educational institutions and course providers as sovereign on-chain Spore Clusters.',
+    href: '/clusters',
   },
   {
     icon: Award,
     tag: 'Spore Protocol',
     title: 'DOB Certificate Issuance',
     description: 'Mint immutable, portable diplomas and certificates with embedded DNA schemas directly to recipient CKB addresses.',
+    href: '/certificates/issue',
   },
   {
     icon: Zap,
     tag: 'Batch Engine',
     title: 'High-Throughput Issuance',
     description: 'Process hundreds of graduate certificates simultaneously via CSV or JSON with instant transaction batching.',
+    href: '/certificates/issue/batch',
   },
   {
     icon: FileText,
     tag: 'Visual Studio',
     title: 'Certificate Templates',
     description: 'Design custom visual layouts, badge metadata, and institution branding with live preview rendering.',
+    href: '/certificates/templates',
   },
   {
     icon: Wallet,
     tag: 'OmniLock',
     title: 'Multi-Wallet Support',
     description: 'Seamless authentication for students and issuers via JoyID passkeys, MetaMask, and WalletConnect.',
+    href: '/certificates',
   },
 ];
 
@@ -224,39 +230,44 @@ export default function Home() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {features.map((feature, i) => (
-            <Card
+            <Link
               key={feature.title}
-              variant="interactive"
-              padding="lg"
-              className="group relative overflow-hidden flex flex-col justify-between"
-              style={{ animationDelay: `${i * 70}ms` }}
+              href={feature.href}
+              className="group flex rounded-card focus:outline-none focus-visible:ring-2 focus-visible:ring-lavender-spark"
             >
-              <div>
-                {/* Header: Icon + Category Tag */}
-                <div className="flex items-center justify-between mb-5">
-                  <div className="w-12 h-12 rounded-xl bg-midnight-plum border border-fog-line/15 group-hover:border-lavender-spark/40 flex items-center justify-center transition-colors duration-200">
-                    <feature.icon className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" strokeWidth={1.5} />
+              <Card
+                variant="interactive"
+                padding="lg"
+                className="relative overflow-hidden flex flex-col justify-between w-full"
+                style={{ animationDelay: `${i * 70}ms` }}
+              >
+                <div>
+                  {/* Header: Icon + Category Tag */}
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="w-12 h-12 rounded-xl bg-midnight-plum border border-fog-line/15 group-hover:border-lavender-spark/40 flex items-center justify-center transition-colors duration-200">
+                      <feature.icon className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" strokeWidth={1.5} />
+                    </div>
+                    <span className="text-[11px] font-mono text-mid-ash tracking-wide px-2.5 py-1 rounded-full bg-midnight-plum border border-fog-line/10">
+                      {feature.tag}
+                    </span>
                   </div>
-                  <span className="text-[11px] font-mono text-mid-ash tracking-wide px-2.5 py-1 rounded-full bg-midnight-plum border border-fog-line/10">
-                    {feature.tag}
-                  </span>
+
+                  {/* Title & Body */}
+                  <h3 className="text-lg font-semibold text-bone-white mb-2 tracking-tight group-hover:text-bone-white">
+                    {feature.title}
+                  </h3>
+                  <p className="text-sm text-ash-veil leading-relaxed font-normal">
+                    {feature.description}
+                  </p>
                 </div>
 
-                {/* Title & Body */}
-                <h3 className="text-lg font-semibold text-bone-white mb-2 tracking-tight group-hover:text-bone-white">
-                  {feature.title}
-                </h3>
-                <p className="text-sm text-ash-veil leading-relaxed font-normal">
-                  {feature.description}
-                </p>
-              </div>
-
-              {/* Bottom Action Affordance */}
-              <div className="pt-5 mt-4 border-t border-fog-line/10 flex items-center text-xs font-medium text-bone-white group-hover:text-lavender-spark transition-colors">
-                <span>Explore capability</span>
-                <ArrowRight className="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Card>
+                {/* Bottom Action Affordance */}
+                <div className="pt-5 mt-4 border-t border-fog-line/10 flex items-center text-xs font-medium text-bone-white group-hover:text-lavender-spark transition-colors">
+                  <span>Explore capability</span>
+                  <ArrowRight className="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Card>
+            </Link>
           ))}
         </div>
       </section>
@@ -306,12 +317,12 @@ export default function Home() {
             Ready to issue tamper-proof certificates?
           </h2>
           <p className="text-sm text-ash-veil leading-relaxed">
-            Create your institution's Spore Cluster in under 2 minutes and start certifying achievements on Nervos CKB.
+            Register your educational institution in under 2 minutes and start certifying achievements on Nervos CKB.
           </p>
           <div className="pt-2 flex justify-center gap-3.5 flex-wrap">
             <Link href="/clusters">
               <Button size="lg" className="px-6 py-3 text-sm font-semibold shadow-glow-green/30">
-                Create Cluster Now →
+                Register Institution Now →
               </Button>
             </Link>
             <Link href="/verify">

@@ -22,7 +22,7 @@ export function Header() {
 
   const navItems = [
     { href: '/', label: 'Home' },
-    { href: '/clusters', label: 'Clusters' },
+    { href: '/clusters', label: 'Institutions' },
     { href: '/certificates', label: 'My Certificates' },
     { href: '/verify', label: 'Verify' },
   ];

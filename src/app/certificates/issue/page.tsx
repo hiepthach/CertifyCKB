@@ -150,12 +150,12 @@ function IssuePageContent() {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <Card variant="default" padding="xl" className="max-w-md text-center space-y-4">
-          <h2 className="text-xl font-bold text-bone-white tracking-tight">Cluster Not Selected</h2>
+          <h2 className="text-xl font-bold text-bone-white tracking-tight">Institution Not Selected</h2>
           <p className="text-sm text-ash-veil leading-relaxed">
-            Please choose an issuing provider cluster before creating a certificate.
+            Please choose an issuing institution before creating a certificate.
           </p>
           <Button onClick={() => router.push('/clusters')} className="text-xs">
-            Go to Clusters
+            Go to Institutions
           </Button>
         </Card>
       </div>

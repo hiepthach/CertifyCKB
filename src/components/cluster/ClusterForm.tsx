@@ -123,7 +123,7 @@ export function ClusterForm({
           Cancel
         </Button>
         <Button type="submit" loading={loading} className="flex-1 text-xs shadow-glow-green/30">
-          {mode === 'create' ? 'Create On-Chain Cluster' : 'Save Changes'}
+          {mode === 'create' ? 'Register Institution (On-Chain)' : 'Save Changes'}
         </Button>
       </div>
     </form>
