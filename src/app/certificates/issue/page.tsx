@@ -190,15 +190,14 @@ function IssuePageContent() {
         {/* Action Cards */}
         <div className="grid md:grid-cols-3 gap-5">
           {/* Single Issue */}
-          <Card
-            variant="interactive"
-            padding="lg"
-            className="group cursor-pointer"
+          <button
+            type="button"
             onClick={() => {
               if (selectedClusterId) {
                 router.push(`/certificates/issue?cluster=${selectedClusterId}`);
               }
             }}
+            className="group bg-midnight border border-dusk rounded-card p-6 text-left hover:border-dusk hover:shadow-glow-violet hover:-translate-y-0.5 cursor-pointer transition-all duration-300 ease-out"
           >
             <div className="w-12 h-12 rounded-xl bg-midnight-plum border border-fog-line/15 flex items-center justify-center mb-4 group-hover:border-lavender-spark/40 transition-colors">
               <Plus className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" strokeWidth={1.5} />
@@ -207,18 +206,17 @@ function IssuePageContent() {
             <p className="text-sm text-ash-veil leading-relaxed">
               Issue one verifiable certificate to a specific recipient address with live preview.
             </p>
-          </Card>
+          </button>
 
           {/* Batch Issue */}
-          <Card
-            variant="interactive"
-            padding="lg"
-            className="group cursor-pointer"
+          <button
+            type="button"
             onClick={() => {
               if (selectedClusterId) {
                 router.push(`/certificates/issue/batch?cluster=${selectedClusterId}`);
               }
             }}
+            className="group bg-midnight border border-dusk rounded-card p-6 text-left hover:border-dusk hover:shadow-glow-violet hover:-translate-y-0.5 cursor-pointer transition-all duration-300 ease-out"
           >
             <div className="w-12 h-12 rounded-xl bg-midnight-plum border border-fog-line/15 flex items-center justify-center mb-4 group-hover:border-lavender-spark/40 transition-colors">
               <Users className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" strokeWidth={1.5} />
@@ -227,18 +225,17 @@ function IssuePageContent() {
             <p className="text-sm text-ash-veil leading-relaxed">
               Upload CSV or JSON to issue hundreds of certificates simultaneously with transaction batching.
             </p>
-          </Card>
+          </button>
 
           {/* Templates */}
-          <Card
-            variant="interactive"
-            padding="lg"
-            className="group cursor-pointer"
+          <button
+            type="button"
             onClick={() => {
               if (selectedClusterId) {
                 router.push(`/certificates/templates?cluster=${selectedClusterId}`);
               }
             }}
+            className="group bg-midnight border border-dusk rounded-card p-6 text-left hover:border-dusk hover:shadow-glow-violet hover:-translate-y-0.5 cursor-pointer transition-all duration-300 ease-out"
           >
             <div className="w-12 h-12 rounded-xl bg-midnight-plum border border-fog-line/15 flex items-center justify-center mb-4 group-hover:border-lavender-spark/40 transition-colors">
               <Palette className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" strokeWidth={1.5} />
@@ -247,7 +244,7 @@ function IssuePageContent() {
             <p className="text-sm text-ash-veil leading-relaxed">
               Browse visual templates, color themes, and layout presets for your certificates.
             </p>
-          </Card>
+          </button>
         </div>
       </div>
     );
