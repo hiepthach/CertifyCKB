@@ -150,68 +150,87 @@ export function PaperCertificate({
   // 1. Classic Layout
   const renderClassicLayout = () => (
     <div
-      className="border-4 border-double rounded-xl p-8 sm:p-10 bg-white relative overflow-hidden text-gray-800 shadow-sm"
+      className="border-4 border-double rounded-xl p-8 sm:p-10 md:p-12 bg-[#FCFBF7] relative overflow-hidden text-gray-800 shadow-md min-h-[420px] flex flex-col justify-between"
       style={{ borderColor: colors.primary }}
     >
+      {/* Subtle Inner Decorative Border */}
+      <div
+        className="absolute inset-2 sm:inset-3.5 border pointer-events-none rounded-lg opacity-30"
+        style={{ borderColor: colors.secondary }}
+      />
+      {/* Corner Filigree Accents */}
+      <div className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 pointer-events-none opacity-40" style={{ borderColor: colors.primary }} />
+      <div className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 pointer-events-none opacity-40" style={{ borderColor: colors.primary }} />
+      <div className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 pointer-events-none opacity-40" style={{ borderColor: colors.primary }} />
+      <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 pointer-events-none opacity-40" style={{ borderColor: colors.primary }} />
+
       {renderExpiredBanner()}
 
-      {/* Header Badge & Title */}
-      <div className="text-center mb-6">
-        <div
-          className="inline-block px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase text-white shadow-sm mb-3"
-          style={{ backgroundColor: colors.secondary }}
-        >
-          {activeCustomTitle || 'CERTIFICATE OF COMPLETION'}
-        </div>
-      </div>
-
-      {/* Decorative line */}
-      <div className="flex items-center justify-center mb-6 max-w-md mx-auto">
-        <div className="flex-1 h-px bg-gray-300" />
-        <div className="mx-4 text-sm" style={{ color: colors.secondary }}>
-          ★ ★ ★
-        </div>
-        <div className="flex-1 h-px bg-gray-300" />
-      </div>
-
-      {/* Recipient */}
-      <div className="text-center mb-6">
-        <p className="text-sm text-gray-500 font-serif italic mb-2">This certifies that</p>
-        <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 mb-2 font-serif">
-          {recipientName}
-        </h3>
-        <p className="text-sm text-gray-500 font-serif italic">
-          has successfully fulfilled all requirements and completed
-        </p>
-      </div>
-
-      {/* Course Details Card */}
-      <div className="rounded-xl p-4 mb-6 text-center border border-gray-100" style={{ backgroundColor: colors.bg }}>
-        <h4 className="font-semibold text-gray-800 text-lg">{courseName}</h4>
-        <div className="flex flex-wrap items-center justify-center gap-4 mt-2 text-xs text-gray-600">
-          <span>Date: <strong>{formattedDate}</strong></span>
-          {grade && <span>Grade: <strong style={{ color: colors.primary }}>{grade}</strong></span>}
-          {score !== undefined && <span>Score: <strong style={{ color: colors.primary }}>{score}%</strong></span>}
-        </div>
-        {skills.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-1.5 mt-3 pt-2.5 border-t border-gray-200/60">
-            {skills.map((skill, index) => (
-              <span
-                key={index}
-                className="px-2 py-0.5 rounded text-[10px] font-medium bg-white text-gray-700 border border-gray-200 shadow-xs"
-              >
-                {skill}
-              </span>
-            ))}
+      <div>
+        {/* Header Badge & Title */}
+        <div className="text-center mb-6">
+          <div
+            className="inline-block px-5 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase text-white shadow-sm mb-3"
+            style={{ backgroundColor: colors.secondary }}
+          >
+            {activeCustomTitle || 'CERTIFICATE OF COMPLETION'}
           </div>
-        )}
+        </div>
+
+        {/* Decorative line */}
+        <div className="flex items-center justify-center mb-6 max-w-md mx-auto">
+          <div className="flex-1 h-px bg-gray-300" />
+          <div className="mx-4 text-sm" style={{ color: colors.secondary }}>
+            ★ ★ ★
+          </div>
+          <div className="flex-1 h-px bg-gray-300" />
+        </div>
+
+        {/* Recipient */}
+        <div className="text-center mb-6">
+          <p className="text-sm text-gray-500 font-serif italic mb-2">This certifies that</p>
+          <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-gray-900 mb-2 font-serif">
+            {recipientName}
+          </h3>
+          <p className="text-sm text-gray-500 font-serif italic">
+            has successfully fulfilled all requirements and completed
+          </p>
+        </div>
+
+        {/* Course Details Card */}
+        <div className="rounded-xl p-4 sm:p-5 mb-6 text-center border border-gray-100 max-w-2xl mx-auto" style={{ backgroundColor: colors.bg }}>
+          <h4 className="font-semibold text-gray-800 text-lg sm:text-xl">{courseName}</h4>
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-2 text-xs text-gray-600">
+            <span>Date: <strong>{formattedDate}</strong></span>
+            {grade && <span>Grade: <strong style={{ color: colors.primary }}>{grade}</strong></span>}
+            {score !== undefined && <span>Score: <strong style={{ color: colors.primary }}>{score}%</strong></span>}
+          </div>
+          {skills.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-1.5 mt-3 pt-2.5 border-t border-gray-200/60">
+              {skills.map((skill, index) => (
+                <span
+                  key={index}
+                  className="px-2.5 py-0.5 rounded text-[10px] font-medium bg-white text-gray-700 border border-gray-200 shadow-xs"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Footer */}
-      <div className="flex justify-between items-end mt-8 pt-4 border-t border-gray-200">
+      <div className="flex justify-between items-end mt-8 pt-4 border-t border-gray-200/80 relative z-10">
         <div className="text-left">
-          <p className="font-bold text-sm text-gray-800">{issuerName}</p>
-          <p className="text-xs text-gray-500">Certificate Authority</p>
+          <div className="w-36 sm:w-48 border-b border-gray-400 pb-1 mb-1 font-serif italic text-gray-700 text-xs sm:text-sm">
+            {issuerName}
+          </div>
+          <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider font-semibold">Authorized Authority</p>
+        </div>
+        <div className="text-center hidden sm:block">
+          <p className="text-xs text-gray-600">Issue Date: <strong>{formattedDate}</strong></p>
+          <p className="text-[10px] font-mono text-gray-400 mt-0.5">Spore ID: {truncateAddress(certificateId, 8, 4)}</p>
         </div>
         <div>
           {renderOfficialSeal('md')}

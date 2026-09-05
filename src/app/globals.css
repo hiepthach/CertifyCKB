@@ -288,6 +288,10 @@ body {
    Print Styles for Paper Certificate
    ============================================ */
 @media print {
+  @page {
+    size: landscape;
+    margin: 8mm;
+  }
   body * {
     visibility: hidden;
   }

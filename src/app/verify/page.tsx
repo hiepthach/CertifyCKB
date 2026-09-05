@@ -78,7 +78,7 @@ function VerifyPageContent() {
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         title="Visual Certificate & Credential DNA"
-        size="xl"
+        size="5xl"
       >
         {isLoadingCertDetails && (
           <div className="flex justify-center py-8">
