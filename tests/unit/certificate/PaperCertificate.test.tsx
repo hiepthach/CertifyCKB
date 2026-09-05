@@ -101,6 +101,27 @@ describe('PaperCertificate Component', () => {
     expect(screen.getByText('RISC-V')).toBeInTheDocument();
   });
 
+  it('does not render skills section when skills are not provided or empty', () => {
+    const certWithoutSkills: CertificateDNA = {
+      ...mockCertificate,
+      credentialSubject: {
+        ...mockCertificate.credentialSubject,
+        skills: undefined,
+      },
+    };
+
+    render(
+      <PaperCertificate
+        certificate={certWithoutSkills}
+        certificateId="cert_no_skills"
+        layout="classic"
+      />
+    );
+
+    expect(screen.queryByText('Rust')).not.toBeInTheDocument();
+    expect(screen.queryByText('RISC-V')).not.toBeInTheDocument();
+  });
+
   it('includes the print-certificate-target class on the container', () => {
     const { container } = render(
       <PaperCertificate

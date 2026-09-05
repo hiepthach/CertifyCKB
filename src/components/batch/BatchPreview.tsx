@@ -104,7 +104,7 @@ export function BatchPreview({
         skills:
           firstValidEntry?.skills && firstValidEntry.skills.length > 0
             ? firstValidEntry.skills
-            : ['CKB-VM', 'Spore DOB'],
+            : undefined,
         issuerName: 'Certificate Authority',
         metadata: {
           layout: firstValidEntry?.layout || defaultStyle.layout,

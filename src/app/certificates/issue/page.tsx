@@ -139,7 +139,7 @@ function IssuePageContent() {
         completionDate: liveFormData.completionDate || new Date().toISOString().split('T')[0],
         grade: liveFormData.grade,
         score: liveFormData.score,
-        skills: liveFormData.skills && liveFormData.skills.length > 0 ? liveFormData.skills : ['CKB-VM', 'Spore DOB', 'Cell Model'],
+        skills: liveFormData.skills && liveFormData.skills.length > 0 ? liveFormData.skills : undefined,
         issuerName: cluster?.name || 'Certificate Authority',
         metadata: {
           layout: liveFormData.layout,
