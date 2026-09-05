@@ -143,6 +143,10 @@ export async function getProviderClusters(
   address?: string,
   client?: unknown
 ): Promise<Cluster[]> {
+  if (!address || !address.trim()) {
+    return [];
+  }
+
   // 1. Purge any invalid/polluted entries from cache (e.g. certificate DNA stored by mistake)
   const keysToDelete: string[] = [];
   for (const [id, cluster] of clusterCache.entries()) {
@@ -157,15 +161,13 @@ export async function getProviderClusters(
   }
   keysToDelete.forEach((id) => clusterCache.delete(id));
 
-  // 2. Get cached clusters, filtering by address if provided
+  // 2. Get cached clusters, strictly filtering by matching creatorAddress
   const results: Cluster[] = clusterCache.values().filter((c) => {
     const isValidCluster = !c.description ||
       (!c.description.includes('@context') && !c.description.includes('VerifiableCredential'));
 
-    // If address is provided, only include clusters with matching creatorAddress
-    // Never use wildcard fallback - clusters without creatorAddress should be excluded
-    const matchesAddress = !address ||
-      (c.creatorAddress && c.creatorAddress.toLowerCase() === address.toLowerCase());
+    const matchesAddress =
+      Boolean(c.creatorAddress && c.creatorAddress.toLowerCase() === address.toLowerCase());
 
     return isValidCluster && matchesAddress;
   });

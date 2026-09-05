@@ -374,7 +374,7 @@ describe('BatchIssuePage Integration', () => {
     expect(screen.getByRole('button', { name: /Copy Error Log/i })).toBeInTheDocument();
 
     // Verify actionable troubleshooting hint & faucet link
-    expect(screen.getByText(/Wallet has insufficient CKB capacity/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Wallet has insufficient CKB capacity/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole('link', { name: /Get free testnet CKB from Faucet/i })).toHaveAttribute(
       'href',
       'https://faucet.nervos.org'

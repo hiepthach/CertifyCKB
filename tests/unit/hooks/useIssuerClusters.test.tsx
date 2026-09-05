@@ -17,6 +17,17 @@ vi.mock('@/lib/credentials', async (importOriginal) => {
   };
 });
 
+vi.mock('@/hooks/useWallet', () => ({
+  useWallet: () => ({
+    address: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+    signer: {},
+    client: {},
+    isConnected: true,
+    isLoadingAddress: false,
+    open: vi.fn(),
+  }),
+}));
+
 const createWrapper = () => {
   const queryClient = new QueryClient();
   return ({ children }: { children: React.ReactNode }) => (
