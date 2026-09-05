@@ -33,7 +33,7 @@ function IssuePageContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const { signer, address, isLoadingAddress } = useWallet();
+  const { signer, address, isLoadingAddress, open } = useWallet();
   const { clusters, isLoading: isLoadingClusters } = useIssuerClusters();
 
   const clusterIdParam = searchParams.get('cluster');
@@ -206,6 +206,15 @@ function IssuePageContent() {
           <h2 className="text-xl font-bold text-bone-white tracking-tight">Wallet Not Connected</h2>
           <p className="text-sm text-ash-veil leading-relaxed">
             Connect your wallet to issue verifiable certificates on Nervos CKB.
+          </p>
+          <div className="pt-2">
+            <Button onClick={() => open()} className="gap-2 shadow-glow-green/30">
+              <Wallet className="w-4 h-4" />
+              <span>Connect Wallet</span>
+            </Button>
+          </div>
+          <p className="text-xs text-mid-ash pt-2 border-t border-fog-line/10">
+            Supported wallets: JoyID Passkeys, MetaMask, WalletConnect
           </p>
         </Card>
       </div>

@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Modal, Card, Badge, Spinner } from '@/components/ui';
 import { CredoraLogo } from '@/components/ui/CredoraLogo';
 import { ClusterList, ClusterForm } from '@/components/cluster';
-import { Plus, RefreshCw, Globe, Mail, Copy, Check, ArrowRight, Wallet, Award, FileText, Layers } from 'lucide-react';
+import { Plus, RefreshCw, Globe, Mail, Copy, Check, ArrowRight, Wallet, Award } from 'lucide-react';
 import type { Cluster, ClusterConfig } from '@/types';
 import {
   createCluster,
@@ -293,84 +293,73 @@ export default function ClustersPage() {
                   <Award className="w-3.5 h-3.5 text-lavender-spark" />
                   Issued Certificates ({selectedClusterCerts.length})
                 </h3>
+                {selectedClusterCerts.length > 0 && (
+                  <span className="text-[11px] text-ash-veil">Click to view details</span>
+                )}
               </div>
 
               {selectedClusterCerts.length === 0 ? (
                 <div className="p-4 bg-midnight-plum rounded-xl border border-fog-line/10 text-center text-xs text-ash-veil">
-                  No certificates issued under this institution yet. Click "Issue Single" or "Batch Issue" below to mint.
+                  No certificates issued under this institution yet. Click "Issue Certificate" below to mint.
                 </div>
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {selectedClusterCerts.map((cert) => (
                     <div
                       key={cert.certificateId}
-                      className="p-3 bg-midnight-plum rounded-xl border border-fog-line/10 flex items-center justify-between text-xs"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        setSelectedCluster(null);
+                        router.push(`/certificates?id=${encodeURIComponent(cert.certificateId)}`);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          setSelectedCluster(null);
+                          router.push(`/certificates?id=${encodeURIComponent(cert.certificateId)}`);
+                        }
+                      }}
+                      className="p-3 bg-midnight-plum hover:bg-shadow-plum/80 rounded-xl border border-fog-line/10 hover:border-lavender-spark/40 flex items-center justify-between text-xs cursor-pointer transition-all duration-200 group"
+                      title="View Certificate Details"
                     >
                       <div className="min-w-0 flex-1 mr-3">
-                        <p className="font-semibold text-bone-white truncate">
+                        <p className="font-semibold text-bone-white truncate group-hover:text-lavender-spark transition-colors">
                           {cert.certificate.credentialSubject.courseName}
                         </p>
                         <p className="text-ash-veil truncate text-[11px]">
                           Recipient: {cert.certificate.credentialSubject.name || cert.certificate.credentialSubject.id}
                         </p>
                       </div>
-                      <Badge variant="neutral" className="font-mono text-[10px]">
-                        {cert.certificateId.slice(0, 8)}...
-                      </Badge>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Badge variant="neutral" className="font-mono text-[10px]">
+                          {cert.certificateId.slice(0, 8)}...
+                        </Badge>
+                        <ArrowRight className="w-3.5 h-3.5 text-ash-veil group-hover:text-lavender-spark group-hover:translate-x-0.5 transition-all" />
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            <div className="pt-4 border-t border-fog-line/10">
-              {/* Quick Actions */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <Button
-                  onClick={() => {
-                    router.push(`/certificates/issue?cluster=${selectedCluster.clusterId}`);
-                    setSelectedCluster(null);
-                  }}
-                  className="text-xs gap-1.5 shadow-glow-green/30"
-                >
-                  <Award className="w-3.5 h-3.5" />
-                  Issue Single
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    router.push(`/certificates/issue/batch?cluster=${selectedCluster.clusterId}`);
-                    router.push(`/certificates/issue?cluster=${selectedCluster.clusterId}&tab=batch`);
-                    setSelectedCluster(null);
-                  }}
-                  className="text-xs gap-1.5"
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  Batch Issue
-                </Button>
-              </div>
-
-              {/* Secondary Actions */}
-              <div className="flex gap-3">
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    router.push(`/certificates/templates?cluster=${selectedCluster.clusterId}`);
-                    setSelectedCluster(null);
-                  }}
-                  className="flex-1 text-xs gap-1.5 border border-fog-line/15"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  Templates
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => setSelectedCluster(null)}
-                  className="text-xs"
-                >
-                  Close
-                </Button>
-              </div>
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-fog-line/10">
+              <Button
+                variant="secondary"
+                onClick={() => setSelectedCluster(null)}
+                className="text-xs"
+              >
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  router.push(`/certificates/issue?cluster=${selectedCluster.clusterId}`);
+                  setSelectedCluster(null);
+                }}
+                className="text-xs gap-1.5 shadow-glow-green/30"
+              >
+                <Award className="w-3.5 h-3.5" />
+                <span>Issue Certificate →</span>
+              </Button>
             </div>
           </div>
         </Modal>
