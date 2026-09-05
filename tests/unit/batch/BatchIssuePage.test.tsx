@@ -318,4 +318,66 @@ describe('BatchIssuePage Integration', () => {
     // Verify we are back on upload step
     expect(await screen.findByText(/Drop file here or click to browse/i)).toBeInTheDocument();
   });
+
+  it('displays detailed error breakdown, row numbers, and error reasons when some certificates fail', async () => {
+    vi.mocked(credentialsLib.issueBatchCertificates).mockResolvedValue({
+      total: 2,
+      successful: 1,
+      failed: 1,
+      certificates: [
+        {
+          row: 1,
+          recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+          recipientName: 'Alice Developer',
+          success: true,
+          certificateId: 'cert_1',
+        },
+        {
+          row: 2,
+          recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqw',
+          recipientName: 'Bob Builder',
+          success: false,
+          error: 'Insufficient capacity: Wallet needs 151 CKB',
+        },
+      ],
+      errors: [
+        {
+          code: 'ISSUANCE_FAILED',
+          message: 'Row 2 [Bob Builder]: Insufficient capacity: Wallet needs 151 CKB',
+          row: 2,
+        },
+      ],
+    });
+
+    const { container } = renderWithClient(<BatchIssuePage />);
+
+    expect(await screen.findByText('Acme Certification Academy')).toBeInTheDocument();
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const mockFile = new File(['mock content'], 'batch.csv', { type: 'text/csv' });
+    fireEvent.change(fileInput, { target: { files: [mockFile] } });
+
+    expect(await screen.findByText(/Batch Certificate Style & Appearance/i)).toBeInTheDocument();
+
+    const confirmButton = screen.getByRole('button', { name: /Issue 2 Certificates/i });
+    fireEvent.click(confirmButton);
+
+    // Verify Partially Completed title
+    expect(await screen.findByText(/Partially Completed/i)).toBeInTheDocument();
+
+    // Verify Error Breakdown Box
+    expect(screen.getByText(/Issuance Error Details \(1 failed certificate\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Row #2 • Bob Builder/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Insufficient capacity: Wallet needs 151 CKB/i).length).toBeGreaterThanOrEqual(1);
+
+    // Verify copy button
+    expect(screen.getByRole('button', { name: /Copy Error Log/i })).toBeInTheDocument();
+
+    // Verify actionable troubleshooting hint & faucet link
+    expect(screen.getByText(/Wallet has insufficient CKB capacity/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Get free testnet CKB from Faucet/i })).toHaveAttribute(
+      'href',
+      'https://faucet.nervos.org'
+    );
+  });
 });

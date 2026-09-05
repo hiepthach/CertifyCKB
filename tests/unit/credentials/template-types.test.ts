@@ -8,12 +8,12 @@ describe('Certificate Template Types & Encoder Preservation', () => {
       layout: 'classic',
       theme: 'custom',
       customColor: '#F26F21',
-      customTitle: 'CHỨNG CHỈ TỐT NGHIỆP',
+      customTitle: 'GRADUATION CERTIFICATE',
     };
     expect(validConfig.layout).toBe('classic');
     expect(validConfig.theme).toBe('custom');
     expect(validConfig.customColor).toBe('#F26F21');
-    expect(validConfig.customTitle).toBe('CHỨNG CHỈ TỐT NGHIỆP');
+    expect(validConfig.customTitle).toBe('GRADUATION CERTIFICATE');
   });
 
   it('should preserve metadata in encodeCertificateDNA', () => {
@@ -28,7 +28,7 @@ describe('Certificate Template Types & Encoder Preservation', () => {
           layout: 'detailed',
           theme: 'custom',
           customColor: '#8B5CF6',
-          customTitle: 'BẰNG KHEN XUẤT SẮC',
+          customTitle: 'CERTIFICATE OF EXCELLENCE',
         },
       },
     });
@@ -36,7 +36,7 @@ describe('Certificate Template Types & Encoder Preservation', () => {
     expect(dna.credentialSubject.metadata?.layout).toBe('detailed');
     expect(dna.credentialSubject.metadata?.theme).toBe('custom');
     expect(dna.credentialSubject.metadata?.customColor).toBe('#8B5CF6');
-    expect(dna.credentialSubject.metadata?.customTitle).toBe('BẰNG KHEN XUẤT SẮC');
+    expect(dna.credentialSubject.metadata?.customTitle).toBe('CERTIFICATE OF EXCELLENCE');
   });
 });
 

@@ -48,11 +48,11 @@ describe('PaperCertificate Component', () => {
         layout="modern"
         theme="custom"
         customColor="#F26F21"
-        customTitle="BẰNG KHEN DANH DỰ"
+        customTitle="HONORARY CITATION"
       />
     );
 
-    expect(screen.getByText('BẰNG KHEN DANH DỰ')).toBeInTheDocument();
+    expect(screen.getByText('HONORARY CITATION')).toBeInTheDocument();
     expect(container.innerHTML).toContain('#F26F21');
   });
 
@@ -166,7 +166,7 @@ describe('PaperCertificate Component', () => {
         metadata: {
           layout: 'badge',
           theme: 'red',
-          customTitle: 'CHỨNG NHẬN ĐẶC BIỆT',
+          customTitle: 'SPECIAL RECOGNITION',
         },
       },
     };
@@ -178,7 +178,7 @@ describe('PaperCertificate Component', () => {
       />
     );
 
-    expect(screen.getByText('CHỨNG NHẬN ĐẶC BIỆT')).toBeInTheDocument();
+    expect(screen.getByText('SPECIAL RECOGNITION')).toBeInTheDocument();
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
   });
 

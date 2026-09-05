@@ -46,6 +46,8 @@ export interface BatchProgress {
 export interface BatchCertificateResult {
   row: number;
   recipientAddress: string;
+  recipientName?: string;
+  courseName?: string;
   certificateId?: string;
   transactionHash?: string;
   success: boolean;

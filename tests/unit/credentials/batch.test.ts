@@ -566,6 +566,75 @@ ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq,Bob,Rust 101,2026-
         })
       );
     });
+
+    it('should accurately capture row details, recipientName, and error message when issuance fails', async () => {
+      const mockSigner = {};
+      const entries: BatchEntry[] = [
+        {
+          row: 1,
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+          recipientName: 'Alice Success',
+          courseName: 'Rust 101',
+          completionDate: '2026-03-01',
+          errors: [],
+          valid: true,
+        },
+        {
+          row: 2,
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpr',
+          recipientName: 'Bob Failed',
+          courseName: 'CKB Basics',
+          completionDate: '2026-03-02',
+          errors: [],
+          valid: true,
+        },
+      ];
+
+      vi.mocked(issueCertificate)
+        .mockResolvedValueOnce({
+          certificateId: 'cert-1',
+          transactionHash: '0xabc',
+        } as any)
+        .mockRejectedValueOnce(new Error('Insufficient capacity in wallet'));
+
+      const result = await issueBatchCertificates(mockSigner, {
+        clusterId: 'cluster-1',
+        issuerName: 'Test Issuer',
+        entries,
+      });
+
+      expect(result.total).toBe(2);
+      expect(result.successful).toBe(1);
+      expect(result.failed).toBe(1);
+
+      // Verify successful certificate
+      expect(result.certificates[0]).toEqual(
+        expect.objectContaining({
+          row: 1,
+          recipientName: 'Alice Success',
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+          success: true,
+          certificateId: 'cert-1',
+        })
+      );
+
+      // Verify failed certificate has full row context and error
+      expect(result.certificates[1]).toEqual(
+        expect.objectContaining({
+          row: 2,
+          recipientName: 'Bob Failed',
+          recipientAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpr',
+          success: false,
+          error: 'Insufficient capacity in wallet',
+        })
+      );
+
+      // Verify errors array contains formatted error with row number and recipient
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].row).toBe(2);
+      expect(result.errors[0].message).toContain('Row 2 [Bob Failed');
+      expect(result.errors[0].message).toContain('Insufficient capacity in wallet');
+    });
   });
 });
 

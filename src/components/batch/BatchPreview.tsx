@@ -315,6 +315,36 @@ export function BatchPreview({
           </div>
         </div>
 
+        {/* Invalid entries summary banner */}
+        {invalidCount > 0 && (
+          <div className="mb-6 p-4 rounded-xl bg-red-950/30 border border-red-800/40 text-left space-y-2">
+            <div className="flex items-center gap-2 text-red-400 font-semibold text-xs uppercase tracking-wider">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>{invalidCount} Invalid Row{invalidCount > 1 ? 's' : ''} Found in File</span>
+            </div>
+            <p className="text-xs text-ash-veil">
+              These rows have validation issues and will be skipped during issuance. Review the errors below to edit your file:
+            </p>
+            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+              {entries
+                .filter((e) => !e.valid)
+                .map((e) => (
+                  <div
+                    key={e.row}
+                    className="text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1 p-2 rounded-lg bg-midnight-plum/70 border border-red-500/20"
+                  >
+                    <span className="font-semibold text-bone-white">
+                      Row #{e.row} {e.recipientName ? `• ${e.recipientName}` : ''}
+                    </span>
+                    <span className="text-red-400 font-mono text-[11px]">
+                      {e.errors?.join(', ') || 'Validation error'}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
         {/* Table of Entries */}
         <div className="overflow-x-auto mb-6">
           <table className="w-full text-sm">
@@ -358,17 +388,17 @@ export function BatchPreview({
                         Valid
                       </Badge>
                     ) : (
-                      <div className="flex items-center gap-1">
-                        <Badge variant="danger">
+                      <div className="flex flex-col gap-1 items-start">
+                        <Badge variant="danger" className="text-[10px]">
                           <XCircle className="w-3 h-3 mr-1" />
                           Invalid
                         </Badge>
                         {entry.errors && entry.errors.length > 0 && (
                           <span
-                            className="text-yellow-500 cursor-help"
+                            className="text-[11px] text-red-400 font-normal leading-tight max-w-[200px]"
                             title={entry.errors.join(', ')}
                           >
-                            <AlertTriangle className="w-4 h-4" />
+                            {entry.errors.join(', ')}
                           </span>
                         )}
                       </div>

@@ -236,4 +236,20 @@ describe('BatchPreview Component', () => {
     const confirmButton = screen.getByRole('button', { name: /Issue 0 Certificates/i });
     expect(confirmButton).toBeDisabled();
   });
+
+  it('displays invalid entries summary banner with row numbers and direct error reasons in table', () => {
+    render(
+      <BatchPreview
+        entries={mockEntries}
+        estimatedCost="302 CKB"
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    // Banner should be visible because mockEntries has row 3 with errors
+    expect(screen.getByText(/1 Invalid Row Found in File/i)).toBeInTheDocument();
+    expect(screen.getByText(/Row #3/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Invalid CKB address format/i).length).toBeGreaterThanOrEqual(1);
+  });
 });

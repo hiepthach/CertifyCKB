@@ -263,21 +263,30 @@ export async function issueBatchCertificates(
       results.push({
         row: entry.row,
         recipientAddress: entry.recipientAddress,
+        recipientName: entry.recipientName,
+        courseName: entry.courseName,
         certificateId: result.certificateId,
         transactionHash: result.transactionHash,
         success: true,
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       results.push({
         row: entry.row,
         recipientAddress: entry.recipientAddress,
+        recipientName: entry.recipientName,
+        courseName: entry.courseName,
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
       });
+
+      const identifier = entry.recipientName
+        ? `${entry.recipientName} (${entry.recipientAddress.slice(0, 8)}...)`
+        : entry.recipientAddress.slice(0, 10);
 
       errors.push({
         code: 'ISSUANCE_FAILED',
-        message: `Row ${entry.row}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: `Row ${entry.row} [${identifier}]: ${errorMessage}`,
         row: entry.row,
       });
     }
