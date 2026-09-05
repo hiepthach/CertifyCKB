@@ -26,7 +26,7 @@ describe('CertificateForm Style Selection & Color Picker', () => {
     });
 
     // Select Modern layout
-    const modernButton = screen.getByRole('button', { name: /Modern/i });
+    const modernButton = screen.getByRole('button', { name: /^Modern$/i });
     fireEvent.click(modernButton);
 
     // Select Custom theme and enter custom color
@@ -100,7 +100,7 @@ describe('CertificateForm Style Selection & Color Picker', () => {
     });
 
     // Click Badge layout
-    fireEvent.click(screen.getByRole('button', { name: /Badge/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Badge$/i }));
 
     // Click Gold theme
     fireEvent.click(screen.getByRole('button', { name: /Gold/i }));
@@ -113,6 +113,41 @@ describe('CertificateForm Style Selection & Color Picker', () => {
         recipientName: 'Alice',
         courseName: 'CKB Development',
         layout: 'badge',
+        theme: 'gold',
+      })
+    );
+  });
+
+  it('supports selecting a 1-click preset template', () => {
+    const handleSubmit = vi.fn();
+
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        defaultRecipientAddress="ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv"
+        onSubmit={handleSubmit}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/Student name|Jane Doe/i), {
+      target: { value: 'Bob' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Course or program/i), {
+      target: { value: 'Full-Stack CKB' },
+    });
+
+    // Click 1-click preset: Academic Classic (classic / gold)
+    fireEvent.click(screen.getByRole('button', { name: /Preset: Academic Classic/i }));
+
+    const submitBtn = screen.getByRole('button', { name: /Mint Certificate|Mint Spore/i });
+    fireEvent.click(submitBtn);
+
+    expect(handleSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientName: 'Bob',
+        courseName: 'Full-Stack CKB',
+        layout: 'classic',
         theme: 'gold',
       })
     );

@@ -340,6 +340,7 @@ export default function ClustersPage() {
                   variant="secondary"
                   onClick={() => {
                     router.push(`/certificates/issue/batch?cluster=${selectedCluster.clusterId}`);
+                    router.push(`/certificates/issue?cluster=${selectedCluster.clusterId}&tab=batch`);
                     setSelectedCluster(null);
                   }}
                   className="text-xs gap-1.5"

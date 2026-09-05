@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Button, Input } from '@/components/ui';
 import type { CertificateLayout, CertificateTheme } from '@/types';
-import { ArrowRight, Palette, Layout as LayoutIcon } from 'lucide-react';
+import { ArrowRight, Palette, Layout as LayoutIcon, Sparkles } from 'lucide-react';
 import { cn } from '@/utils';
+import { CERTIFICATE_PRESETS } from '@/components/template';
 
 export interface CertificateData {
   recipientAddress: string;
@@ -303,6 +304,56 @@ export function CertificateForm({
           <span>2. Certificate Style & Appearance</span>
         </h3>
 
+        {/* Quick Template Presets */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold text-bone-white uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-lavender-spark" />
+              <span>Recommended Templates (1-Click Setup)</span>
+            </label>
+            <span className="text-[11px] text-mid-ash">Apply layout & theme preset</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {CERTIFICATE_PRESETS.map((preset) => {
+              const isSelected = formData.layout === preset.layout && formData.theme === preset.theme;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  aria-label={`Preset: ${preset.name}`}
+                  onClick={() => {
+                    const updated = {
+                      ...formData,
+                      layout: preset.layout,
+                      theme: preset.theme,
+                    };
+                    setFormData(updated);
+                    notifyChange(updated);
+                  }}
+                  className={cn(
+                    'p-3 rounded-xl border text-left transition-all duration-200 flex flex-col justify-between relative group cursor-pointer',
+                    isSelected
+                      ? 'border-lavender-spark bg-lavender-spark/15 text-bone-white shadow-glow-violet/20 font-semibold'
+                      : 'border-fog-line/15 bg-midnight-plum/60 text-ash-veil hover:border-fog-line/30 hover:text-bone-white'
+                  )}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <span className="text-xs font-medium text-bone-white truncate">{preset.name}</span>
+                    {isSelected && (
+                      <span className="w-3.5 h-3.5 rounded-full bg-lavender-spark text-midnight-plum flex items-center justify-center text-[10px] font-bold">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-mid-ash block truncate">
+                    {preset.badge}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Layout Selection */}
         <div className="space-y-2">
           <label className="block text-xs font-medium text-ash-veil">
@@ -315,6 +366,7 @@ export function CertificateForm({
                 <button
                   key={opt.id}
                   type="button"
+                  aria-label={opt.label}
                   onClick={() => updateField('layout', opt.id)}
                   className={cn(
                     'p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-lavender-spark/50',

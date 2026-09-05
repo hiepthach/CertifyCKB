@@ -30,14 +30,14 @@ const features = [
     tag: 'Batch Engine',
     title: 'High-Throughput Issuance',
     description: 'Process hundreds of graduate certificates simultaneously via CSV or JSON with instant transaction batching.',
-    href: '/certificates/issue/batch',
+    href: '/certificates/issue?tab=batch',
   },
   {
     icon: FileText,
     tag: 'Visual Studio',
     title: 'Certificate Templates',
     description: 'Design custom visual layouts, badge metadata, and institution branding with live preview rendering.',
-    href: '/certificates/templates',
+    href: '/certificates/issue',
   },
   {
     icon: Wallet,

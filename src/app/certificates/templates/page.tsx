@@ -47,14 +47,14 @@ function TemplatesPageContent() {
       <div className="flex flex-col items-center justify-center py-16">
         <Card variant="default" padding="xl" className="max-w-md text-center space-y-4">
           <div className="w-16 h-16 mx-auto bg-midnight-plum border border-lavender-spark/30 rounded-2xl flex items-center justify-center text-2xl shadow-glow-violet/30 animate-float">
-            🏛️
+            🎨
           </div>
-          <h2 className="text-xl font-bold text-bone-white tracking-tight">Institution Not Selected</h2>
+          <h2 className="text-xl font-bold text-bone-white tracking-tight">Templates in Issuance Form</h2>
           <p className="text-sm text-ash-veil leading-relaxed">
-            Please select an issuing institution to view and manage certificate design templates.
+            Certificate templates and visual style presets are now directly integrated into the Certificate Issuance workspace.
           </p>
-          <Button onClick={() => router.push('/certificates/issue')} className="text-xs">
-            Go to Issue Certificates
+          <Button onClick={() => router.push('/certificates/issue')} className="text-xs shadow-glow-green/30">
+            Go to Issue Certificates →
           </Button>
         </Card>
       </div>

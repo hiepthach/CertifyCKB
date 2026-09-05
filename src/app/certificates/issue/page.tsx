@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
+import { useIssuerClusters } from '@/hooks/useIssuerClusters';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, Button, Modal, Spinner } from '@/components/ui';
 import { CredoraLogo } from '@/components/ui/CredoraLogo';
@@ -12,39 +13,97 @@ import {
   PaperCertificate,
   InstitutionSelector,
 } from '@/components/certificate';
-import { CheckCircle2, ArrowRight, ExternalLink, Eye, EyeOff, Sparkles, Wallet, Plus, Users, Palette } from 'lucide-react';
+import { BatchIssueSection } from '@/components/batch';
+import {
+  CheckCircle2,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Sparkles,
+  Wallet,
+  Award,
+  Layers,
+} from 'lucide-react';
 import type { Cluster, CertificateDNA, CertificateLayout, CertificateTheme } from '@/types';
 import { getCluster, issueCertificate } from '@/lib/credentials';
 import { getTransactionUrl } from '@/lib/ckb';
+import { cn } from '@/utils';
 
 function IssuePageContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const { signer, address, isLoadingAddress } = useWallet();
-  const clusterId = searchParams.get('cluster');
+  const { clusters, isLoading: isLoadingClusters } = useIssuerClusters();
+
+  const clusterIdParam = searchParams.get('cluster');
+  const tabParam = searchParams.get('tab');
   const queryLayout = searchParams.get('layout') as CertificateLayout | null;
   const queryTheme = searchParams.get('theme') as CertificateTheme | null;
 
+  const [activeTab, setActiveTab] = useState<'single' | 'batch'>(
+    tabParam === 'batch' ? 'batch' : 'single'
+  );
+  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(clusterIdParam);
   const [cluster, setCluster] = useState<Cluster | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [result, setResult] = useState<{ certificateId: string; transactionHash: string } | null>(null);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
-  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
 
-  // Load cluster when selection changes
+  // Sync activeTab with URL tabParam
   useEffect(() => {
-    const id = clusterId || selectedClusterId;
-    if (id) {
-      getCluster(id).then(setCluster);
+    if (tabParam === 'batch') {
+      setActiveTab('batch');
+    } else if (tabParam === 'single') {
+      setActiveTab('single');
+    }
+  }, [tabParam]);
+
+  // Auto-select first institution if none is selected
+  useEffect(() => {
+    if (clusterIdParam) {
+      setSelectedClusterId(clusterIdParam);
+    } else if (!selectedClusterId && clusters.length > 0) {
+      const firstId = clusters[0].clusterId || clusters[0].id;
+      if (firstId) {
+        setSelectedClusterId(firstId);
+      }
+    }
+  }, [clusterIdParam, clusters, selectedClusterId]);
+
+  const activeClusterId = clusterIdParam || selectedClusterId;
+
+  // Load cluster metadata when selection changes
+  useEffect(() => {
+    if (activeClusterId) {
+      getCluster(activeClusterId)
+        .then(setCluster)
+        .catch((err) => {
+          console.error('Failed to load cluster:', err);
+          setCluster(null);
+        });
     } else {
       setCluster(null);
     }
-  }, [clusterId, selectedClusterId]);
+  }, [activeClusterId]);
 
-  // Derive active clusterId (URL param takes precedence, else selector)
-  const activeClusterId = clusterId || selectedClusterId;
-  const isHubMode = !activeClusterId;
+  const handleTabChange = (newTab: 'single' | 'batch') => {
+    setActiveTab(newTab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', newTab);
+    router.replace(`/certificates/issue?${params.toString()}`);
+  };
+
+  const handleClusterChange = (newClusterId: string | null) => {
+    setSelectedClusterId(newClusterId);
+    const params = new URLSearchParams(searchParams.toString());
+    if (newClusterId) {
+      params.set('cluster', newClusterId);
+    } else {
+      params.delete('cluster');
+    }
+    router.replace(`/certificates/issue?${params.toString()}`);
+  };
 
   // Live preview form state
   const [liveFormData, setLiveFormData] = useState<CertificateData>({
@@ -57,7 +116,6 @@ function IssuePageContent() {
     customColor: '#1E40AF',
     customTitle: '',
   });
-
 
   const previewCertificate: CertificateDNA = useMemo(() => {
     return {
@@ -130,10 +188,10 @@ function IssuePageContent() {
     },
   });
 
-  if (isLoadingAddress) {
+  if (isLoadingAddress || isLoadingClusters) {
     return (
       <div className="flex justify-center py-24">
-        <Spinner label="Resolving wallet address..." />
+        <Spinner label="Loading workspace..." />
       </div>
     );
   }
@@ -149,18 +207,14 @@ function IssuePageContent() {
           <p className="text-sm text-ash-veil leading-relaxed">
             Connect your wallet to issue verifiable certificates on Nervos CKB.
           </p>
-          <Button onClick={() => router.push('/certificates/issue')} className="text-xs">
-            Go to Issue Certificates
-          </Button>
         </Card>
       </div>
     );
   }
 
-  if (!activeClusterId || !cluster) {
+  if (clusters.length === 0 && !activeClusterId) {
     return (
       <div className="space-y-8 animate-fade-in">
-        {/* Page Header */}
         <div className="pb-6 border-b border-fog-line/10">
           <div className="flex items-center gap-2 mb-1">
             <CredoraLogo size={14} className="inline-block" />
@@ -168,198 +222,208 @@ function IssuePageContent() {
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Issue Certificates</h1>
           <p className="text-sm text-ash-veil mt-1">
-            Select an institution and choose an issuance method below
+            Mint immutable Spore DOB credentials directly to students&apos; CKB addresses
           </p>
         </div>
 
-        {/* Institution Selector */}
-        <Card variant="default" padding="lg">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-ash-veil mb-2">
-                Issuing Institution
-              </label>
-              <InstitutionSelector
-                value={selectedClusterId}
-                onChange={(id) => setSelectedClusterId(id)}
-              />
-            </div>
+        <Card variant="default" padding="xl" className="max-w-md mx-auto text-center space-y-4 py-12">
+          <div className="w-16 h-16 mx-auto bg-midnight-plum border border-lavender-spark/30 rounded-2xl flex items-center justify-center text-3xl shadow-glow-violet/30 animate-float">
+            🏛️
           </div>
+          <h2 className="text-xl font-bold text-bone-white tracking-tight">No Registered Institutions</h2>
+          <p className="text-sm text-ash-veil leading-relaxed">
+            You need an accredited issuing institution on CKB to issue certificates. Register your institution on-chain to get started.
+          </p>
+          <Button onClick={() => router.push('/clusters')} className="text-xs shadow-glow-green/30">
+            Register Institution Now →
+          </Button>
         </Card>
-
-        {/* Action Cards */}
-        <div className="grid md:grid-cols-3 gap-5">
-          {/* Single Issue */}
-          <button
-            type="button"
-            onClick={() => {
-              if (selectedClusterId) {
-                router.push(`/certificates/issue?cluster=${selectedClusterId}`);
-              }
-            }}
-            className="group bg-midnight border border-dusk rounded-card p-6 text-left hover:border-dusk hover:shadow-glow-violet hover:-translate-y-0.5 cursor-pointer transition-all duration-300 ease-out"
-          >
-            <div className="w-12 h-12 rounded-xl bg-midnight-plum border border-fog-line/15 flex items-center justify-center mb-4 group-hover:border-lavender-spark/40 transition-colors">
-              <Plus className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" strokeWidth={1.5} />
-            </div>
-            <h3 className="text-base font-semibold text-bone-white mb-2">Single Certificate</h3>
-            <p className="text-sm text-ash-veil leading-relaxed">
-              Issue one verifiable certificate to a specific recipient address with live preview.
-            </p>
-          </button>
-
-          {/* Batch Issue */}
-          <button
-            type="button"
-            onClick={() => {
-              if (selectedClusterId) {
-                router.push(`/certificates/issue/batch?cluster=${selectedClusterId}`);
-              }
-            }}
-            className="group bg-midnight border border-dusk rounded-card p-6 text-left hover:border-dusk hover:shadow-glow-violet hover:-translate-y-0.5 cursor-pointer transition-all duration-300 ease-out"
-          >
-            <div className="w-12 h-12 rounded-xl bg-midnight-plum border border-fog-line/15 flex items-center justify-center mb-4 group-hover:border-lavender-spark/40 transition-colors">
-              <Users className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" strokeWidth={1.5} />
-            </div>
-            <h3 className="text-base font-semibold text-bone-white mb-2">Batch Issue</h3>
-            <p className="text-sm text-ash-veil leading-relaxed">
-              Upload CSV or JSON to issue hundreds of certificates simultaneously with transaction batching.
-            </p>
-          </button>
-
-          {/* Templates */}
-          <button
-            type="button"
-            onClick={() => {
-              if (selectedClusterId) {
-                router.push(`/certificates/templates?cluster=${selectedClusterId}`);
-              }
-            }}
-            className="group bg-midnight border border-dusk rounded-card p-6 text-left hover:border-dusk hover:shadow-glow-violet hover:-translate-y-0.5 cursor-pointer transition-all duration-300 ease-out"
-          >
-            <div className="w-12 h-12 rounded-xl bg-midnight-plum border border-fog-line/15 flex items-center justify-center mb-4 group-hover:border-lavender-spark/40 transition-colors">
-              <Palette className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" strokeWidth={1.5} />
-            </div>
-            <h3 className="text-base font-semibold text-bone-white mb-2">Certificate Templates</h3>
-            <p className="text-sm text-ash-veil leading-relaxed">
-              Browse visual templates, color themes, and layout presets for your certificates.
-            </p>
-          </button>
-        </div>
       </div>
     );
   }
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
+      {/* Page Header */}
       <div className="pb-6 border-b border-fog-line/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <CredoraLogo size={14} className="inline-block" />
             <span className="text-xs font-mono text-mid-ash uppercase tracking-wider">Certificate Issuance</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Issue Certificate</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-bone-white tracking-tight">Issue Certificates</h1>
           <p className="text-sm text-ash-veil mt-1">
-            Mint an immutable Spore DOB credential directly to a student&apos;s CKB address
+            Mint immutable Spore DOB credentials directly to students&apos; CKB addresses
           </p>
         </div>
 
-        {/* Mobile preview toggle button */}
-        <div className="lg:hidden flex items-center">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setShowMobilePreview(!showMobilePreview)}
-            className="text-xs gap-1.5 w-full sm:w-auto justify-center"
-          >
-            {showMobilePreview ? (
-              <>
-                <EyeOff className="w-3.5 h-3.5" />
-                <span>Hide Live Preview</span>
-              </>
-            ) : (
-              <>
-                <Eye className="w-3.5 h-3.5 text-lavender-spark" />
-                <span>Preview Certificate</span>
-              </>
-            )}
-          </Button>
-        </div>
+        {/* Mobile preview toggle button (only on single tab) */}
+        {activeTab === 'single' && (
+          <div className="lg:hidden flex items-center">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowMobilePreview(!showMobilePreview)}
+              className="text-xs gap-1.5 w-full sm:w-auto justify-center"
+            >
+              {showMobilePreview ? (
+                <>
+                  <EyeOff className="w-3.5 h-3.5" />
+                  <span>Hide Live Preview</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="w-3.5 h-3.5 text-lavender-spark" />
+                  <span>Preview Certificate</span>
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Split-screen layout: Form on Left (7 cols), Live Preview on Right (5 cols) */}
-      <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
-        {/* Form Column */}
-        <div className="lg:col-span-7 space-y-6">
-          <Card variant="default" padding="xl">
-            <CertificateForm
-              clusterId={activeClusterId}
-              clusterName={cluster.name}
-              defaultRecipientAddress={address || ''}
-              defaultLayout={queryLayout || 'classic'}
-              defaultTheme={queryTheme || 'blue'}
-              onChange={setLiveFormData}
-              onSubmit={(data) => issueMutation.mutate(data)}
-              onCancel={() => router.back()}
-              loading={issueMutation.isPending}
-            />
-          </Card>
-
-          {issueMutation.isError && (
-            <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-xl">
-              <p className="text-sm text-red-400">
-                Failed to issue certificate: {issueMutation.error?.message || 'Unknown error'}
-              </p>
-              {(issueMutation.error?.message || '').includes('faucet') && (
-                <a
-                  href="https://faucet.nervos.org"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-block text-xs text-lavender-spark hover:underline"
-                >
-                  Get free testnet CKB →
-                </a>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Live Preview Column (Sticky on Desktop, Toggleable on Mobile) */}
-        <div
-          className={`lg:col-span-5 space-y-4 lg:sticky lg:top-8 ${
-            showMobilePreview ? 'block mt-6 lg:mt-0' : 'hidden lg:block'
-          }`}
-        >
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-lavender-spark" />
-              <h3 className="text-xs font-semibold text-bone-white uppercase tracking-wider">
-                Live Certificate Preview
-              </h3>
-            </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-midnight-plum text-lavender-spark border border-lavender-spark/20">
-              WYSIWYG
+      {/* Unified Control Bar: Institution Selector + Sub-Tabs */}
+      <div className="p-4 bg-midnight-plum/70 rounded-2xl border border-fog-line/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Institution Selector */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 max-w-xl">
+          <div className="min-w-[130px]">
+            <span className="text-xs font-mono uppercase tracking-wider text-mid-ash font-semibold block">
+              Issuing Institution
             </span>
           </div>
-
-          <div className="p-4 sm:p-5 bg-midnight-plum/40 rounded-2xl border border-fog-line/15 shadow-xl backdrop-blur-xs">
-            <PaperCertificate
-              certificate={previewCertificate}
-              certificateId="PREVIEW_ID"
-              layout={liveFormData.layout}
-              theme={liveFormData.theme}
-              customColor={liveFormData.customColor}
-              customTitle={liveFormData.customTitle}
-              className="transform scale-100 origin-top"
+          <div className="flex-1">
+            <InstitutionSelector
+              value={activeClusterId}
+              onChange={handleClusterChange}
             />
           </div>
+        </div>
 
-          <div className="p-3 bg-midnight-plum/20 rounded-xl border border-fog-line/10 text-[11px] text-mid-ash flex items-center justify-between">
-            <span>Theme: <strong className="text-bone-white capitalize">{liveFormData.theme || 'Blue'}</strong></span>
-            <span>Layout: <strong className="text-bone-white capitalize">{liveFormData.layout || 'Classic'}</strong></span>
+        {/* Sub-Tabs Switcher */}
+        <div className="flex items-center justify-start md:justify-end">
+          <div className="inline-flex rounded-xl bg-midnight p-1 border border-fog-line/15">
+            <button
+              type="button"
+              onClick={() => handleTabChange('single')}
+              className={cn(
+                'px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer',
+                activeTab === 'single'
+                  ? 'bg-lavender-spark text-midnight-plum shadow-glow-violet/30 font-bold'
+                  : 'text-ash-veil hover:text-bone-white hover:bg-white/5'
+              )}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Single Certificate</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('batch')}
+              className={cn(
+                'px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer',
+                activeTab === 'batch'
+                  ? 'bg-lavender-spark text-midnight-plum shadow-glow-violet/30 font-bold'
+                  : 'text-ash-veil hover:text-bone-white hover:bg-white/5'
+              )}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Batch Issuance</span>
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Tab Content */}
+      {cluster ? (
+        <>
+          {activeTab === 'single' && (
+            <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
+              {/* Form Column */}
+              <div className="lg:col-span-7 space-y-6">
+                <Card variant="default" padding="xl">
+                  <CertificateForm
+                    clusterId={activeClusterId || ''}
+                    clusterName={cluster.name}
+                    defaultRecipientAddress={address || ''}
+                    defaultLayout={queryLayout || 'classic'}
+                    defaultTheme={queryTheme || 'blue'}
+                    onChange={setLiveFormData}
+                    onSubmit={(data) => issueMutation.mutate(data)}
+                    onCancel={() => router.back()}
+                    loading={issueMutation.isPending}
+                  />
+                </Card>
+
+                {issueMutation.isError && (
+                  <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-xl">
+                    <p className="text-sm text-red-400">
+                      Failed to issue certificate: {issueMutation.error?.message || 'Unknown error'}
+                    </p>
+                    {(issueMutation.error?.message || '').includes('faucet') && (
+                      <a
+                        href="https://faucet.nervos.org"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-block text-xs text-lavender-spark hover:underline"
+                      >
+                        Get free testnet CKB →
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Live Preview Column (Sticky on Desktop, Toggleable on Mobile) */}
+              <div
+                className={`lg:col-span-5 space-y-4 lg:sticky lg:top-8 ${
+                  showMobilePreview ? 'block mt-6 lg:mt-0' : 'hidden lg:block'
+                }`}
+              >
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-lavender-spark" />
+                    <h3 className="text-xs font-semibold text-bone-white uppercase tracking-wider">
+                      Live Certificate Preview
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-midnight-plum text-lavender-spark border border-lavender-spark/20">
+                    WYSIWYG
+                  </span>
+                </div>
+
+                <div className="p-4 sm:p-5 bg-midnight-plum/40 rounded-2xl border border-fog-line/15 shadow-xl backdrop-blur-xs">
+                  <PaperCertificate
+                    certificate={previewCertificate}
+                    certificateId="PREVIEW_ID"
+                    layout={liveFormData.layout}
+                    theme={liveFormData.theme}
+                    customColor={liveFormData.customColor}
+                    customTitle={liveFormData.customTitle}
+                    className="transform scale-100 origin-top"
+                  />
+                </div>
+
+                <div className="p-3 bg-midnight-plum/20 rounded-xl border border-fog-line/10 text-[11px] text-mid-ash flex items-center justify-between">
+                  <span>Theme: <strong className="text-bone-white capitalize">{liveFormData.theme || 'Blue'}</strong></span>
+                  <span>Layout: <strong className="text-bone-white capitalize">{liveFormData.layout || 'Classic'}</strong></span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'batch' && (
+            <BatchIssueSection
+              clusterId={activeClusterId || ''}
+              cluster={cluster}
+              signer={signer}
+              onNavigateToCertificates={() => router.push('/certificates')}
+            />
+          )}
+        </>
+      ) : (
+        <div className="flex justify-center py-16">
+          <Spinner label="Loading institution details..." />
+        </div>
+      )}
 
       {/* Success Modal */}
       <Modal
