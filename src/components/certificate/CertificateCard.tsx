@@ -61,7 +61,7 @@ export function CertificateCard({
           </div>
           <div className="flex items-center gap-2 text-xs text-mid-ash">
             <Calendar className="w-3.5 h-3.5" />
-            <span>Completed {display.date}</span>
+            <span>Completed {formatDate(display.date)}</span>
           </div>
         </div>
 

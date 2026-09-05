@@ -290,20 +290,104 @@ body {
 @media print {
   @page {
     size: landscape;
-    margin: 8mm;
+    margin: 0;
   }
+
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    background: #FCFBF7 !important;
+  }
+
+  /* Explicitly hide non-print elements */
+  .no-print,
+  header,
+  nav,
+  footer,
+  aside {
+    display: none !important;
+  }
+
+  /* Hide everything in body by default */
   body * {
     visibility: hidden;
   }
-  .print-certificate-target, .print-certificate-target * {
-    visibility: visible;
+
+  /* Reset all modal containers & dialog wrappers when printing */
+  div:has(.print-certificate-target),
+  div:has(> .print-certificate-target) {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    max-height: none !important;
+    max-width: none !important;
+    height: auto !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
+
+  /* Make certificate target and all its contents visible and positioned to fill the landscape page */
+  .print-certificate-target,
+  .print-certificate-target * {
+    visibility: visible !important;
+  }
+
   .print-certificate-target {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 0;
-    margin: 0;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    padding: 8mm 12mm !important;
+    box-sizing: border-box !important;
+    z-index: 99999999 !important;
+    background: #FCFBF7 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-certificate-target > div {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 275mm !important;
+    max-height: 192mm !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    border-width: 4px !important;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
   }
 }

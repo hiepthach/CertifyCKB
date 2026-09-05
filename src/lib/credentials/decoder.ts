@@ -77,7 +77,7 @@ export function formatCertificateDisplay(dna: CertificateDNA): CertificateDispla
     recipient: (subject.name as string) || 'Unknown Recipient',
     course: (subject.courseName as string) || 'Unknown Course',
     issuer: dna.issuer.name || 'Unknown Issuer',
-    date: dna.issuanceDate,
+    date: (subject?.completionDate as string) || dna.issuanceDate,
     status,
   };
 }

@@ -56,7 +56,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-midnight-plum/80 backdrop-blur-sm transition-opacity duration-300 z-0"
+        className="fixed inset-0 bg-midnight-plum/80 backdrop-blur-sm transition-opacity duration-300 z-0 no-print"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -74,7 +74,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-fog-line/10 flex-shrink-0 bg-midnight-plum/40">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-fog-line/10 flex-shrink-0 bg-midnight-plum/40 no-print">
             <h2 className="text-base font-semibold text-bone-white tracking-tight">{title}</h2>
             <button
               onClick={onClose}
@@ -93,7 +93,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-fog-line/10 flex justify-end gap-3 bg-midnight-plum/40 flex-shrink-0">
+          <div className="px-6 py-4 border-t border-fog-line/10 flex justify-end gap-3 bg-midnight-plum/40 flex-shrink-0 no-print">
             {footer}
           </div>
         )}

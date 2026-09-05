@@ -66,7 +66,6 @@ export function CertificateDetail({
   const initialCustomTitle: string | undefined =
     typeof metadata?.customTitle === 'string' ? metadata.customTitle : undefined;
 
-
   const handleCopyId = async () => {
     const success = await copyToClipboard(certificateId);
     if (success) {
@@ -76,12 +75,7 @@ export function CertificateDetail({
   };
 
   const handlePrint = () => {
-    if (viewMode !== 'visual') {
-      setViewMode('visual');
-      setTimeout(() => window.print(), 100);
-    } else {
-      window.print();
-    }
+    window.print();
   };
 
   const getStatusBadge = () => {
@@ -92,7 +86,7 @@ export function CertificateDetail({
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Top Navigation Bar: View Toggle & Print Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-fog-line/10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-fog-line/10 no-print">
         <div className="flex bg-midnight-plum p-1 rounded-xl border border-fog-line/10 text-xs">
           <button
             type="button"
@@ -135,61 +129,61 @@ export function CertificateDetail({
         </div>
       </div>
 
-      {viewMode === 'visual' ? (
-        /* Visual Mode: Paper Certificate strictly locked to Issuer's on-chain design */
-        <div className="space-y-4">
-          {/* Render Paper Certificate */}
-          <div className="p-1 sm:p-2 bg-midnight-plum/40 rounded-2xl border border-fog-line/10 shadow-glow-sm">
-            <PaperCertificate
-              certificate={certificate}
-              certificateId={certificateId}
-              layout={initialLayout}
-              theme={initialTheme}
-              customColor={initialCustomColor}
-              customTitle={initialCustomTitle}
-              isExpired={expired}
-            />
-          </div>
-
-          {/* Visual Mode Actions */}
-          <div className="flex flex-wrap gap-3 pt-2">
-            {transactionHash && (
-              <a
-                href={getTransactionUrl(transactionHash)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 min-w-[140px]"
-              >
-                <Button variant="secondary" className="w-full text-xs gap-1.5 shadow-glow-violet/20">
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  View on CKB Explorer
-                </Button>
-              </a>
-            )}
-            {onShare && (
-              <Button variant="secondary" className="flex-1 min-w-[140px] text-xs" onClick={onShare}>
-                Share Certificate
-              </Button>
-            )}
-            {!expired && onMelt && (
-              <Button
-                variant="secondary"
-                className="flex-1 min-w-[140px] text-xs gap-1.5 border border-orange-500/40 text-orange-400 hover:bg-orange-950/30"
-                onClick={() => {
-                  setMeltModalError(null);
-                  setShowMeltModal(true);
-                }}
-                disabled={melting}
-              >
-                <Flame className="w-3.5 h-3.5" />
-                Melt & Reclaim CKB
-              </Button>
-            )}
-          </div>
+      {/* Visual Mode: Paper Certificate (Always available for print media) */}
+      <div className={cn('space-y-4', viewMode !== 'visual' && 'hidden print:block')}>
+        {/* Render Paper Certificate */}
+        <div className="p-1 sm:p-2 bg-midnight-plum/40 rounded-2xl border border-fog-line/10 shadow-glow-sm print:p-0 print:border-none print:bg-transparent print:shadow-none">
+          <PaperCertificate
+            certificate={certificate}
+            certificateId={certificateId}
+            layout={initialLayout}
+            theme={initialTheme}
+            customColor={initialCustomColor}
+            customTitle={initialCustomTitle}
+            isExpired={expired}
+          />
         </div>
-      ) : (
-        /* Technical Mode: On-Chain Cryptographic Proof and DOB Cards */
-        <div className="space-y-6">
+
+        {/* Visual Mode Actions */}
+        <div className="flex flex-wrap gap-3 pt-2 no-print">
+          {transactionHash && (
+            <a
+              href={getTransactionUrl(transactionHash)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 min-w-[140px]"
+            >
+              <Button variant="secondary" className="w-full text-xs gap-1.5 shadow-glow-violet/20">
+                <ExternalLink className="w-3.5 h-3.5" />
+                View on CKB Explorer
+              </Button>
+            </a>
+          )}
+          {onShare && (
+            <Button variant="secondary" className="flex-1 min-w-[140px] text-xs" onClick={onShare}>
+              Share Certificate
+            </Button>
+          )}
+          {!expired && onMelt && (
+            <Button
+              variant="secondary"
+              className="flex-1 min-w-[140px] text-xs gap-1.5 border border-orange-500/40 text-orange-400 hover:bg-orange-950/30"
+              onClick={() => {
+                setMeltModalError(null);
+                setShowMeltModal(true);
+              }}
+              disabled={melting}
+            >
+              <Flame className="w-3.5 h-3.5" />
+              Melt & Reclaim CKB
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Technical Mode: On-Chain Cryptographic Proof and DOB Cards */}
+      {viewMode === 'technical' && (
+        <div className="space-y-6 no-print">
           {/* Certificate Header Display */}
           <div className="text-center py-10 px-6 bg-shadow-plum rounded-2xl border border-fog-line/15 shadow-glow-violet relative overflow-hidden">
             <div className="w-20 h-20 mx-auto mb-4 bg-midnight-plum border border-lavender-spark/30 rounded-2xl flex items-center justify-center shadow-glow-violet text-lavender-spark animate-float">
@@ -242,7 +236,7 @@ export function CertificateDetail({
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-mid-ash" />
                 <span className="text-ash-veil">
-                  Completed on {formatDate(certificate.issuanceDate)}
+                  Completed on {formatDate(subject.completionDate || certificate.issuanceDate)}
                 </span>
               </div>
               {certificate.expirationDate && (
@@ -318,8 +312,8 @@ export function CertificateDetail({
             </div>
           </Card>
 
-          {/* Actions */}
-          <div className="flex flex-wrap gap-3">
+          {/* Technical Mode Actions */}
+          <div className="flex flex-wrap gap-3 pt-2">
             {transactionHash && (
               <a
                 href={getTransactionUrl(transactionHash)}

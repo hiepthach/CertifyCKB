@@ -34,8 +34,10 @@ export function truncateAddress(address: string, prefixLength = 6, suffixLength 
 /**
  * Format date for display
  */
-export function formatDate(dateString: string): string {
+export function formatDate(dateString?: string): string {
+  if (!dateString) return 'N/A';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',

@@ -228,10 +228,6 @@ export function PaperCertificate({
           </div>
           <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider font-semibold">Authorized Authority</p>
         </div>
-        <div className="text-center hidden sm:block">
-          <p className="text-xs text-gray-600">Issue Date: <strong>{formattedDate}</strong></p>
-          <p className="text-[10px] font-mono text-gray-400 mt-0.5">Spore ID: {truncateAddress(certificateId, 8, 4)}</p>
-        </div>
         <div>
           {renderOfficialSeal('md')}
         </div>
